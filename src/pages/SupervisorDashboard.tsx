@@ -3,12 +3,9 @@ import { useLocation } from "react-router-dom";
 import { Navbar } from "@/components/Navbar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Save, FileSpreadsheet, Package, DollarSign, CheckCircle } from "lucide-react";
+import { FileSpreadsheet, Package, DollarSign, CheckCircle } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { ExcelSheet } from "@/components/ExcelSheet";
 
 const SupervisorDashboard = () => {
   const location = useLocation();
@@ -16,20 +13,128 @@ const SupervisorDashboard = () => {
   const [activeTab, setActiveTab] = useState("daily-input");
 
   const handleSubmit = () => {
-    toast.success("Sheet submitted successfully!", {
-      description: "Your data has been sent for PM review.",
-    });
+    // Handle submission - callback managed by ExcelSheet component
   };
 
-  const dailyInputFields = [
-    { label: "Date", value: "2024-01-15", readOnly: true },
-    { label: "Shift", value: "Morning", readOnly: true },
-    { label: "Activity Code", value: "ACT-001", readOnly: true },
-    { label: "Resource Type", value: "", readOnly: false },
-    { label: "Quantity Used", value: "", readOnly: false },
-    { label: "Unit", value: "MT", readOnly: true },
-    { label: "Progress %", value: "", readOnly: false },
-    { label: "Remarks", value: "", readOnly: false },
+  // Daily Input Sheet Data - Excel format
+  const dailyInputColumns = [
+    "Date",
+    "Shift",
+    "Activity Code",
+    "Activity Description",
+    "Resource Type",
+    "Quantity Used",
+    "Unit",
+    "Progress %",
+    "Remarks",
+  ];
+
+  const dailyInputRows = [
+    [
+      { value: "2024-01-15", readOnly: true },
+      { value: "Morning", readOnly: true },
+      { value: "ACT-001", readOnly: true },
+      { value: "Concrete Foundation Work", readOnly: true },
+      { value: "", readOnly: false, columnType: "text" as const },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "MT", readOnly: true },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "", readOnly: false, columnType: "text" as const },
+    ],
+    [
+      { value: "2024-01-15", readOnly: true },
+      { value: "Morning", readOnly: true },
+      { value: "ACT-002", readOnly: true },
+      { value: "Steel Framework Installation", readOnly: true },
+      { value: "", readOnly: false, columnType: "text" as const },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "MT", readOnly: true },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "", readOnly: false, columnType: "text" as const },
+    ],
+    [
+      { value: "2024-01-15", readOnly: true },
+      { value: "Afternoon", readOnly: true },
+      { value: "ACT-003", readOnly: true },
+      { value: "Electrical Wiring - Phase 1", readOnly: true },
+      { value: "", readOnly: false, columnType: "text" as const },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "Units", readOnly: true },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "", readOnly: false, columnType: "text" as const },
+    ],
+    [
+      { value: "2024-01-15", readOnly: true },
+      { value: "Afternoon", readOnly: true },
+      { value: "ACT-004", readOnly: true },
+      { value: "Masonry Work - Block A", readOnly: true },
+      { value: "", readOnly: false, columnType: "text" as const },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "SQM", readOnly: true },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "", readOnly: false, columnType: "text" as const },
+    ],
+    [
+      { value: "2024-01-15", readOnly: true },
+      { value: "Evening", readOnly: true },
+      { value: "ACT-005", readOnly: true },
+      { value: "Site Preparation & Cleaning", readOnly: true },
+      { value: "", readOnly: false, columnType: "text" as const },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "Hours", readOnly: true },
+      { value: "", readOnly: false, columnType: "number" as const },
+      { value: "", readOnly: false, columnType: "text" as const },
+    ],
+  ];
+
+  // Resources Sheet Data
+  const resourcesColumns = [
+    "Resource ID",
+    "Resource Name",
+    "Type",
+    "Available Qty",
+    "Allocated Qty",
+    "Utilization %",
+    "Status",
+  ];
+
+  const resourcesRows = [
+    [
+      { value: "RES-001", readOnly: true },
+      { value: "Labor - Skilled Mason", readOnly: true },
+      { value: "Human Resource", readOnly: true },
+      { value: "45", readOnly: true },
+      { value: "38", readOnly: false, columnType: "number" as const },
+      { value: "84%", readOnly: true },
+      { value: "Active", readOnly: true },
+    ],
+    [
+      { value: "RES-002", readOnly: true },
+      { value: "Excavator - CAT 320", readOnly: true },
+      { value: "Equipment", readOnly: true },
+      { value: "5", readOnly: true },
+      { value: "4", readOnly: false, columnType: "number" as const },
+      { value: "80%", readOnly: true },
+      { value: "Active", readOnly: true },
+    ],
+    [
+      { value: "RES-003", readOnly: true },
+      { value: "Cement - Grade 53", readOnly: true },
+      { value: "Material", readOnly: true },
+      { value: "500", readOnly: true },
+      { value: "320", readOnly: false, columnType: "number" as const },
+      { value: "64%", readOnly: true },
+      { value: "Available", readOnly: true },
+    ],
+    [
+      { value: "RES-004", readOnly: true },
+      { value: "Steel Bars - TMT", readOnly: true },
+      { value: "Material", readOnly: true },
+      { value: "250", readOnly: true },
+      { value: "185", readOnly: false, columnType: "number" as const },
+      { value: "74%", readOnly: true },
+      { value: "Available", readOnly: true },
+    ],
   ];
 
   return (
@@ -74,82 +179,37 @@ const SupervisorDashboard = () => {
             </TabsList>
 
             <TabsContent value="daily-input" className="mt-6">
-              <Card className="p-6 glass-effect">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground mb-2">Daily Input Sheet</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Fields marked with <span className="text-primary">blue border</span> are editable. Others are auto-filled from P6.
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <ExcelSheet
+                  title="Daily Input Sheet - January 15, 2024"
+                  columns={dailyInputColumns}
+                  rows={dailyInputRows}
+                  onSubmit={handleSubmit}
+                />
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    <strong>Excel Tips:</strong> Use <kbd className="px-2 py-1 bg-white border border-blue-300 rounded text-xs">Tab</kbd> to move right, 
+                    <kbd className="px-2 py-1 bg-white border border-blue-300 rounded text-xs ml-1">Enter</kbd> to move down. 
+                    Gray cells are auto-filled from P6 and read-only.
                   </p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  {dailyInputFields.map((field, index) => (
-                    <motion.div
-                      key={field.label}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <Label htmlFor={field.label} className="text-sm font-medium">
-                        {field.label}
-                      </Label>
-                      <Input
-                        id={field.label}
-                        defaultValue={field.value}
-                        readOnly={field.readOnly}
-                        className={`mt-1 ${!field.readOnly ? 'border-primary focus:ring-primary' : 'bg-muted/50'}`}
-                      />
-                    </motion.div>
-                  ))}
-                </div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="flex justify-end"
-                >
-                  <Button
-                    onClick={handleSubmit}
-                    className="gradient-adani text-white hover:opacity-90 transition-opacity space-x-2"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Submit Sheet</span>
-                  </Button>
-                </motion.div>
-              </Card>
+              </motion.div>
             </TabsContent>
 
             <TabsContent value="resources" className="mt-6">
-              <Card className="p-6 glass-effect">
-                <h2 className="text-2xl font-bold mb-4">Resource Management</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b border-border">
-                      <tr className="text-left">
-                        <th className="pb-3 text-sm font-semibold text-muted-foreground">Resource</th>
-                        <th className="pb-3 text-sm font-semibold text-muted-foreground">Type</th>
-                        <th className="pb-3 text-sm font-semibold text-muted-foreground">Available</th>
-                        <th className="pb-3 text-sm font-semibold text-muted-foreground">Allocated</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {[
-                        { name: "Labor - Skilled", type: "Human", available: 45, allocated: 38 },
-                        { name: "Excavator", type: "Equipment", available: 5, allocated: 4 },
-                        { name: "Cement", type: "Material", available: "500 MT", allocated: "320 MT" },
-                      ].map((resource, i) => (
-                        <tr key={i} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3 text-sm font-medium">{resource.name}</td>
-                          <td className="py-3 text-sm text-muted-foreground">{resource.type}</td>
-                          <td className="py-3 text-sm">{resource.available}</td>
-                          <td className="py-3 text-sm font-semibold text-primary">{resource.allocated}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Card>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
+                <ExcelSheet
+                  title="Resource Allocation - January 15, 2024"
+                  columns={resourcesColumns}
+                  rows={resourcesRows}
+                />
+              </motion.div>
             </TabsContent>
 
             <TabsContent value="boq" className="mt-6">
