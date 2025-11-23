@@ -154,3 +154,159 @@ All colors MUST be HSL.
     transition: var(--transition-smooth);
   }
 }
+
+/* Excel-like Sheet Styles */
+.excel-container {
+  background: #ffffff;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.excel-toolbar {
+  background: #f3f3f3;
+  border-bottom: 1px solid #d4d4d4;
+}
+
+.excel-button {
+  height: 28px;
+  font-size: 12px;
+  background: white;
+  border: 1px solid #d4d4d4;
+  color: #333;
+}
+
+.excel-button:hover {
+  background: #e8e8e8;
+  border-color: #adadad;
+}
+
+.excel-save-button {
+  height: 28px;
+  font-size: 12px;
+  background: #217346;
+  color: white;
+  border: none;
+}
+
+.excel-save-button:hover {
+  background: #1a5c37;
+}
+
+.excel-grid-wrapper {
+  overflow: auto;
+  max-height: 600px;
+  background: #ffffff;
+}
+
+.excel-grid {
+  display: table;
+  border-collapse: collapse;
+  width: 100%;
+  font-family: 'Calibri', 'Arial', sans-serif;
+  font-size: 11pt;
+}
+
+.excel-row {
+  display: table-row;
+}
+
+.excel-cell {
+  display: table-cell;
+  border: 1px solid #d4d4d4;
+  padding: 0;
+  height: 21px;
+  min-width: 100px;
+  vertical-align: middle;
+  position: relative;
+}
+
+.excel-header-row {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.excel-column-header {
+  background: #f3f3f3;
+  font-weight: 600;
+  text-align: center;
+  padding: 4px 8px;
+  border-right: 1px solid #d4d4d4;
+  border-bottom: 1px solid #a6a6a6;
+  color: #333;
+  font-size: 11pt;
+  user-select: none;
+}
+
+.excel-row-header {
+  background: #f3f3f3;
+  font-weight: 500;
+  text-align: center;
+  padding: 4px 8px;
+  border-right: 1px solid #a6a6a6;
+  color: #333;
+  font-size: 11pt;
+  min-width: 40px;
+  max-width: 40px;
+  user-select: none;
+}
+
+.excel-data-cell {
+  background: #ffffff;
+  padding: 0;
+}
+
+.excel-readonly-cell {
+  background: #f9f9f9;
+}
+
+.excel-readonly-cell .excel-cell-content {
+  padding: 4px 8px;
+  color: #555;
+}
+
+.excel-editable-cell {
+  background: #ffffff;
+}
+
+.excel-editable-cell:hover {
+  border: 1px solid #a6a6a6;
+}
+
+.excel-selected-cell {
+  border: 2px solid #217346 !important;
+  box-shadow: inset 0 0 0 1px #217346;
+}
+
+.excel-input {
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 4px 8px;
+  font-family: 'Calibri', 'Arial', sans-serif;
+  font-size: 11pt;
+  background: transparent;
+  color: #000;
+}
+
+.excel-input:focus {
+  background: #ffffff;
+}
+
+.excel-cell-content {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.excel-status-bar {
+  background: #f3f3f3;
+  border-top: 1px solid #d4d4d4;
+  padding: 4px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
