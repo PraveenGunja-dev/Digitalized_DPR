@@ -1,23 +1,21 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, AuthResponse, loginUser } from '../services/authService';
+import { User, AuthResponse, loginUser, getUserProfile } from '../services/authService';
 import { setAuthToken as setProjectAuthToken } from '../services/projectService';
 import { setAuthToken as setAuthAuthToken } from '../services/authService';
 
-// Define a type for the user without password
-type UserWithoutPassword = Omit<User, 'password'>;
-
 interface AuthContextType {
-  user: UserWithoutPassword | null;
+  user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
+  refreshUserProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserWithoutPassword | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
@@ -56,6 +54,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // Function to refresh user profile from API
+  const refreshUserProfile = async () => {
+    if (token) {
+      try {
+        const profile = await getUserProfile();
+        setUser(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
+      } catch (error) {
+        console.error('Failed to refresh user profile:', error);
+      }
+    }
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -71,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, refreshUserProfile }}>
       {children}
     </AuthContext.Provider>
   );

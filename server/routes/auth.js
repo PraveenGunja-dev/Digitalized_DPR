@@ -39,6 +39,7 @@ const isPMAG = (req, res, next) => {
 let authenticateToken;
 
 // Register a new user (no authentication required)
+// Oracle P6 equivalent would be creating a new user in the system
 router.post('/register', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -92,15 +93,19 @@ router.post('/register', async (req, res) => {
       { expiresIn: '24h' }
     );
 
+    // Oracle P6 API compatible response format
     res.status(201).json({
       message: 'User registered successfully',
       token,
       user: {
-        user_id: user.user_id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      }
+        ObjectId: user.user_id,  // Oracle P6 uses ObjectId
+        Name: user.name,         // Oracle P6 uses PascalCase
+        Email: user.email,
+        Role: user.role
+      },
+      // Additional Oracle P6 compatible fields
+      sessionId: token,
+      loginStatus: 'SUCCESS'
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -112,6 +117,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login user (no authentication required)
+// Oracle P6 equivalent - authenticates user and returns session/token
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -158,10 +164,19 @@ router.post('/login', async (req, res) => {
     // Remove password from user object
     const { password: _, ...userWithoutPassword } = user;
 
+    // Oracle P6 API compatible response format
     res.status(200).json({
       message: 'Login successful',
       token,
-      user: userWithoutPassword
+      user: {
+        ObjectId: userWithoutPassword.user_id,  // Oracle P6 uses ObjectId
+        Name: userWithoutPassword.name,         // Oracle P6 uses PascalCase
+        Email: userWithoutPassword.email,
+        Role: userWithoutPassword.role
+      },
+      // Additional Oracle P6 compatible fields
+      sessionId: token,
+      loginStatus: 'SUCCESS'
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -170,6 +185,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Get user profile (requires authentication)
+// Oracle P6 equivalent - gets current user information
 const getUserProfile = async (req, res) => {
   try {
     // Get user ID from authenticated request
@@ -187,9 +203,15 @@ const getUserProfile = async (req, res) => {
 
     const user = result.rows[0];
 
+    // Oracle P6 API compatible response format
     res.status(200).json({
       message: 'Profile fetched successfully',
-      user
+      user: {
+        ObjectId: user.user_id,  // Oracle P6 uses ObjectId
+        Name: user.name,         // Oracle P6 uses PascalCase
+        Email: user.email,
+        Role: user.role
+      }
     });
   } catch (error) {
     console.error('Profile fetch error:', error);
@@ -224,7 +246,16 @@ router.get('/supervisors', (req, res, next) => {
     );
 
     console.log("Supervisors found:", result.rows); // Debug log
-    res.status(200).json(result.rows);
+    
+    // Transform to Oracle P6 format (PascalCase)
+    const supervisors = result.rows.map(user => ({
+      ObjectId: user.user_id,
+      Name: user.name,
+      Email: user.email,
+      Role: user.role
+    }));
+    
+    res.status(200).json(supervisors);
   } catch (error) {
     console.error('Fetch supervisors error:', error);
     res.status(500).json({ message: 'Internal server error' });
@@ -249,15 +280,17 @@ router.post('/reset-users', isAdmin, async (req, res) => {
 
     const adminUser = result.rows[0];
 
+    // Oracle P6 API compatible response format
     res.status(200).json({
       message: 'Users reset successfully. Admin user created.',
       admin: {
-        user_id: adminUser.user_id,
-        name: adminUser.name,
-        email: adminUser.email,
-        role: adminUser.role,
-        password: adminPassword // Note: In a real application, never send passwords in responses
-      }
+        ObjectId: adminUser.user_id,  // Oracle P6 uses ObjectId
+        Name: adminUser.name,         // Oracle P6 uses PascalCase
+        Email: adminUser.email,
+        Role: adminUser.role
+        // Note: In a real application, never send passwords in responses
+      },
+      status: 'SUCCESS'
     });
   } catch (error) {
     console.error('Reset users error:', error);

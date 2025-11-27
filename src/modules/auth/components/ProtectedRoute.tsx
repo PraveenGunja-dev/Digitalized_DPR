@@ -19,7 +19,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // If a specific role is required and user doesn't have it, redirect to projects
-  if (requiredRole && user?.role !== requiredRole) {
+  if (requiredRole && user?.Role !== requiredRole) {
     return <Navigate to="/projects" replace />;
   }
 

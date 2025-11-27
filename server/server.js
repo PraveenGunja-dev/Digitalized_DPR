@@ -57,21 +57,52 @@ const testDatabaseConnection = () => {
 // Test database connection
 testDatabaseConnection();
 
-// Authentication middleware
+// Authentication middleware - Oracle P6 API compatible
+// Supports both Bearer token (JWT) and session-based authentication
 const authenticateToken = (req, res, next) => {
+  // Check for Authorization header with Bearer token (JWT)
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  let token = authHeader && authHeader.split(' ')[1];
+  
+  // If no Bearer token, check for custom token header (Oracle P6 style)
+  if (!token) {
+    token = req.headers['x-adani-token'] || req.headers['x-p6-token'];
+  }
+  
+  // If still no token, check for token in query parameters (less secure but Oracle P6 compatible)
+  if (!token) {
+    token = req.query.token;
+  }
 
   if (!token) {
-    return res.status(401).json({ message: 'Access token required' });
+    return res.status(401).json({ 
+      message: 'Access token required',
+      // Oracle P6 compatible error format
+      error: {
+        code: 'AUTH_TOKEN_MISSING',
+        description: 'Authentication token is missing'
+      }
+    });
   }
 
   jwt.verify(token, process.env.JWT_SECRET || 'adani_flow_secret_key', (err, user) => {
     if (err) {
       if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ message: 'Token expired' });
+        return res.status(401).json({ 
+          message: 'Token expired',
+          error: {
+            code: 'AUTH_TOKEN_EXPIRED',
+            description: 'Authentication token has expired'
+          }
+        });
       }
-      return res.status(403).json({ message: 'Invalid token' });
+      return res.status(403).json({ 
+        message: 'Invalid token',
+        error: {
+          code: 'AUTH_TOKEN_INVALID',
+          description: 'Authentication token is invalid'
+        }
+      });
     }
     req.user = user; // Attach the decoded user data to the request object
     next();
@@ -82,20 +113,90 @@ const authenticateToken = (req, res, next) => {
 const { router: authRoutes, setPool, getUserProfile } = require('./routes/auth');
 const projectRoutes = require('./routes/projects');
 const projectAssignmentRoutes = require('./routes/projectAssignment');
+const activityRoutes = require('./routes/activities');
 
 // Set the pool for auth routes
 setPool(pool, authenticateToken);
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/projects', authenticateToken, projectRoutes);
-app.use('/api/project-assignment', authenticateToken, projectAssignmentRoutes);
+// API routes - Modified to match Oracle P6 API structure
+app.use('/project', authenticateToken, projectRoutes);
+app.use('/activity', authenticateToken, activityRoutes);
+app.use('/project-assignment', authenticateToken, projectAssignmentRoutes);
 
-// Profile route (requires authentication)
-app.get('/api/auth/profile', authenticateToken, getUserProfile);
+// Import individual route handlers
+const { router: authRouter } = require('./routes/auth');
+
+// Alternative Oracle P6 compatible login endpoint
+app.post('/login', async (req, res, next) => {
+  // Find the login route handler in the auth router
+  const loginLayer = authRouter.stack.find(layer => 
+    layer.route && layer.route.path === '/login' && layer.route.methods.post
+  );
+  
+  if (loginLayer) {
+    // Call the login handler directly
+    return loginLayer.route.stack[0].handle(req, res, next);
+  } else {
+    return res.status(404).json({ message: 'Route not found' });
+  }
+});
+
+// Alternative Oracle P6 compatible register endpoint
+app.post('/register', async (req, res, next) => {
+  // Find the register route handler in the auth router
+  const registerLayer = authRouter.stack.find(layer => 
+    layer.route && layer.route.path === '/register' && layer.route.methods.post
+  );
+  
+  if (registerLayer) {
+    // Call the register handler directly
+    return registerLayer.route.stack[0].handle(req, res, next);
+  } else {
+    return res.status(404).json({ message: 'Route not found' });
+  }
+});
+
+// Oracle P6 compatible profile endpoint
+app.get('/auth/profile', authenticateToken, getUserProfile);
+
+// Oracle P6 compatible supervisors endpoint
+app.get('/auth/supervisors', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is PMAG
+    if (req.user.role !== 'PMAG') {
+      return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
+    }
+    
+    // Get all users with supervisor role directly
+    const result = await pool.query(
+      'SELECT user_id, name, email, role FROM users WHERE role = $1 ORDER BY name',
+      ['supervisor']
+    );
+    
+    // Transform to Oracle P6 format (PascalCase)
+    const supervisors = result.rows.map(user => ({
+      ObjectId: user.user_id,
+      Name: user.name,
+      Email: user.email,
+      Role: user.role
+    }));
+    
+    res.status(200).json(supervisors);
+  } catch (error) {
+    console.error('Fetch supervisors error:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Oracle P6 compatible logout endpoint
+app.post('/logout', authenticateToken, (req, res) => {
+  // In a real implementation with sessions, we would destroy the session here
+  // For JWT, we simply return success as the client should discard the token
+  res.status(200).json({ message: 'Logout successful' });
+});
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
+app.get('/health', (req, res) => {
   res.status(200).json({ 
     message: 'Server is running', 
     timestamp: new Date().toISOString(),

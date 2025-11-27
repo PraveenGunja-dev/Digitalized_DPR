@@ -1,13 +1,13 @@
-import { motion } from "framer-motion";
-import { useLocation, useNavigate } from "react-router-dom";
-import { Navbar } from "@/components/Navbar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card } from "@/components/ui/card";
-import { FileSpreadsheet, Package, DollarSign, CheckCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Navbar } from "@/components/Navbar";
 import { ExcelSheet } from "@/components/ExcelSheet";
-import { getAssignedProjects } from "@/modules/auth/services/projectService";
+import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { FileSpreadsheet, Package, DollarSign } from "lucide-react";
 import { useAuth } from "@/modules/auth/contexts/AuthContext";
+import { getAssignedProjects } from "@/modules/auth/services/projectService";
 import { toast } from "sonner";
 
 // Function to format date as YYYY-MM-DD
@@ -20,13 +20,13 @@ const formatDate = (dateString: string | null | undefined): string => {
 const SupervisorDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { token } = useAuth();
-  const { user, projectName, projectId, projectDetails } = location.state || { 
-    user: { name: "Supervisor User", role: "supervisor" },
-    projectName: "Project", 
-    projectId: null,
-    projectDetails: null
-  };
+  const { user, token } = useAuth();
+  
+  // Extract project data from location state
+  const locationState = location.state || {};
+  const projectName = locationState.projectName || "Project";
+  const projectId = locationState.projectId || null;
+  const projectDetails = locationState.projectDetails || null;
 
   const [activeTab, setActiveTab] = useState("daily-input");
   const [assignedProjects, setAssignedProjects] = useState<any[]>([]);
@@ -138,8 +138,8 @@ const SupervisorDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar 
-        userName={user.name} 
-        userRole={user.role} 
+        userName={user?.Name || "User"} 
+        userRole={user?.Role || "supervisor"} 
         projectName={projectName}
         onAddUser={() => alert("Add User functionality is only available for PMAG users")}
         onAddProject={() => alert("Add Project functionality is only available for PMAG users")}
@@ -161,8 +161,8 @@ const SupervisorDashboard = () => {
               </p>
               {projectDetails && (
                 <div className="mt-2 text-sm text-muted-foreground">
-                  <p>Plan: {formatDate(projectDetails.planStart)} to {formatDate(projectDetails.planEnd)}</p>
-                  <p>Actual: {formatDate(projectDetails.actualStart) || "Not started"} to {formatDate(projectDetails.actualEnd) || "Not completed"}</p>
+                  <p>Plan: {formatDate(projectDetails.PlannedStartDate)} to {formatDate(projectDetails.PlannedFinishDate)}</p>
+                  <p>Actual: {formatDate(projectDetails.ActualStartDate) || "Not started"} to {formatDate(projectDetails.ActualFinishDate) || "Not completed"}</p>
                 </div>
               )}
             </div>

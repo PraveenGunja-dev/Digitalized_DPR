@@ -1,12 +1,34 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
 import { StatsCard } from "@/components/StatsCard";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FileText, CheckCircle, Clock, AlertCircle, Eye, Edit, Check } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { 
+  FileText, 
+  CheckCircle, 
+  Clock, 
+  AlertCircle, 
+  Eye, 
+  Edit, 
+  Check,
+  BarChart3,
+  PieChart
+} from "lucide-react";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Pie,
+  Cell
+} from "recharts";
+import { useAuth } from "@/modules/auth/contexts/AuthContext";
 
 // Function to format date as YYYY-MM-DD
 const formatDate = (dateString: string | null | undefined): string => {
@@ -18,12 +40,13 @@ const formatDate = (dateString: string | null | undefined): string => {
 const PMDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, projectName, projectId, projectDetails } = location.state || { 
-    user: { name: "PM User", role: "Site PM" },
-    projectName: "Project", 
-    projectId: null,
-    projectDetails: null
-  };
+  const { user } = useAuth();
+  
+  // Extract project data from location state
+  const locationState = location.state || {};
+  const projectName = locationState.projectName || "Project";
+  const projectId = locationState.projectId || null;
+  const projectDetails = locationState.projectDetails || null;
 
   const statsData = [
     { title: "Total Sheets", value: 156, icon: FileText, trend: { value: 12, isPositive: true } },
@@ -57,8 +80,8 @@ const PMDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar 
-        userName={user.name} 
-        userRole={user.role} 
+        userName={user?.Name || "User"} 
+        userRole={user?.Role || "Site PM"} 
         projectName={projectName}
         onAddUser={() => alert("Add User functionality is only available for PMAG users")}
         onAddProject={() => alert("Add Project functionality is only available for PMAG users")}
@@ -80,8 +103,8 @@ const PMDashboard = () => {
               </p>
               {projectDetails && (
                 <div className="mt-2 text-sm text-muted-foreground">
-                  <p>Plan: {formatDate(projectDetails.planStart)} to {formatDate(projectDetails.planEnd)}</p>
-                  <p>Actual: {formatDate(projectDetails.actualStart) || "Not started"} to {formatDate(projectDetails.actualEnd) || "Not completed"}</p>
+                  <p>Plan: {formatDate(projectDetails.PlannedStartDate)} to {formatDate(projectDetails.PlannedFinishDate)}</p>
+                  <p>Actual: {formatDate(projectDetails.ActualStartDate) || "Not started"} to {formatDate(projectDetails.ActualFinishDate) || "Not completed"}</p>
                 </div>
               )}
             </div>

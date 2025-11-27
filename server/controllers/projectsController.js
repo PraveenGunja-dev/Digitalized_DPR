@@ -13,15 +13,15 @@ const getUserProjects = async (req, res) => {
       // For supervisors, get only assigned projects
       result = await pool.query(`
         SELECT 
-          p.id, 
-          p.name, 
-          p.location, 
-          p.status, 
-          p.progress, 
-          p.plan_start as "planStart", 
-          p.plan_end as "planEnd", 
-          p.actual_start as "actualStart", 
-          p.actual_end as "actualEnd"
+          p.id AS "ObjectId", 
+          p.name AS "Name", 
+          p.location AS "Location", 
+          p.status AS "Status", 
+          p.progress AS "PercentComplete", 
+          p.plan_start as "PlannedStartDate", 
+          p.plan_end as "PlannedFinishDate", 
+          p.actual_start as "ActualStartDate", 
+          p.actual_end as "ActualFinishDate"
         FROM projects p
         INNER JOIN project_assignments pa ON p.id = pa.project_id
         WHERE pa.user_id = $1
@@ -31,15 +31,15 @@ const getUserProjects = async (req, res) => {
       // For PMAG and Site PM, get all projects
       result = await pool.query(`
         SELECT 
-          id, 
-          name, 
-          location, 
-          status, 
-          progress, 
-          plan_start as "planStart", 
-          plan_end as "planEnd", 
-          actual_start as "actualStart", 
-          actual_end as "actualEnd"
+          id AS "ObjectId", 
+          name AS "Name", 
+          location AS "Location", 
+          status AS "Status", 
+          progress AS "PercentComplete", 
+          plan_start as "PlannedStartDate", 
+          plan_end as "PlannedFinishDate", 
+          actual_start as "ActualStartDate", 
+          actual_end as "ActualFinishDate"
         FROM projects
         ORDER BY name
       `);
@@ -65,15 +65,15 @@ const getProjectById = async (req, res) => {
       // For supervisors, check if they're assigned to this project
       result = await pool.query(`
         SELECT 
-          p.id, 
-          p.name, 
-          p.location, 
-          p.status, 
-          p.progress, 
-          p.plan_start as "planStart", 
-          p.plan_end as "planEnd", 
-          p.actual_start as "actualStart", 
-          p.actual_end as "actualEnd"
+          p.id AS "ObjectId", 
+          p.name AS "Name", 
+          p.location AS "Location", 
+          p.status AS "Status", 
+          p.progress AS "PercentComplete", 
+          p.plan_start as "PlannedStartDate", 
+          p.plan_end as "PlannedFinishDate", 
+          p.actual_start as "ActualStartDate", 
+          p.actual_end as "ActualFinishDate"
         FROM projects p
         INNER JOIN project_assignments pa ON p.id = pa.project_id
         WHERE p.id = $1 AND pa.user_id = $2
@@ -82,15 +82,15 @@ const getProjectById = async (req, res) => {
       // For PMAG and Site PM, get the project directly
       result = await pool.query(`
         SELECT 
-          id, 
-          name, 
-          location, 
-          status, 
-          progress, 
-          plan_start as "planStart", 
-          plan_end as "planEnd", 
-          actual_start as "actualStart", 
-          actual_end as "actualEnd"
+          id AS "ObjectId", 
+          name AS "Name", 
+          location AS "Location", 
+          status AS "Status", 
+          progress AS "PercentComplete", 
+          plan_start as "PlannedStartDate", 
+          plan_end as "PlannedFinishDate", 
+          actual_start as "ActualStartDate", 
+          actual_end as "ActualFinishDate"
         FROM projects
         WHERE id = $1
       `, [id]);
@@ -122,15 +122,15 @@ const createProject = async (req, res) => {
       (name, location, status, progress, plan_start, plan_end, actual_start, actual_end)
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING 
-        id, 
-        name, 
-        location, 
-        status, 
-        progress, 
-        plan_start as "planStart", 
-        plan_end as "planEnd", 
-        actual_start as "actualStart", 
-        actual_end as "actualEnd"
+        id AS "ObjectId", 
+        name AS "Name", 
+        location AS "Location", 
+        status AS "Status", 
+        progress AS "PercentComplete", 
+        plan_start as "PlannedStartDate", 
+        plan_end as "PlannedFinishDate", 
+        actual_start as "ActualStartDate", 
+        actual_end as "ActualFinishDate"
     `, [name, location, status, progress, planStart, planEnd, actualStart, actualEnd]);
     
     res.status(201).json(result.rows[0]);
@@ -164,15 +164,15 @@ const updateProject = async (req, res) => {
         actual_end = COALESCE($8, actual_end)
       WHERE id = $9
       RETURNING 
-        id, 
-        name, 
-        location, 
-        status, 
-        progress, 
-        plan_start as "planStart", 
-        plan_end as "planEnd", 
-        actual_start as "actualStart", 
-        actual_end as "actualEnd"
+        id AS "ObjectId", 
+        name AS "Name", 
+        location AS "Location", 
+        status AS "Status", 
+        progress AS "PercentComplete", 
+        plan_start as "PlannedStartDate", 
+        plan_end as "PlannedFinishDate", 
+        actual_start as "ActualStartDate", 
+        actual_end as "ActualFinishDate"
     `, [name, location, status, progress, planStart, planEnd, actualStart, actualEnd, id]);
     
     if (result.rows.length === 0) {
@@ -186,9 +186,40 @@ const updateProject = async (req, res) => {
   }
 };
 
+// Delete a project (PMAG/admin only)
+const deleteProject = async (req, res) => {
+  try {
+    // Check if user is PMAG (admin)
+    if (req.user.role !== 'PMAG') {
+      return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
+    }
+    
+    const { id } = req.params;
+    
+    // First delete any project assignments
+    await pool.query('DELETE FROM project_assignments WHERE project_id = $1', [id]);
+    
+    // Then delete the project
+    const result = await pool.query(
+      'DELETE FROM projects WHERE id = $1 RETURNING id AS "ObjectId"',
+      [id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    
+    res.status(200).json({ message: 'Project deleted successfully', project: result.rows[0] });
+  } catch (error) {
+    console.error('Error deleting project:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getUserProjects,
   getProjectById,
   createProject,
-  updateProject
+  updateProject,
+  deleteProject
 };

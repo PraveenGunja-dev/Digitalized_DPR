@@ -48,7 +48,7 @@ const assignProjectToSupervisor = async (req, res) => {
     
     // Assign project to supervisor
     const result = await pool.query(
-      'INSERT INTO project_assignments (project_id, user_id, assigned_by) VALUES ($1, $2, $3) RETURNING id, project_id, user_id, assigned_at',
+      'INSERT INTO project_assignments (project_id, user_id, assigned_by) VALUES ($1, $2, $3) RETURNING id AS "ObjectId", project_id AS "ProjectId", user_id AS "UserId", assigned_at AS "AssignedAt"',
       [projectId, supervisorId, req.user.userId]
     );
     
@@ -75,15 +75,15 @@ const getAssignedProjects = async (req, res) => {
     // Get projects assigned to this supervisor
     const result = await pool.query(`
       SELECT 
-        p.id, 
-        p.name, 
-        p.location, 
-        p.status, 
-        p.progress, 
-        p.plan_start as "planStart", 
-        p.plan_end as "planEnd", 
-        p.actual_start as "actualStart", 
-        p.actual_end as "actualEnd"
+        p.id AS "ObjectId", 
+        p.name AS "Name", 
+        p.location AS "Location", 
+        p.status AS "Status", 
+        p.progress AS "PercentComplete", 
+        p.plan_start as "PlannedStartDate", 
+        p.plan_end as "PlannedFinishDate", 
+        p.actual_start as "ActualStartDate", 
+        p.actual_end as "ActualFinishDate"
       FROM projects p
       INNER JOIN project_assignments pa ON p.id = pa.project_id
       WHERE pa.user_id = $1
@@ -110,10 +110,10 @@ const getProjectSupervisors = async (req, res) => {
     // Get supervisors assigned to this project
     const result = await pool.query(`
       SELECT 
-        u.user_id,
-        u.name,
-        u.email,
-        pa.assigned_at
+        u.user_id AS "ObjectId",
+        u.name AS "Name",
+        u.email AS "Email",
+        pa.assigned_at AS "AssignedAt"
       FROM users u
       INNER JOIN project_assignments pa ON u.user_id = pa.user_id
       WHERE pa.project_id = $1 AND u.role = 'supervisor'
@@ -144,7 +144,7 @@ const unassignProjectFromSupervisor = async (req, res) => {
     
     // Remove the assignment
     const result = await pool.query(
-      'DELETE FROM project_assignments WHERE project_id = $1 AND user_id = $2 RETURNING id',
+      'DELETE FROM project_assignments WHERE project_id = $1 AND user_id = $2 RETURNING id AS "ObjectId"',
       [projectId, supervisorId]
     );
     

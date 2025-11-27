@@ -5,13 +5,16 @@ const {
   getUserProjects, 
   getProjectById, 
   createProject, 
-  updateProject 
+  updateProject,
+  deleteProject 
 } = require('../controllers/projectsController');
 
 // All routes require authentication
-router.get('/user', getUserProjects);
-router.get('/:id', getProjectById);
-router.post('/', createProject);
-router.put('/:id', updateProject);
+// Oracle P6 API equivalent endpoints
+router.get('/', getUserProjects);  // Equivalent to GET /project
+router.get('/:id', getProjectById);  // Equivalent to GET /project/{id}
+router.post('/', createProject);  // Equivalent to POST /project
+router.put('/:id', updateProject);  // Equivalent to PUT /project/{id}
+router.delete('/:id', deleteProject);  // Equivalent to DELETE /project/{id}
 
 module.exports = router;

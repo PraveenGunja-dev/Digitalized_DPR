@@ -11,14 +11,14 @@ const Projects = () => {
   const { user } = useAuth();
   
   // Use authenticated user role if available, otherwise fallback to location state
-  const role = user?.role || (location.state?.role || "User");
+  const role = user?.Role || (location.state?.role || "User");
 
   // This component is now just a placeholder for the old dashboard selection
   // The new ProjectsPage component handles the actual project listing
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userName={user?.name || "User"} userRole={role} />
+      <Navbar userName={user?.Name || "User"} userRole={role} />
 
       <div className="container mx-auto px-4 py-8">
         <motion.div

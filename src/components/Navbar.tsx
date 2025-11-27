@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useEffect } from "react";
 
 interface NavbarProps {
   userName?: string;
@@ -24,7 +25,14 @@ interface NavbarProps {
 
 export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProject, onAssignProject }: NavbarProps) => {
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user, refreshUserProfile } = useAuth();
+
+  // Fetch user profile on component mount
+  useEffect(() => {
+    if (!user) {
+      refreshUserProfile();
+    }
+  }, [user, refreshUserProfile]);
 
   const handleLogout = () => {
     logout();
@@ -67,6 +75,10 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
     navigate("/projects");
   };
 
+  // Use the user data from context if available, otherwise use props
+  const displayName = user?.Name || userName || "User";
+  const displayRole = user?.Role || userRole || "Role";
+
   return (
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
@@ -91,59 +103,57 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
           )}
         </div>
 
-        {userName && (
-          <div className="flex items-center space-x-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
-                <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{userName}</p>
-                    <p className="text-xs leading-none text-muted-foreground">{userRole}</p>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuGroup>
-                  {userRole === "PMAG" && (
-                    <>
-                      <DropdownMenuItem onClick={handleAddUser}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Add User</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleAddProject}>
-                        <FolderPlus className="mr-2 h-4 w-4" />
-                        <span>Add Project</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleAssignProject}>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        <span>Assign Project</span>
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                  <DropdownMenuItem onClick={handleProjects}>
-                    <FolderPlus className="mr-2 h-4 w-4" />
-                    <span>Projects</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleCharts}>
-                    <BarChart3 className="mr-2 h-4 w-4" />
-                    <span>Charts</span>
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Log out</span>
+        <div className="flex items-center space-x-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <User className="w-4 h-4 text-white" />
+                </div>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end" forceMount>
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{displayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{displayRole}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuGroup>
+                {displayRole === "PMAG" && (
+                  <>
+                    <DropdownMenuItem onClick={handleAddUser}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Add User</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAddProject}>
+                      <FolderPlus className="mr-2 h-4 w-4" />
+                      <span>Add Project</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAssignProject}>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      <span>Assign Project</span>
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem onClick={handleProjects}>
+                  <FolderPlus className="mr-2 h-4 w-4" />
+                  <span>Projects</span>
                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        )}
+                <DropdownMenuItem onClick={handleCharts}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  <span>Charts</span>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Log out</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </motion.nav>
   );

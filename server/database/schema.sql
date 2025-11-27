@@ -40,9 +40,9 @@ CREATE TABLE IF NOT EXISTS project_assignments (
 -- Insert sample users with actual passwords
 -- Password for all users is "admin123"
 INSERT INTO users (name, email, password, role) VALUES
-('Admin User', 'admin@adani.com', '$2b$10$example_hashed_password', 'PMAG'),
-('Project Manager', 'pm@adani.com', '$2b$10$example_hashed_password', 'Site PM'),
-('Supervisor User', 'supervisor@adani.com', '$2b$10$example_hashed_password', 'supervisor')
+('Admin User', 'admin@adani.com', '$2b$10$OO9bNrLlL3oOQz2rJQKGtOiNIH5TZo4hum3XTkJy4M5cnSpVVwOJK', 'PMAG'),
+('Project Manager', 'pm@adani.com', '$2b$10$OO9bNrLlL3oOQz2rJQKGtOiNIH5TZo4hum3XTkJy4M5cnSpVVwOJK', 'Site PM'),
+('Supervisor User', 'supervisor@adani.com', '$2b$10$OO9bNrLlL3oOQz2rJQKGtOiNIH5TZo4hum3XTkJy4M5cnSpVVwOJK', 'supervisor')
 ON CONFLICT (email) DO NOTHING;
 
 -- Insert sample projects
@@ -51,3 +51,5 @@ INSERT INTO projects (name, location, status, progress, plan_start, plan_end) VA
 ('Ahmedabad Metro Line 2', 'Ahmedabad, Gujarat', 'active', 45, '2025-02-01', '2025-11-30'),
 ('Chennai Coastal Road', 'Chennai, Tamil Nadu', 'planning', 10, '2025-02-01', '2025-11-30')
 ON CONFLICT DO NOTHING;
+
+-- Note: Activities schema is defined in activities-schema.sql for Oracle P6 API compatibility
