@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Building2, User, LogOut, Users, FolderPlus, BarChart3, UserPlus } from "lucide-react";
+import { Building2, User, LogOut, Users, FolderPlus, BarChart3, UserPlus, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/modules/auth/contexts/AuthContext";
@@ -21,9 +21,10 @@ interface NavbarProps {
   onAddUser?: () => void;
   onAddProject?: () => void;
   onAssignProject?: () => void;
+  onAddIssue?: () => void;
 }
 
-export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProject, onAssignProject }: NavbarProps) => {
+export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProject, onAssignProject, onAddIssue }: NavbarProps) => {
   const navigate = useNavigate();
   const { logout, user, refreshUserProfile } = useAuth();
 
@@ -66,6 +67,15 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
     }
   };
 
+  const handleAddIssue = () => {
+    if (onAddIssue) {
+      onAddIssue();
+    } else {
+      // Navigate to supervisor dashboard issues tab if no handler is provided
+      navigate("/supervisor", { state: { openAddIssueModal: true, activeTab: "issues" } });
+    }
+  };
+
   const handleCharts = () => {
     // Navigate to charts page or open charts modal
     alert("Charts functionality will be implemented soon!");
@@ -83,17 +93,31 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
     <motion.nav
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 100, 
+        damping: 15,
+        duration: 0.5 
+      }}
       className="sticky top-0 z-50 w-full border-b border-border glass-effect"
     >
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Adani Workflow
-            </span>
+            <img 
+              src="/logo.png" 
+              alt="Adani Logo" 
+              className="h-8 w-auto"
+              onError={(e) => {
+                // Fallback to text if image doesn't load
+                e.currentTarget.onerror = null;
+                e.currentTarget.style.display = 'none';
+                const textElement = document.createElement('span');
+                textElement.className = 'text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent';
+                textElement.textContent = 'Adani Workflow';
+                e.currentTarget.parentElement?.appendChild(textElement);
+              }}
+            />
           </div>
           {projectName && (
             <div className="hidden md:flex items-center space-x-2 pl-4 border-l border-border">
@@ -113,44 +137,56 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end" forceMount>
-              <DropdownMenuLabel className="font-normal">
-                <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">{displayName}</p>
-                  <p className="text-xs leading-none text-muted-foreground">{displayRole}</p>
-                </div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                {displayRole === "PMAG" && (
-                  <>
-                    <DropdownMenuItem onClick={handleAddUser}>
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Add User</span>
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{displayName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{displayRole}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  {displayRole === "PMAG" && (
+                    <>
+                      <DropdownMenuItem onClick={handleAddUser}>
+                        <Users className="mr-2 h-4 w-4" />
+                        <span>Add User</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleAddProject}>
+                        <FolderPlus className="mr-2 h-4 w-4" />
+                        <span>Add Project</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleAssignProject}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        <span>Assign Project</span>
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  {displayRole === "supervisor" && (
+                    <DropdownMenuItem onClick={handleAddIssue}>
+                      <AlertCircle className="mr-2 h-4 w-4" />
+                      <span>Add Issue</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleAddProject}>
-                      <FolderPlus className="mr-2 h-4 w-4" />
-                      <span>Add Project</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleAssignProject}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      <span>Assign Project</span>
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuItem onClick={handleProjects}>
-                  <FolderPlus className="mr-2 h-4 w-4" />
-                  <span>Projects</span>
+                  )}
+                  <DropdownMenuItem onClick={handleProjects}>
+                    <FolderPlus className="mr-2 h-4 w-4" />
+                    <span>Projects</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleCharts}>
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <span>Charts</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleCharts}>
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  <span>Charts</span>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-              </DropdownMenuItem>
+              </motion.div>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

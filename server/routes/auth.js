@@ -2,6 +2,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
 
 // We'll pass the pool from server.js when registering the routes
 let pool;
@@ -37,6 +38,28 @@ const isPMAG = (req, res, next) => {
 
 // We'll pass the authenticateToken middleware from server.js when registering the routes
 let authenticateToken;
+
+// In-memory store for refresh tokens (in production, use Redis or database)
+const refreshTokens = new Map();
+
+// Generate tokens function
+const generateTokens = (user) => {
+  // Short-lived access token (15 minutes)
+  const accessToken = jwt.sign(
+    { userId: user.user_id || user.userId, email: user.email, role: user.role },
+    process.env.JWT_SECRET || 'adani_flow_secret_key',
+    { expiresIn: '15m' }
+  );
+  
+  // Long-lived refresh token (7 days)
+  const refreshToken = jwt.sign(
+    { userId: user.user_id || user.userId, email: user.email, role: user.role, tokenId: uuidv4() },
+    process.env.REFRESH_TOKEN_SECRET || 'adani_flow_refresh_secret_key',
+    { expiresIn: '7d' }
+  );
+  
+  return { accessToken, refreshToken };
+};
 
 // Register a new user (no authentication required)
 // Oracle P6 equivalent would be creating a new user in the system
@@ -86,17 +109,21 @@ router.post('/register', async (req, res) => {
 
     const user = result.rows[0];
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.user_id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'adani_flow_secret_key',
-      { expiresIn: '24h' }
-    );
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+    
+    // Store refresh token
+    refreshTokens.set(refreshToken, { 
+      userId: user.user_id, 
+      email: user.email, 
+      role: user.role 
+    });
 
     // Oracle P6 API compatible response format
     res.status(201).json({
       message: 'User registered successfully',
-      token,
+      accessToken,
+      refreshToken,
       user: {
         ObjectId: user.user_id,  // Oracle P6 uses ObjectId
         Name: user.name,         // Oracle P6 uses PascalCase
@@ -104,7 +131,7 @@ router.post('/register', async (req, res) => {
         Role: user.role
       },
       // Additional Oracle P6 compatible fields
-      sessionId: token,
+      sessionId: accessToken,
       loginStatus: 'SUCCESS'
     });
   } catch (error) {
@@ -154,12 +181,15 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { userId: user.user_id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'adani_flow_secret_key',
-      { expiresIn: '24h' }
-    );
+    // Generate tokens
+    const { accessToken, refreshToken } = generateTokens(user);
+    
+    // Store refresh token
+    refreshTokens.set(refreshToken, { 
+      userId: user.user_id, 
+      email: user.email, 
+      role: user.role 
+    });
 
     // Remove password from user object
     const { password: _, ...userWithoutPassword } = user;
@@ -167,7 +197,8 @@ router.post('/login', async (req, res) => {
     // Oracle P6 API compatible response format
     res.status(200).json({
       message: 'Login successful',
-      token,
+      accessToken,
+      refreshToken,
       user: {
         ObjectId: userWithoutPassword.user_id,  // Oracle P6 uses ObjectId
         Name: userWithoutPassword.name,         // Oracle P6 uses PascalCase
@@ -175,13 +206,75 @@ router.post('/login', async (req, res) => {
         Role: userWithoutPassword.role
       },
       // Additional Oracle P6 compatible fields
-      sessionId: token,
+      sessionId: accessToken,
       loginStatus: 'SUCCESS'
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
+});
+
+// Refresh token endpoint
+router.post('/refresh-token', async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (!refreshToken) {
+    return res.status(401).json({ message: 'Refresh token is required' });
+  }
+
+  try {
+    // Verify refresh token
+    const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || 'adani_flow_refresh_secret_key');
+    
+    // Check if refresh token exists in our store
+    const storedToken = refreshTokens.get(refreshToken);
+    if (!storedToken) {
+      return res.status(403).json({ message: 'Invalid refresh token' });
+    }
+
+    // Check if token matches stored data
+    if (decoded.userId !== storedToken.userId) {
+      return res.status(403).json({ message: 'Invalid refresh token' });
+    }
+
+    // Generate new tokens
+    const user = {
+      userId: storedToken.userId,
+      email: storedToken.email,
+      role: storedToken.role
+    };
+    
+    const { accessToken, refreshToken: newRefreshToken } = generateTokens(user);
+    
+    // Remove old refresh token and store new one
+    refreshTokens.delete(refreshToken);
+    refreshTokens.set(newRefreshToken, storedToken);
+
+    res.status(200).json({
+      accessToken,
+      refreshToken: newRefreshToken
+    });
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      // Remove expired token from store
+      refreshTokens.delete(refreshToken);
+      return res.status(401).json({ message: 'Refresh token expired' });
+    }
+    return res.status(403).json({ message: 'Invalid refresh token' });
+  }
+});
+
+// Logout endpoint - revoke refresh token
+router.post('/logout', async (req, res) => {
+  const { refreshToken } = req.body;
+
+  if (refreshToken) {
+    // Remove refresh token from store
+    refreshTokens.delete(refreshToken);
+  }
+
+  res.status(200).json({ message: 'Logout successful' });
 });
 
 // Get user profile (requires authentication)

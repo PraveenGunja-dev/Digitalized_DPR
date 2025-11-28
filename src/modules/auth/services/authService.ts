@@ -22,7 +22,8 @@ export interface LoginCredentials {
 }
 
 export interface AuthResponse {
-  token: string;
+  accessToken: string;
+  refreshToken: string;
   user: User;
   sessionId?: string;
   loginStatus?: string;
@@ -49,15 +50,42 @@ export const setAuthToken = (token: string | null) => {
   }
 };
 
+// Refresh token function
+export const refreshAccessToken = async (refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> => {
+  try {
+    const response = await api.post('/auth/refresh-token', { refreshToken });
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      axios.isAxiosError(error) && error.response
+        ? error.response.data.message || 'Failed to refresh token'
+        : 'Network error'
+    );
+  }
+};
+
 // Normalize user data from different API responses to Oracle P6 style
 const normalizeUser = (userData: any): User => {
   // Handle standard response (snake_case)
   if (userData.user_id !== undefined) {
+    // Normalize role to ensure it matches expected values
+    let normalizedRole: 'supervisor' | 'Site PM' | 'PMAG' = 'supervisor'; // default
+    if (userData.role) {
+      const roleStr = userData.role.toString().trim().toLowerCase();
+      if (roleStr === 'supervisor') {
+        normalizedRole = 'supervisor';
+      } else if (roleStr === 'site pm' || roleStr === 'sitepm') {
+        normalizedRole = 'Site PM';
+      } else if (roleStr === 'pmag') {
+        normalizedRole = 'PMAG';
+      }
+    }
+    
     return {
       ObjectId: userData.user_id,
       Name: userData.name,
       Email: userData.email,
-      Role: userData.role
+      Role: normalizedRole
     };
   }
   
@@ -79,10 +107,7 @@ export const registerUser = async (userData: Omit<User, 'ObjectId'>): Promise<Au
       password: userData.password,
       role: userData.Role
     });
-    return {
-      ...response.data,
-      user: normalizeUser(response.data.user)
-    };
+    return response.data;
   } catch (error) {
     throw new Error(
       axios.isAxiosError(error) && error.response
@@ -96,16 +121,23 @@ export const registerUser = async (userData: Omit<User, 'ObjectId'>): Promise<Au
 export const loginUser = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
     const response = await api.post<AuthResponse>('/login', credentials);
-    return {
-      ...response.data,
-      user: normalizeUser(response.data.user)
-    };
+    return response.data;
   } catch (error) {
     throw new Error(
       axios.isAxiosError(error) && error.response
         ? error.response.data.message || 'Login failed'
         : 'Network error'
     );
+  }
+};
+
+// Logout user
+export const logoutUser = async (refreshToken: string): Promise<void> => {
+  try {
+    await api.post('/logout', { refreshToken });
+  } catch (error) {
+    // Even if logout fails, we still want to clear local storage
+    console.error('Logout error:', error);
   }
 };
 

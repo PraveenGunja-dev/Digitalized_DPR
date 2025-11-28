@@ -73,7 +73,11 @@ Responses now include Oracle P6 compatible fields:
 
 ## Authentication Endpoints
 
-- `GET /auth/profile` - Get user profile (traditional)
+- `POST /login` - Authenticate user and return access/refresh tokens
+- `POST /register` - Register new user
+- `POST /auth/refresh-token` - Refresh access token using refresh token
+- `POST /logout` - Invalidate refresh token
+- `GET /auth/profile` - Get user profile (requires authentication)
 
 ## Project Endpoints
 
@@ -122,20 +126,28 @@ node server/test-oracle-p6-api.js
 
 1. Update all API calls to remove the `/api` prefix
 2. Update authentication to use `/login` instead of `/auth/login`
+3. Implement refresh token handling for long-lived sessions
 
 ```javascript
-// Before (with /api prefix)
-const response = await fetch('/login', {
+// Login example with refresh token handling
+const loginResponse = await fetch('/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(credentials)
 });
 
-// After (pure P6 style)
-const response = await fetch('/login', {
+const { accessToken, refreshToken } = await loginResponse.json();
+
+// Use accessToken for authenticated requests
+// Store refreshToken securely for session renewal
+
+// Refresh token example
+const refreshResponse = await fetch('/auth/refresh-token', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(credentials)
+  body: JSON.stringify({ refreshToken })
 });
+
+const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await refreshResponse.json();
 ```
 

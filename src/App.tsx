@@ -12,6 +12,9 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "@/modules/auth/contexts/AuthContext";
 import { ProtectedRoute } from "@/modules/auth/components/ProtectedRoute";
 
+// Debug log to check if SupervisorDashboard is imported
+console.log("SupervisorDashboard component:", SupervisorDashboard);
+
 const queryClient = new QueryClient();
 
 const App = () => (

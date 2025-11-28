@@ -24,6 +24,8 @@ if (process.env.NODE_ENV !== 'production') {
   console.log('DB_PORT:', process.env.DB_PORT);
   console.log('DB_NAME:', process.env.DB_NAME);
   console.log('DB_USER:', process.env.DB_USER);
+  console.log('JWT_SECRET:', process.env.JWT_SECRET ? 'SET' : 'NOT SET');
+  console.log('REFRESH_TOKEN_SECRET:', process.env.REFRESH_TOKEN_SECRET ? 'SET' : 'NOT SET');
 }
 
 // PostgreSQL connection pool
@@ -80,7 +82,7 @@ const authenticateToken = (req, res, next) => {
       // Oracle P6 compatible error format
       error: {
         code: 'AUTH_TOKEN_MISSING',
-        description: 'Authentication token is missing'
+        description: 'Authentication token is required'
       }
     });
   }
@@ -107,6 +109,11 @@ const authenticateToken = (req, res, next) => {
     req.user = user; // Attach the decoded user data to the request object
     next();
   });
+};
+
+// Refresh token middleware for refresh token endpoint (doesn't require authentication)
+const refreshTokenMiddleware = (req, res, next) => {
+  next();
 };
 
 // Import routes
@@ -151,6 +158,21 @@ app.post('/register', async (req, res, next) => {
   if (registerLayer) {
     // Call the register handler directly
     return registerLayer.route.stack[0].handle(req, res, next);
+  } else {
+    return res.status(404).json({ message: 'Route not found' });
+  }
+});
+
+// Refresh token endpoint
+app.post('/auth/refresh-token', refreshTokenMiddleware, async (req, res, next) => {
+  // Find the refresh token route handler in the auth router
+  const refreshLayer = authRouter.stack.find(layer => 
+    layer.route && layer.route.path === '/refresh-token' && layer.route.methods.post
+  );
+  
+  if (refreshLayer) {
+    // Call the refresh token handler directly
+    return refreshLayer.route.stack[0].handle(req, res, next);
   } else {
     return res.status(404).json({ message: 'Route not found' });
   }
@@ -237,3 +259,5 @@ app.listen(PORT, () => {
 });
 
 module.exports = { app, pool, authenticateToken };
+
+

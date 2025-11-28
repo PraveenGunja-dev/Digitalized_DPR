@@ -29,7 +29,7 @@ async function testAllRoutes() {
         password: 'admin123'
       });
       console.log('   ✓ Traditional auth login working');
-      const token = authLoginResponse.data.token;
+      const token = authLoginResponse.data.accessToken;
       console.log(`   Token received: ${token ? 'Yes' : 'No'}\n`);
       
       // Test 4: Oracle P6 style project endpoints with auth
