@@ -36,6 +36,15 @@ const isPMAG = (req, res, next) => {
   }
 };
 
+// Middleware to check if user is Site PM
+const isSitePM = (req, res, next) => {
+  if (req.user && req.user.role === 'Site PM') {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied. Site PM privileges required.' });
+  }
+};
+
 // We'll pass the authenticateToken middleware from server.js when registering the routes
 let authenticateToken;
 
@@ -61,9 +70,47 @@ const generateTokens = (user) => {
   return { accessToken, refreshToken };
 };
 
-// Register a new user (no authentication required)
+// Register a new user (requires authentication based on role hierarchy)
 // Oracle P6 equivalent would be creating a new user in the system
-router.post('/register', async (req, res) => {
+router.post('/register', async (req, res, next) => {
+  // First authenticate the requesting user
+  if (authenticateToken) {
+    authenticateToken(req, res, () => {
+      // After authentication, check role-based permissions
+      const { role } = req.body;
+      
+      // Validate role hierarchy:
+      // - PMAG can create Site PM and PMAG users
+      // - Site PM can create Supervisor users
+      // - Others cannot create users
+      
+      if (req.user.role === 'PMAG') {
+        // PMAG can create Site PM and PMAG users
+        if (role !== 'Site PM' && role !== 'PMAG') {
+          return res.status(403).json({ 
+            message: 'PMAG users can only create Site PM and PMAG users.' 
+          });
+        }
+        next(); // Allow registration
+      } else if (req.user.role === 'Site PM') {
+        // Site PM can only create Supervisor users
+        if (role !== 'supervisor') {
+          return res.status(403).json({ 
+            message: 'Site PM users can only create Supervisor users.' 
+          });
+        }
+        next(); // Allow registration
+      } else {
+        // Other roles cannot create users
+        return res.status(403).json({ 
+          message: 'Access denied. Only PMAG and Site PM users can create new users.' 
+        });
+      }
+    });
+  } else {
+    next();
+  }
+}, async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -121,7 +168,7 @@ router.post('/register', async (req, res) => {
 
     // Oracle P6 API compatible response format
     res.status(201).json({
-      message: 'User registered successfully',
+      message: 'User registered successfully. Note: Projects can only be assigned at user creation time.',
       accessToken,
       refreshToken,
       user: {
@@ -320,11 +367,16 @@ router.get('/profile', (req, res, next) => {
   }
 }, getUserProfile);
 
-// Get all supervisors (requires authentication and PMAG role)
+// Get all supervisors (requires authentication and PMAG or Site PM role)
 router.get('/supervisors', (req, res, next) => {
   if (authenticateToken) {
     authenticateToken(req, res, () => {
-      isPMAG(req, res, next);
+      // Allow both PMAG and Site PM to fetch supervisors
+      if (req.user.role === 'PMAG' || req.user.role === 'Site PM') {
+        next();
+      } else {
+        res.status(403).json({ message: 'Access denied. PMAG or Site PM privileges required.' });
+      }
     });
   } else {
     next();

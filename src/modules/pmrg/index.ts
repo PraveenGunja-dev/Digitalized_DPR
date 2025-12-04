@@ -1,1 +1,1 @@
-export { default as PMRGDashboard } from './PMRGDashboard';
+export { default as PMRGDashboard } from './PMAGDashboard';

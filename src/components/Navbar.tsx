@@ -1,9 +1,9 @@
-import { motion } from "framer-motion";
-import { Building2, User, LogOut, Users, FolderPlus, BarChart3, UserPlus, AlertCircle, Bell } from "lucide-react";
-import { Button } from "./ui/button";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/modules/auth/contexts/AuthContext";
-import { useNotification } from "@/modules/auth/contexts/NotificationContext";
+import { motion } from "framer-motion"
+import { Building2, User, LogOut, Users, FolderPlus, BarChart3, UserPlus, AlertCircle, Bell } from "lucide-react"
+import { Button } from "./ui/button"
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/modules/auth/contexts/AuthContext"
+import { useNotification } from "@/modules/auth/contexts/NotificationContext"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,84 +12,95 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useEffect } from "react";
+} from "@/components/ui/dropdown-menu"
+import { useEffect } from "react"
+import { ThemeToggle } from "@/components/ThemeToggle"
 
 interface NavbarProps {
-  userName?: string;
-  userRole?: string;
-  projectName?: string;
-  onAddUser?: () => void;
-  onAddProject?: () => void;
-  onAssignProject?: () => void;
-  onAddIssue?: () => void;
+  userName?: string
+  userRole?: string
+  projectName?: string
+  onAddUser?: () => void
+  onAddProject?: () => void
+  onAssignProject?: () => void
+  onAddIssue?: () => void
 }
 
 export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProject, onAssignProject, onAddIssue }: NavbarProps) => {
-  const navigate = useNavigate();
-  const { logout, user, refreshUserProfile } = useAuth();
-  const { notifications, unreadCount, markAllAsRead } = useNotification();
+  // Note: User creation is role-based:
+  // - PMAG can create Site PM and PMAG users
+  // - Site PM can only create supervisors
+  // - Supervisors cannot create users
+  const navigate = useNavigate()
+  const { logout, user, refreshUserProfile } = useAuth()
+  const { notifications, unreadCount, markAllAsRead } = useNotification()
 
   // Fetch user profile on component mount
   useEffect(() => {
     if (!user) {
-      refreshUserProfile();
+      refreshUserProfile()
     }
-  }, [user, refreshUserProfile]);
+  }, [user, refreshUserProfile])
 
   const handleLogout = () => {
-    logout();
-    navigate("/");
-  };
+    logout()
+    navigate("/")
+  }
 
   const handleAddUser = () => {
     if (onAddUser) {
-      onAddUser();
+      onAddUser()
     } else {
-      // Default behavior if no handler is provided
-      alert("Add User functionality is not available for this user role");
+      // Default behavior based on user role
+      if (displayRole === "PMAG") {
+        alert("PMAG: Add User functionality should allow creating Site PM and PMAG users")
+      } else if (displayRole === "Site PM") {
+        alert("Site PM: Add User functionality should only allow creating supervisors")
+      } else {
+        alert("Add User functionality is not available for this user role")
+      }
     }
-  };
+  }
 
   const handleAddProject = () => {
     if (onAddProject) {
-      onAddProject();
+      onAddProject()
     } else {
       // Default behavior if no handler is provided
-      alert("Add Project functionality is not available for this user role");
+      alert("Add Project functionality is not available for this user role")
     }
-  };
+  }
 
   const handleAssignProject = () => {
     if (onAssignProject) {
-      onAssignProject();
+      onAssignProject()
     } else {
       // Default behavior if no handler is provided
-      alert("Assign Project functionality is not available for this user role");
+      alert("Assign Project functionality is not available for this user role")
     }
-  };
+  }
 
   const handleAddIssue = () => {
     if (onAddIssue) {
-      onAddIssue();
+      onAddIssue()
     } else {
       // Navigate to supervisor dashboard issues tab if no handler is provided
-      navigate("/supervisor", { state: { openAddIssueModal: true, activeTab: "issues" } });
+      navigate("/supervisor", { state: { openAddIssueModal: true, activeTab: "issues" } })
     }
-  };
+  }
 
   const handleCharts = () => {
     // Navigate to charts page or open charts modal
-    alert("Charts functionality will be implemented soon!");
-  };
+    alert("Charts functionality will be implemented soon!")
+  }
 
   const handleProjects = () => {
-    navigate("/projects");
-  };
+    navigate("/projects")
+  }
 
   // Use the user data from context if available, otherwise use props
-  const displayName = user?.Name || userName || "User";
-  const displayRole = user?.Role || userRole || "Role";
+  const displayName = user?.Name || userName || "User"
+  const displayRole = user?.Role || userRole || "Role"
 
   return (
     <motion.nav
@@ -112,12 +123,12 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
               className="h-8 w-auto"
               onError={(e) => {
                 // Fallback to text if image doesn't load
-                e.currentTarget.onerror = null;
-                e.currentTarget.style.display = 'none';
-                const textElement = document.createElement('span');
-                textElement.className = 'text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent';
-                textElement.textContent = 'Adani Workflow';
-                e.currentTarget.parentElement?.appendChild(textElement);
+                e.currentTarget.onerror = null
+                e.currentTarget.style.display = 'none'
+                const textElement = document.createElement('span')
+                textElement.className = 'text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent'
+                textElement.textContent = 'Adani Workflow'
+                e.currentTarget.parentElement?.appendChild(textElement)
               }}
             />
           </div>
@@ -130,6 +141,9 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
         </div>
 
         <div className="flex items-center space-x-4">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
           {/* Notification Bell */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -204,16 +218,25 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   {displayRole === "PMAG" && (
+                    <DropdownMenuItem onClick={handleAddUser}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Add User (Site PM/PMAG)</span>
+                    </DropdownMenuItem>
+                  )}
+                  {displayRole === "Site PM" && (
+                    <DropdownMenuItem onClick={handleAddUser}>
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Add Supervisor</span>
+                    </DropdownMenuItem>
+                  )}
+                  {displayRole === "PMAG" && (
                     <>
-                      <DropdownMenuItem onClick={handleAddUser}>
-                        <Users className="mr-2 h-4 w-4" />
-                        <span>Add User</span>
-                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleAddProject}>
                         <FolderPlus className="mr-2 h-4 w-4" />
                         <span>Add Project</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleAssignProject}>
+                      {/* Only PMAG can assign projects separately (not at creation time) */}
+                      <DropdownMenuItem onClick={onAssignProject}>
                         <UserPlus className="mr-2 h-4 w-4" />
                         <span>Assign Project</span>
                       </DropdownMenuItem>
@@ -245,5 +268,5 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
         </div>
       </div>
     </motion.nav>
-  );
-};
+  )
+}

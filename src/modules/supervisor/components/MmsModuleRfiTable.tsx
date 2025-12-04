@@ -19,13 +19,12 @@ interface MmsModuleRfiTableProps {
   data: MmsModuleRfiData[];
   setData: (data: MmsModuleRfiData[]) => void;
   onSave: () => void;
-  onSubmit?: () => void;
   yesterday: string;
   today: string;
   isLocked?: boolean;
 }
 
-export function MmsModuleRfiTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false }: MmsModuleRfiTableProps) {
+export function MmsModuleRfiTable({ data, setData, onSave, yesterday, today, isLocked = false }: MmsModuleRfiTableProps) {
   // Define columns
   const columns = [
     "RFI No",
@@ -86,7 +85,6 @@ export function MmsModuleRfiTable({ data, setData, onSave, onSubmit, yesterday, 
         data={tableData}
         onDataChange={handleDataChange}
         onSave={onSave}
-        onSubmit={onSubmit}
         isReadOnly={isLocked}
       />
     </div>

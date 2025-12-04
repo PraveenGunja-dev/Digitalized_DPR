@@ -137,51 +137,70 @@ app.use('/project-assignment', authenticateToken, projectAssignmentRoutes);
 app.use('/dpr', authenticateToken, dprRoutes);
 app.use('/dpr-supervisor', authenticateToken, dprSupervisorRoutes);
 
-// Import individual route handlers
-const { router: authRouter } = require('./routes/auth');
-
 // Alternative Oracle P6 compatible login endpoint
 app.post('/login', async (req, res, next) => {
-  // Find the login route handler in the auth router
-  const loginLayer = authRouter.stack.find(layer => 
-    layer.route && layer.route.path === '/login' && layer.route.methods.post
-  );
-  
-  if (loginLayer) {
-    // Call the login handler directly
-    return loginLayer.route.stack[0].handle(req, res, next);
-  } else {
-    return res.status(404).json({ message: 'Route not found' });
+  try {
+    // Find the login route handler in the auth router
+    const loginLayer = authRoutes.stack.find(layer => 
+      layer.route && layer.route.path === '/login' && layer.route.methods.post
+    );
+    
+    if (loginLayer && loginLayer.route && loginLayer.route.stack && loginLayer.route.stack[0]) {
+      // Call the login handler directly
+      return loginLayer.route.stack[0].handle(req, res, next);
+    } else {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+  } catch (error) {
+    console.error('Error in login endpoint:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Alternative Oracle P6 compatible register endpoint
 app.post('/register', async (req, res, next) => {
-  // Find the register route handler in the auth router
-  const registerLayer = authRouter.stack.find(layer => 
-    layer.route && layer.route.path === '/register' && layer.route.methods.post
-  );
-  
-  if (registerLayer) {
-    // Call the register handler directly
-    return registerLayer.route.stack[0].handle(req, res, next);
-  } else {
-    return res.status(404).json({ message: 'Route not found' });
+  try {
+    // Find the register route handler in the auth router
+    // Note: In Express router, paths are relative, so we look for '/register' not '/auth/register'
+    const registerLayer = authRoutes.stack.find(layer => 
+      layer.route && layer.route.path === '/register' && layer.route.methods.post
+    );
+    
+    if (registerLayer && registerLayer.route && registerLayer.route.stack && registerLayer.route.stack[0]) {
+      // Call the register handler directly
+      return registerLayer.route.stack[0].handle(req, res, next);
+    } else {
+      console.log('Register route not found in auth router. Available routes:', 
+        authRoutes.stack.filter(l => l.route).map(l => ({
+          path: l.route.path,
+          methods: Object.keys(l.route.methods)
+        }))
+      );
+      return res.status(404).json({ message: 'Route not found' });
+    }
+  } catch (error) {
+    console.error('Error in register endpoint:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
 // Refresh token endpoint
 app.post('/auth/refresh-token', refreshTokenMiddleware, async (req, res, next) => {
-  // Find the refresh token route handler in the auth router
-  const refreshLayer = authRouter.stack.find(layer => 
-    layer.route && layer.route.path === '/refresh-token' && layer.route.methods.post
-  );
-  
-  if (refreshLayer) {
-    // Call the refresh token handler directly
-    return refreshLayer.route.stack[0].handle(req, res, next);
-  } else {
-    return res.status(404).json({ message: 'Route not found' });
+  try {
+    // Find the refresh token route handler in the auth router
+    const refreshLayer = authRoutes.stack.find(layer => 
+      layer.route && layer.route.path === '/refresh-token' && layer.route.methods.post
+    );
+    
+    if (refreshLayer && refreshLayer.route && refreshLayer.route.stack && refreshLayer.route.stack[0]) {
+      // Call the refresh token handler directly
+      return refreshLayer.route.stack[0].handle(req, res, next);
+    } else {
+      return res.status(404).json({ message: 'Route not found' });
+    }
+  } catch (error) {
+    console.error('Error in refresh token endpoint:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 

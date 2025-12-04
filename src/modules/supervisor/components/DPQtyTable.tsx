@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { ExcelSheet } from "@/components/ExcelSheet";
+import { ExcelTable } from "@/components/ExcelTable";
 import { getTodayAndYesterday } from "@/modules/auth/services/dprSupervisorService";
 import { toast } from "sonner";
 
@@ -26,13 +26,14 @@ interface DPQtyTableProps {
   data: DPQtyData[];
   setData: (data: DPQtyData[]) => void;
   onSave: () => void;
+  onSubmit?: () => void;
   isLocked?: boolean;
 }
 
-export function DPQtyTable({ data, setData, onSave, isLocked = false }: DPQtyTableProps) {
+export function DPQtyTable({ data, setData, onSave, onSubmit, isLocked = false }: DPQtyTableProps) {
   const { today, yesterday } = getTodayAndYesterday();
   
-  // Convert data to the format expected by ExcelSheet
+  // Convert data to the format expected by ExcelTable
   const columns = [
     "Sl.No",
     "Description",
@@ -49,8 +50,8 @@ export function DPQtyTable({ data, setData, onSave, isLocked = false }: DPQtyTab
     "Cumulative"
   ];
   
-  // Convert array of objects to array of arrays for rows
-  const rowData = data.map(row => [
+  // Convert array of objects to array of arrays
+  const tableData = data.map(row => [
     row.slNo,
     row.description,
     row.totalQuantity,
@@ -66,15 +67,7 @@ export function DPQtyTable({ data, setData, onSave, isLocked = false }: DPQtyTab
     row.cumulative
   ]);
   
-  // Convert to CellData format for ExcelSheet
-  const rows = rowData.map(row => 
-    row.map(cell => ({
-      value: cell || "",
-      readOnly: isLocked || false
-    }))
-  );
-
-  // Handle data changes from ExcelSheet
+  // Handle data changes from ExcelTable
   const handleDataChange = (newData: any[][]) => {
     // Convert array of arrays back to array of objects
     const updatedData = newData.map(row => ({
@@ -108,16 +101,14 @@ export function DPQtyTable({ data, setData, onSave, isLocked = false }: DPQtyTab
         )}
       </div>
       
-      <ExcelSheet
+      <ExcelTable
         title="DP Qty Table"
         columns={columns}
-        rows={rows}
-        onSave={() => {
-          handleDataChange(rows.map(row => row.map(cell => cell.value)));
-          onSave();
-        }}
+        data={tableData}
+        onDataChange={handleDataChange}
+        onSave={onSave}
+        onSubmit={onSubmit}
         isReadOnly={isLocked}
-        showSubmitButton={true}
       />
     </div>
   );

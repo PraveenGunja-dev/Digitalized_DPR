@@ -1,18 +1,16 @@
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Download, Palette, Maximize, Minimize } from "lucide-react";
+import { Button } from "./ui/button";
+import { Download, Palette } from "lucide-react";
+import { toast } from "sonner";
+
 import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "@/components/ui/table";
-import { toast } from "sonner";
+// Import Handsontable styles correctly
+import "handsontable/dist/handsontable.css";
+// Import our custom theme
+import "./handsontable-theme.css";
+
+// Register all Handsontable modules to ensure cell types are available
 
 interface CellData {
   value: string;
@@ -47,7 +45,7 @@ export const ExcelSheet = ({
   todayDate
 }: ExcelSheetProps) => {
   const [data, setData] = useState<any[][]>([]);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  let hotInstance: Handsontable | null = null;
   
   // Theme state - using custom themes
   const [theme, setTheme] = useState<
@@ -61,7 +59,7 @@ export const ExcelSheet = ({
     "htThemeHorizon"
   >("modern-excel");
 
-  // Convert initialRows to data format
+  // Convert initialRows to Handsontable data format
   useEffect(() => {
     const convertedData = initialRows.map(row => 
       row.map(cell => cell.value)
@@ -69,14 +67,34 @@ export const ExcelSheet = ({
     setData(convertedData);
   }, [initialRows]);
 
-  const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
-    if (isReadOnly) return;
+  // Define column settings for Handsontable
+  const columnSettings = columns.map((col, index) => {
+    const firstRowCell = initialRows[0]?.[index];
+    if (!firstRowCell) return {};
     
-    const newData = [...data];
-    newData[rowIndex] = [...newData[rowIndex]];
-    newData[rowIndex][colIndex] = value;
-    setData(newData);
-  };
+    const settings: any = {
+      readOnly: firstRowCell.readOnly || false  // Default to false if not specified
+    };
+    
+    // Use correct Handsontable cell types
+    if (firstRowCell.columnType === "number") {
+      settings.type = "numeric";
+      settings.numericFormat = {
+        pattern: '0,0.00'
+      };
+    } else if (firstRowCell.columnType === "date") {
+      settings.type = "date";
+      settings.dateFormat = "YYYY-MM-DD";
+    } else if (firstRowCell.columnType === "dropdown" && firstRowCell.options) {
+      settings.type = "dropdown";
+      settings.source = firstRowCell.options;
+    } else {
+      // Default to text type for any other case including undefined columnType
+      settings.type = "text";
+    }
+    
+    return settings;
+  });
 
   const handleSubmit = () => {
     if (onSubmit) {
@@ -162,44 +180,48 @@ export const ExcelSheet = ({
     "htThemeHorizon"
   ) => {
     setTheme(newTheme);
-  };
-
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
-
-  // Add row handler
-  const handleAddRow = () => {
-    if (isReadOnly) return;
-    
-    const newRow = Array(columns.length).fill("");
-    setData([...data, newRow]);
-  };
-
-  // Delete row handler
-  const handleDeleteRow = (rowIndex: number) => {
-    if (isReadOnly) return;
-    
-    const newData = [...data];
-    newData.splice(rowIndex, 1);
-    setData(newData);
+    // Update the Handsontable instance with the new theme if it exists
+    if (hotInstance) {
+      // Apply theme by updating the container class
+      const container = hotInstance.rootElement;
+      if (container) {
+        // Remove all theme classes
+        container.classList.remove(
+          "modern-excel",
+          "htThemeAdaniBlue",
+          "htThemeEmerald",
+          "htThemeSunset",
+          "htThemeOcean",
+          "htThemeDark",
+          "htThemeMain",
+          "htThemeHorizon"
+        );
+        // Add the new theme class
+        container.classList.add(newTheme);
+      }
+      
+      // Also update the settings to ensure the theme is applied
+      hotInstance.updateSettings({
+        className: newTheme
+      });
+    }
   };
 
   return (
     <motion.div 
-      className={`excel-container ${isFullscreen ? 'fixed inset-0 z-50 bg-white' : ''}`}
+      className="excel-container"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
       {/* Excel Toolbar */}
       <motion.div 
-        className={`excel-toolbar ${isFullscreen ? 'bg-gray-100' : 'bg-white'}`}
+        className="excel-toolbar"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.1, duration: 0.3 }}
       >
-        <div className="flex items-center justify-between px-4 py-2 border-b">
+        <div className="flex items-center justify-between px-4 py-2">
           <motion.h2 
             className="text-sm font-semibold text-gray-700"
             initial={{ opacity: 0 }}
@@ -248,31 +270,6 @@ export const ExcelSheet = ({
                 Export
               </Button>
             </motion.div>
-            
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="excel-button"
-                onClick={toggleFullscreen}
-              >
-                {isFullscreen ? (
-                  <>
-                    <Minimize className="w-4 h-4 mr-1" />
-                    Exit Fullscreen
-                  </>
-                ) : (
-                  <>
-                    <Maximize className="w-4 h-4 mr-1" />
-                    Fullscreen
-                  </>
-                )}
-              </Button>
-            </motion.div>
-            
             {showSubmitButton && !isReadOnly && (
               <motion.div
                 whileHover={{ scale: 1.05 }}
@@ -281,7 +278,7 @@ export const ExcelSheet = ({
                 <Button 
                   size="sm" 
                   onClick={handleSubmit} 
-                  className="excel-save-button bg-blue-600 hover:bg-blue-700"
+                  className="excel-save-button"
                 >
                   {submitButtonText}
                 </Button>
@@ -291,97 +288,61 @@ export const ExcelSheet = ({
         </div>
       </motion.div>
 
-      {/* Fullscreen header when in fullscreen mode */}
-      {isFullscreen && (
-        <div className="p-4 border-b bg-white">
-          <h2 className="text-xl font-bold">{title} - Fullscreen View</h2>
-          <p className="text-sm text-muted-foreground">{data.length} rows × {columns.length} columns</p>
-        </div>
-      )}
-
-      {/* Table */}
+      {/* Handsontable Grid */}
       <motion.div 
-        className={`excel-grid-wrapper ${theme} ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'max-h-[600px]'}`}
+        className={`excel-grid-wrapper ${theme}`}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.3 }}
       >
-        <div className="overflow-auto border">
-          <Table className="border-collapse">
-            <TableHeader className="bg-gray-100 sticky top-0 z-10">
-              <TableRow className="hover:bg-gray-100">
-                <TableHead className="w-12 text-center font-medium text-gray-700 border-r border-b border-gray-300 bg-gray-100">#</TableHead>
-                {columns.map((column, index) => (
-                  <TableHead 
-                    key={index} 
-                    className="min-w-[120px] text-left font-medium text-gray-700 border-r border-b border-gray-300 bg-gray-100 px-2 py-1"
-                  >
-                    {column}
-                  </TableHead>
-                ))}
-                {!isReadOnly && (
-                  <TableHead className="w-8 border-b border-gray-300 bg-gray-100"></TableHead>
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {data.map((row, rowIndex) => (
-                <TableRow 
-                  key={rowIndex} 
-                  className={`${rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50`}
-                >
-                  <TableCell className="w-12 text-center text-gray-500 text-xs border-r border-t border-gray-300">
-                    {rowIndex + 1}
-                  </TableCell>
-                  {columns.map((_, colIndex) => (
-                    <TableCell 
-                      key={colIndex} 
-                      className="p-0 border-r border-t border-gray-300"
-                    >
-                      <Input
-                        value={row[colIndex] || ""}
-                        onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                        className="border-0 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 h-8 px-2 py-1 text-xs"
-                        readOnly={isReadOnly}
-                      />
-                    </TableCell>
-                  ))}
-                  {!isReadOnly && (
-                    <TableCell className="w-8 p-0 border-t border-gray-300">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-full rounded-none text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={() => handleDeleteRow(rowIndex)}
-                      >
-                        ×
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <HotTable
+          data={data}
+          colHeaders={columns}
+          rowHeaders={true}
+          contextMenu={isReadOnly ? false : ["row_above", "row_below", "col_left", "col_right", "---------", "remove_row", "remove_col", "---------", "undo", "redo", "---------", "make_read_only", "alignment"]}
+          height="auto"
+          maxRows={100}
+          minRows={10}
+          minCols={columns.length}
+          minSpareRows={isReadOnly ? 0 : 1}
+          licenseKey="non-commercial-and-evaluation"
+          columns={columnSettings}
+          className={theme}
+          stretchH="all"
+          manualColumnResize={!isReadOnly}
+          manualRowResize={!isReadOnly}
+          filters={!isReadOnly}
+          dropdownMenu={!isReadOnly}
+          columnSorting={true}
+          readOnly={isReadOnly}
+          afterChange={(changes, source) => {
+            if (changes && source !== 'loadData' && !isReadOnly) {
+              // Update data state when changes occur
+              const newData = [...data];
+              changes.forEach((change) => {
+                const [row, prop, oldValue, newValue] = change;
+                if (typeof row === 'number' && typeof prop === 'number') {
+                  if (!newData[row]) newData[row] = [];
+                  newData[row][prop] = newValue;
+                }
+              });
+              setData(newData);
+            }
+          }}
+          afterInit={function() {
+            hotInstance = this as Handsontable;
+            // Apply initial theme
+            const container = this.rootElement;
+            if (container) {
+              container.classList.add(theme);
+            }
+          }}
+        />
       </motion.div>
-
-      {/* Add row button */}
-      {!isReadOnly && (
-        <div className="border-t bg-gray-50 px-4 py-2">
-          <Button 
-            size="sm" 
-            variant="outline" 
-            className="h-8"
-            onClick={handleAddRow}
-          >
-            + Add Row
-          </Button>
-        </div>
-      )}
 
       {/* Status Bar */}
       <motion.div 
-        className="excel-status-bar border-t bg-gray-50 px-4 py-1"
+        className="excel-status-bar"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.3 }}

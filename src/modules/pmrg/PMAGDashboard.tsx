@@ -950,7 +950,7 @@ const PMRGDashboard = () => {
                 onChange={(e) => handleRegisterFormChange("assignProject", e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
-              <Label htmlFor="assignProject">Assign project to this user (cannot be changed later)</Label>
+              <Label htmlFor="assignProject">Assign project to this user</Label>
             </div>
             {registerForm.assignProject && (
               <div>

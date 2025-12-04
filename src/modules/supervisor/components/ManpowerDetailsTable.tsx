@@ -20,6 +20,7 @@ interface ManpowerDetailsTableProps {
   totalManpower: number;
   setTotalManpower: (value: number) => void;
   onSave: () => void;
+  onSubmit?: () => void;
   yesterday: string;
   today: string;
   isLocked?: boolean;
@@ -31,6 +32,7 @@ export function ManpowerDetailsTable({
   totalManpower, 
   setTotalManpower, 
   onSave, 
+  onSubmit,
   yesterday, 
   today,
   isLocked = false

@@ -26,7 +26,8 @@ import {
   Package,
   User,
   Maximize,
-  Minimize
+  Minimize,
+  Plus
 } from "lucide-react";
 import { 
   BarChart, 
@@ -39,9 +40,15 @@ import {
   Pie,
   Cell
 } from "recharts";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/modules/auth/contexts/AuthContext";
 import { useNotification } from "@/modules/auth/contexts/NotificationContext";
 import { getEntriesForPMReview, approveEntryByPM, rejectEntryByPM } from "@/modules/auth/services/dprSupervisorService";
+import { registerUser } from "@/modules/auth/services/authService";
+import { getUserProjects, assignProjectToSupervisor } from "@/modules/auth/services/projectService";
 import { toast } from "sonner";
 
 // Function to format date as YYYY-MM-DD
@@ -67,6 +74,27 @@ const PMDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dp_qty');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showCreateSupervisorModal, setShowCreateSupervisorModal] = useState(false);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [supervisorForm, setSupervisorForm] = useState({
+    Name: "",
+    Email: "",
+    password: "",
+    assignProject: false,
+    ProjectId: "" as string | number
+  });
+  
+  // Note: Site PM can only create supervisors, not other roles
+  // This is a business rule enforced in both frontend and backend
+  const [supervisorLoading, setSupervisorLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [registeredUser, setRegisteredUser] = useState({
+    email: "",
+    password: "",
+    role: "supervisor", // Site PM can only create supervisors
+    projectId: "" as string | number | null,
+    projectName: "" as string | null
+  });
 
   // Filter entries by sheet type
   const getEntriesBySheetType = (sheetType: string) => {
@@ -174,6 +202,23 @@ const PMDashboard = () => {
       console.log('Not fetching - user not PM or not logged in');
     }
   }, [projectId, user]);
+
+  // Fetch projects for the PM
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const projectsData = await getUserProjects();
+        setProjects(projectsData);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+        toast.error("Failed to fetch projects");
+      }
+    };
+
+    if (user && user.Role === 'Site PM') {
+      fetchProjects();
+    }
+  }, [user]);
 
   // Handle tab change with auto-refresh
   const handleTabChange = (value: string) => {
@@ -406,6 +451,98 @@ const PMDashboard = () => {
 
   const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
 
+  const handleCreateSupervisor = () => {
+    setShowCreateSupervisorModal(true);
+  };
+
+  const handleSupervisorFormChange = (field: string, value: string | boolean) => {
+    setSupervisorForm(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSupervisorSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSupervisorLoading(true);
+    
+    try {
+      // First create the supervisor - Site PM can only create supervisors
+      const userData: Omit<import('@/modules/auth/services/authService').User, 'ObjectId'> = {
+        Name: supervisorForm.Name,
+        Email: supervisorForm.Email,
+        password: supervisorForm.password,
+        Role: "supervisor"  // Hardcoded - Site PM can only create supervisors
+      };
+      
+      const registeredUserResponse = await registerUser(userData);
+      
+      // If assignProject is checked and a project is selected, assign the project
+      // This is the project assignment functionality for Site PM when creating supervisors
+      let assignedProjectId = null;
+      let assignedProjectName = null;
+      if (supervisorForm.assignProject && supervisorForm.ProjectId) {
+        try {
+          // Ensure we're passing numbers to the API
+          const projectId = parseInt(supervisorForm.ProjectId.toString());
+          const supervisorId = registeredUserResponse.user.ObjectId;
+          
+          console.log('Assigning project:', { projectId, supervisorId });
+          
+          await assignProjectToSupervisor(projectId, supervisorId);
+          
+          // Store the project ID and name for display
+          assignedProjectId = supervisorForm.ProjectId;
+          assignedProjectName = projects.find(p => p.ObjectId == supervisorForm.ProjectId || p.id == supervisorForm.ProjectId)?.Name || "Unknown Project";
+          
+          toast.success(`Supervisor created and project assigned successfully!`);
+        } catch (assignError) {
+          console.error('Project assignment error:', assignError);
+          toast.warning(`Supervisor created but project assignment failed: ${(assignError as Error).message}`);
+        }
+      } else {
+        toast.success("Supervisor created successfully!");
+      }
+      
+      // Show success modal with user details
+      setRegisteredUser({
+        email: supervisorForm.Email,
+        password: supervisorForm.password,
+        role: "supervisor",
+        projectId: assignedProjectId,
+        projectName: assignedProjectName
+      });
+      setShowSuccessModal(true);
+      setShowCreateSupervisorModal(false);
+      
+      // Reset form
+      setSupervisorForm({
+        Name: "",
+        Email: "",
+        password: "",
+        assignProject: false,
+        ProjectId: ""
+      });
+    } catch (err) {
+      console.error('Supervisor creation error:', err);
+      toast.error(err instanceof Error ? err.message : 'Supervisor creation failed');
+    } finally {
+      setSupervisorLoading(false);
+    }
+  };
+  
+  // Reset registered user state when closing the success modal
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    setRegisteredUser({
+      email: "",
+      password: "",
+      role: "supervisor",
+      projectId: null,
+      projectName: null
+    });
+  };
+
   return (
     <motion.div 
       className="min-h-screen bg-background"
@@ -417,8 +554,7 @@ const PMDashboard = () => {
         userName={user?.Name || "User"} 
         userRole={user?.Role || "Site PM"} 
         projectName={projectName}
-        onAddUser={() => alert("Add User functionality is only available for PMAG users")}
-        onAddProject={() => alert("Add Project functionality is only available for PMAG users")}
+        onAddUser={handleCreateSupervisor}
       />
 
       <div className="container mx-auto px-4 py-8">
@@ -713,6 +849,129 @@ const PMDashboard = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Create Supervisor Modal */}
+      <Dialog open={showCreateSupervisorModal} onOpenChange={setShowCreateSupervisorModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New Supervisor (Site PM can only create supervisors)</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSupervisorSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                value={supervisorForm.Name}
+                onChange={(e) => handleSupervisorFormChange("Name", e.target.value)}
+                placeholder="Enter full name"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={supervisorForm.Email}
+                onChange={(e) => handleSupervisorFormChange("Email", e.target.value)}
+                placeholder="Enter email"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={supervisorForm.password}
+                onChange={(e) => handleSupervisorFormChange("password", e.target.value)}
+                placeholder="Enter password"
+                required
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="assignProject"
+                checked={supervisorForm.assignProject}
+                onChange={(e) => handleSupervisorFormChange("assignProject", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="assignProject">Assign project to this supervisor (cannot be changed later)</Label>
+            </div>
+            {/* Project assignment functionality for Site PM when creating supervisors */}
+            {supervisorForm.assignProject && (
+              <div>
+                <Label htmlFor="project">Project</Label>
+                <Select 
+                  value={supervisorForm.ProjectId.toString()} 
+                  onValueChange={(value) => handleSupervisorFormChange("ProjectId", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project to assign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => {
+                      // Ensure we have a valid value for the SelectItem
+                      const value = (project.ObjectId || project.id || '').toString();
+                      
+                      // Skip items with empty values
+                      if (!value) return null;
+                      
+                      return (
+                        <SelectItem 
+                          key={project.ObjectId || project.id || project.Name} 
+                          value={value}
+                        >
+                          {project.Name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="flex justify-end space-x-2">
+              <Button type="button" variant="outline" onClick={() => setShowCreateSupervisorModal(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={supervisorLoading}>
+                {supervisorLoading ? "Creating..." : "Create Supervisor"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={handleSuccessModalClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Supervisor Created Successfully</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p>Supervisor has been created with the following credentials:</p>
+            <div className="bg-muted p-4 rounded-lg">
+              <p><strong>Email:</strong> {registeredUser.email}</p>
+              <p><strong>Password:</strong> {registeredUser.password}</p>
+              <p><strong>Role:</strong> {registeredUser.role} (Site PM can only create supervisors)</p>
+              {registeredUser.projectId && (
+                <p className="mt-2 p-2 bg-green-100 rounded">
+                  <strong>✅ Project Assigned:</strong>{" "}
+                  {registeredUser.projectName || projects.find(p => p.ObjectId == registeredUser.projectId || p.id == registeredUser.projectId)?.Name || "Unknown Project"}
+                </p>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Please share these credentials with the supervisor. They can now log in to the system.
+              {registeredUser.projectId && " The supervisor will only have access to the assigned project."}
+            </p>
+            <div className="flex justify-end">
+              <Button onClick={handleSuccessModalClose}>Close</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

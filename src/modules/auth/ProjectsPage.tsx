@@ -5,7 +5,7 @@ import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Calendar, MapPin, Users, FileText, Loader2, AlertTriangle, Plus, UserPlus } from "lucide-react";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from '@/modules/auth/contexts/AuthContext';
 import { getUserProjects, getAssignedProjects } from "./services/projectService";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -26,7 +26,6 @@ const ProjectsPage = () => {
   // State for modals
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
-  const [showAssignProjectModal, setShowAssignProjectModal] = useState(false);
   
   // State for forms
   const [projectForm, setProjectForm] = useState({
@@ -38,26 +37,70 @@ const ProjectsPage = () => {
     PlannedFinishDate: ""
   });
   
+  const getDefaultRole = () => {
+    if (!user?.Role) return "supervisor";
+    
+    // PMAG can create Site PM and PMAG users, default to Site PM
+    if (user.Role === "PMAG") {
+      return "Site PM";
+    }
+    
+    // Site PM can only create supervisors
+    if (user.Role === "Site PM") {
+      return "supervisor";
+    }
+    
+    // Default to supervisor for other roles
+    return "supervisor";
+  };
+  
   const [registerForm, setRegisterForm] = useState({
     Name: "",
     Email: "",
     password: "",
-    Role: "supervisor" as "supervisor" | "Site PM" | "PMAG"
+    Role: getDefaultRole() as "supervisor" | "Site PM" | "PMAG",
+    assignProject: false,
+    ProjectId: "" as string | number
   });
   
-  const [assignForm, setAssignForm] = useState({
-    projectId: "",
-    supervisorId: ""
-  });
+  // Determine available roles based on current user's role
+  const getAvailableRoles = () => {
+    if (!user?.Role) return [];
+    
+    // PMAG can create Site PM and PMAG users
+    if (user.Role === "PMAG") {
+      return [
+        { value: "Site PM", label: "Site PM" },
+        { value: "PMAG", label: "PMAG" }
+      ];
+    }
+    
+    // Site PM can only create supervisors
+    if (user.Role === "Site PM") {
+      return [
+        { value: "supervisor", label: "Supervisor" }
+      ];
+    }
+    
+    // Supervisors cannot create users
+    return [];
+  };
   
   const [loadingState, setLoadingState] = useState({
     createUser: false,
-    createProject: false,
-    assignProject: false
+    createProject: false
   });
   
   // State for data
   const [supervisors, setSupervisors] = useState<any[]>([]);
+
+  // Update the default role when user role changes
+  useEffect(() => {
+    setRegisterForm(prev => ({
+      ...prev,
+      Role: getDefaultRole()
+    }));
+  }, [user?.Role]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -145,17 +188,6 @@ const ProjectsPage = () => {
     }
   };
 
-  // Fetch supervisors for assignment
-  const fetchSupervisors = async () => {
-    try {
-      const supervisorsData = await getAllSupervisors();
-      setSupervisors(supervisorsData);
-    } catch (err) {
-      toast.error("Failed to fetch supervisors");
-      console.error("Error fetching supervisors:", err);
-    }
-  };
-
   // Handle form changes
   const handleProjectFormChange = (field: string, value: string | number) => {
     setProjectForm(prev => ({
@@ -164,15 +196,8 @@ const ProjectsPage = () => {
     }));
   };
 
-  const handleRegisterFormChange = (field: string, value: string) => {
+  const handleRegisterFormChange = (field: string, value: string | boolean) => {
     setRegisterForm(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handleAssignFormChange = (field: string, value: string) => {
-    setAssignForm(prev => ({
       ...prev,
       [field]: value
     }));
@@ -233,9 +258,28 @@ const ProjectsPage = () => {
         Role: registerForm.Role
       };
       
-      await registerUser(userData);
+      const registeredUserResponse = await registerUser(userData);
       
-      toast.success("User created successfully!");
+      // If assignProject is checked and a project is selected, assign the project
+      if (registerForm.assignProject && registerForm.ProjectId) {
+        try {
+          // Ensure we're passing numbers to the API
+          const projectId = parseInt(registerForm.ProjectId.toString());
+          // For supervisors, we use the user's ObjectId; for other roles, we might need to handle differently
+          const userId = registeredUserResponse.user.ObjectId;
+          
+          console.log('Assigning project:', { projectId, userId });
+          
+          await assignProjectToSupervisor(projectId, userId);
+          toast.success(`User created and project assigned successfully!`);
+        } catch (assignError) {
+          console.error('Project assignment error:', assignError);
+          toast.warning(`User created but project assignment failed: ${(assignError as Error).message}`);
+        }
+      } else {
+        toast.success("User created successfully!");
+      }
+      
       setShowCreateUserModal(false);
       
       // Reset form
@@ -243,38 +287,18 @@ const ProjectsPage = () => {
         Name: "",
         Email: "",
         password: "",
-        Role: "supervisor"
+        Role: getDefaultRole(),
+        assignProject: false,
+        ProjectId: ""
       });
+      
+      // Refresh projects list
+      const projectsData = await getUserProjects();
+      setProjects(projectsData);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'User creation failed');
     } finally {
       setLoadingState({ ...loadingState, createUser: false });
-    }
-  };
-
-  // Handle project assignment
-  const handleAssignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoadingState(prev => ({ ...prev, assignProject: true }));
-    
-    try {
-      await assignProjectToSupervisor(
-        parseInt(assignForm.projectId),
-        parseInt(assignForm.supervisorId)
-      );
-      
-      toast.success("Project assigned successfully!");
-      setShowAssignProjectModal(false);
-      
-      // Reset form
-      setAssignForm({
-        projectId: "",
-        supervisorId: ""
-      });
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Project assignment failed');
-    } finally {
-      setLoadingState({ ...loadingState, assignProject: false });
     }
   };
 
@@ -322,11 +346,6 @@ const ProjectsPage = () => {
         userRole={user?.Role} 
         onAddUser={() => setShowCreateUserModal(true)}
         onAddProject={() => setShowCreateProjectModal(true)}
-        onAssignProject={() => {
-          // Fetch fresh data when opening assign modal
-          fetchSupervisors();
-          setShowAssignProjectModal(true);
-        }}
       />
 
       <div className="container mx-auto px-4 py-8">
@@ -476,17 +495,72 @@ const ProjectsPage = () => {
             </div>
             <div>
               <Label htmlFor="role">Role</Label>
-              <Select value={registerForm.Role} onValueChange={(value) => handleRegisterFormChange("Role", value as any)}>
+              <Select 
+                value={registerForm.Role} 
+                onValueChange={(value) => handleRegisterFormChange("Role", value as any)}
+                disabled={getAvailableRoles().length === 0}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="Site PM">Site PM</SelectItem>
-                  <SelectItem value="PMAG">PMAG</SelectItem>
+                  {getAvailableRoles().map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {getAvailableRoles().length === 0 && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {user?.Role === "supervisor" 
+                    ? "Supervisors cannot create users" 
+                    : "No roles available for your user type"}
+                </p>
+              )}
             </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="assignProject"
+                checked={registerForm.assignProject}
+                onChange={(e) => handleRegisterFormChange("assignProject", e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+              />
+              <Label htmlFor="assignProject">Assign project to this user (cannot be changed later)</Label>
+            </div>
+            {/* Project assignment functionality - only available during user creation */}
+            {registerForm.assignProject && (
+              <div>
+                <Label htmlFor="project">Project</Label>
+                <Select 
+                  value={registerForm.ProjectId.toString()} 
+                  onValueChange={(value) => handleRegisterFormChange("ProjectId", value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project to assign" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects.map((project) => {
+                      // Ensure we have a valid value for the SelectItem
+                      const value = (project.ObjectId || project.id || '').toString();
+                      
+                      // Skip items with empty values
+                      if (!value) return null;
+                      
+                      return (
+                        <SelectItem 
+                          key={project.ObjectId || project.id || project.Name} 
+                          value={value}
+                        >
+                          {project.Name}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="flex justify-end space-x-2">
               <Button type="button" variant="outline" onClick={() => setShowCreateUserModal(false)}>
                 Cancel
@@ -574,76 +648,6 @@ const ProjectsPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Assign Project Modal */}
-      <Dialog open={showAssignProjectModal} onOpenChange={setShowAssignProjectModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Assign Project to Supervisor</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleAssignSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="project">Project</Label>
-              <Select value={assignForm.projectId} onValueChange={(value) => handleAssignFormChange("projectId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => {
-                    // Ensure we have a valid value for the SelectItem
-                    const value = (project.ObjectId || project.id || '').toString();
-                    
-                    // Skip items with empty values
-                    if (!value) return null;
-                    
-                    return (
-                      <SelectItem 
-                        key={project.ObjectId || project.id || project.Name} 
-                        value={value}
-                      >
-                        {project.Name}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="supervisor">Supervisor</Label>
-              <Select value={assignForm.supervisorId} onValueChange={(value) => handleAssignFormChange("supervisorId", value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select supervisor" />
-                </SelectTrigger>
-                <SelectContent>
-                  {supervisors.map((supervisor) => {
-                    // Ensure we have a valid value for the SelectItem
-                    const value = (supervisor.ObjectId || supervisor.id || '').toString();
-                    
-                    // Skip items with empty values
-                    if (!value) return null;
-                    
-                    return (
-                      <SelectItem 
-                        key={supervisor.ObjectId || supervisor.id || supervisor.Name} 
-                        value={value}
-                      >
-                        {supervisor.Name}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button type="button" variant="outline" onClick={() => setShowAssignProjectModal(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={loadingState.assignProject}>
-                {loadingState.assignProject ? "Assigning..." : "Assign Project"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

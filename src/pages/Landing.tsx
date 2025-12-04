@@ -1,12 +1,14 @@
-import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { RoleCard } from "@/components/RoleCard";
-import { UserCog, Shield, CheckCircle2 } from "lucide-react";
-import { SmoothScrollHero as Login } from "@/modules/auth/Login";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion"
+import { useNavigate } from "react-router-dom"
+import { RoleCard } from "@/components/RoleCard"
+import { UserCog, Shield, CheckCircle2, Palette } from "lucide-react"
+import { SmoothScrollHero as Login } from "@/modules/auth/Login"
+import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "@/components/ThemeToggle"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 const Landing = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const roles = [
     {
@@ -27,13 +29,13 @@ const Landing = () => {
       description: "Advanced analytics and final approvals",
       path: "/pmrg",
     },
-  ];
+  ]
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative">    
       <Login />
     </div>
-  );
-};
+  )
+}
 
-export default Landing;
+export default Landing

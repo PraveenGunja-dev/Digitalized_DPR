@@ -5,9 +5,9 @@ const { cache } = require('../cache/redisClient');
 // Assign a project to a supervisor
 const assignProjectToSupervisor = async (req, res) => {
   try {
-    // Check if user is PMAG (admin)
-    if (req.user.role !== 'PMAG') {
-      return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
+    // Check if user is PMAG (admin) or Site PM
+    if (req.user.role !== 'PMAG' && req.user.role !== 'Site PM') {
+      return res.status(403).json({ message: 'Access denied. PMAG or Site PM privileges required.' });
     }
     
     const { projectId, supervisorId } = req.body;
@@ -44,7 +44,24 @@ const assignProjectToSupervisor = async (req, res) => {
     );
     
     if (existingAssignment.rows.length > 0) {
-      return res.status(400).json({ message: 'Project is already assigned to this supervisor' });
+      return res.status(400).json({ 
+        message: 'Project is already assigned to this supervisor and cannot be reassigned. Projects can only be assigned at user creation time.' 
+      });
+    }
+    
+    // For Site PM users, check if they are trying to assign a project they have access to
+    if (req.user.role === 'Site PM') {
+      // Check if the Site PM has access to this project
+      const sitePMProjectAccess = await pool.query(
+        'SELECT id FROM project_assignments WHERE project_id = $1 AND user_id = $2',
+        [projectId, req.user.userId]
+      );
+      
+      if (sitePMProjectAccess.rows.length === 0) {
+        return res.status(403).json({ 
+          message: 'Access denied. You can only assign projects that you have access to.' 
+        });
+      }
     }
     
     // Assign project to supervisor
@@ -57,7 +74,7 @@ const assignProjectToSupervisor = async (req, res) => {
     await cache.del(`assigned_projects_${supervisorId}`);
     
     res.status(201).json({ 
-      message: 'Project assigned to supervisor successfully',
+      message: 'Project assigned to supervisor successfully. Note: This project cannot be reassigned.',
       assignment: result.rows[0]
     });
   } catch (error) {
@@ -114,12 +131,12 @@ const getAssignedProjects = async (req, res) => {
   }
 };
 
-// Get supervisors for a project (PMAG only) with caching
+// Get supervisors for a project (PMAG and Site PM only)
 const getProjectSupervisors = async (req, res) => {
   try {
-    // Check if user is PMAG (admin)
-    if (req.user.role !== 'PMAG') {
-      return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
+    // Check if user is PMAG (admin) or Site PM
+    if (req.user.role !== 'PMAG' && req.user.role !== 'Site PM') {
+      return res.status(403).json({ message: 'Access denied. PMAG or Site PM privileges required.' });
     }
     
     const { projectId } = req.params;
@@ -160,9 +177,11 @@ const getProjectSupervisors = async (req, res) => {
 // Unassign a project from a supervisor (PMAG only)
 const unassignProjectFromSupervisor = async (req, res) => {
   try {
-    // Check if user is PMAG (admin)
+    // Check if user is PMAG (admin) - only PMAG can unassign projects
     if (req.user.role !== 'PMAG') {
-      return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
+      return res.status(403).json({ 
+        message: 'Access denied. Only PMAG can unassign projects. Projects can only be reassigned by creating a new user.' 
+      });
     }
     
     const { projectId, supervisorId } = req.body;
@@ -186,7 +205,7 @@ const unassignProjectFromSupervisor = async (req, res) => {
     await cache.del(`assigned_projects_${supervisorId}`);
     
     res.status(200).json({ 
-      message: 'Project unassigned from supervisor successfully'
+      message: 'Project unassigned from supervisor successfully. Note: Projects can only be reassigned by creating a new user.'
     });
   } catch (error) {
     console.error('Error unassigning project from supervisor:', error);

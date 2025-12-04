@@ -1,5 +1,7 @@
-import { useState, useEffect } from "react";
-import { ExcelSheet } from "@/components/ExcelSheet";
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Maximize, Minimize } from "lucide-react";
 
 interface ExcelTableProps {
   title: string;
@@ -20,31 +22,194 @@ export const ExcelTable = ({
   onSubmit,
   isReadOnly = false
 }: ExcelTableProps) => {
-  // Convert data to the format expected by ExcelSheet
-  const rows = data.map(row => 
-    row.map((cell: any) => ({
-      value: cell || "",
-      readOnly: isReadOnly || false
-    }))
-  );
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Handle data changes from ExcelSheet
-  const handleSave = (newData: any[][]) => {
+  const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
+    if (isReadOnly) return;
+    
+    const newData = [...data];
+    newData[rowIndex] = [...newData[rowIndex]];
+    newData[rowIndex][colIndex] = value;
     onDataChange(newData);
-    if (onSave) {
-      onSave();
-    }
+  };
+
+  const handleAddRow = () => {
+    if (isReadOnly) return;
+    
+    const newRow = Array(columns.length).fill("");
+    onDataChange([...data, newRow]);
+  };
+
+  const handleDeleteRow = (rowIndex: number) => {
+    if (isReadOnly) return;
+    
+    const newData = [...data];
+    newData.splice(rowIndex, 1);
+    onDataChange(newData);
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
   };
 
   return (
-    <ExcelSheet
-      title={title}
-      columns={columns}
-      rows={rows}
-      onSave={handleSave}
-      onSubmit={onSubmit}
-      isReadOnly={isReadOnly}
-      showSubmitButton={!!onSubmit}
-    />
+    <div className={`border rounded-lg overflow-hidden shadow-sm bg-white ${isFullscreen ? 'fixed inset-0 z-50 m-0 rounded-none' : ''}`}>
+      {/* Header */}
+      <div className={`flex items-center justify-between px-4 py-3 border-b ${isFullscreen ? 'bg-gray-100' : 'bg-gray-50'}`}>
+        <div className="flex items-center space-x-2">
+          <h3 className="font-semibold text-lg">{title}</h3>
+          <span className="text-sm text-muted-foreground">({data.length} rows)</span>
+        </div>
+        <div className="flex items-center space-x-2">
+          {!isReadOnly && onSave && (
+            <Button size="sm" onClick={onSave} variant="outline">
+              Save
+            </Button>
+          )}
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={toggleFullscreen}
+          >
+            {isFullscreen ? (
+              <>
+                <Minimize className="w-4 h-4 mr-1" />
+                Exit Fullscreen
+              </>
+            ) : (
+              <>
+                <Maximize className="w-4 h-4 mr-1" />
+                Fullscreen
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Fullscreen header when in fullscreen mode */}
+      {isFullscreen && (
+        <div className="p-4 border-b bg-white">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl font-bold">{title} - Fullscreen View</h2>
+              <p className="text-sm text-muted-foreground">{data.length} rows × {columns.length} columns</p>
+            </div>
+            <div className="flex space-x-2">
+              {!isReadOnly && onSave && (
+                <Button size="sm" onClick={onSave} variant="outline">
+                  Save
+                </Button>
+              )}
+              {!isReadOnly && onSubmit && (
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    const confirmed = window.confirm("Check once - if submitted, editing is not possible. Do you want to proceed?");
+                    if (confirmed) {
+                      onSubmit();
+                    }
+                  }}
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  Submit
+                </Button>
+              )}
+              <Button 
+                size="sm" 
+                variant="outline" 
+                onClick={toggleFullscreen}
+              >
+                <Minimize className="w-4 h-4 mr-1" />
+                Exit Fullscreen
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className={`overflow-auto ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'max-h-[600px]'}`}>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-gray-100 sticky top-0 z-10">
+              <th className="border-r border-b border-gray-300 w-12 h-8 text-center font-medium text-gray-700">#</th>
+              {columns.map((column, index) => (
+                <th 
+                  key={index} 
+                  className="border-r border-b border-gray-300 px-3 py-2 text-left font-medium text-gray-700 min-w-[120px]"
+                >
+                  {column}
+                </th>
+              ))}
+              {!isReadOnly && (
+                <th className="border-b border-gray-300 w-12"></th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, rowIndex) => (
+              <tr 
+                key={rowIndex} 
+                className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}
+              >
+                <td className="border-r border-t border-gray-300 w-12 h-8 text-center text-gray-500 text-xs">
+                  {rowIndex + 1}
+                </td>
+                {columns.map((_, colIndex) => (
+                  <td 
+                    key={colIndex} 
+                    className="border-r border-t border-gray-300 p-0"
+                  >
+                    <Input
+                      value={row[colIndex] || ""}
+                      onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                      className="border-0 rounded-none focus-visible:ring-1 focus-visible:ring-blue-500 h-8"
+                      readOnly={isReadOnly}
+                    />
+                  </td>
+                ))}
+                {!isReadOnly && (
+                  <td className="border-t border-gray-300 w-12 p-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-full rounded-none text-red-500 hover:text-red-700 hover:bg-red-50"
+                      onClick={() => handleDeleteRow(rowIndex)}
+                    >
+                      ×
+                    </Button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Add row button */}
+      {!isReadOnly && (
+        <div className="border-t bg-gray-50 px-4 py-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            className="h-8"
+            onClick={handleAddRow}
+          >
+            + Add Row
+          </Button>
+        </div>
+      )}
+
+      {/* Status bar */}
+      <div className="border-t bg-gray-50 px-4 py-1 flex justify-between text-xs text-gray-500">
+        <div>
+          Ready | {data.length} rows × {columns.length} columns
+        </div>
+        <div>
+          Adani Workflow Excel Sheet
+        </div>
+      </div>
+    </div>
   );
 };

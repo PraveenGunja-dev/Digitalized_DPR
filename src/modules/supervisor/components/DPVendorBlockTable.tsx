@@ -25,12 +25,13 @@ interface DPVendorBlockTableProps {
   data: DPVendorBlockData[];
   setData: (data: DPVendorBlockData[]) => void;
   onSave: () => void;
+  onSubmit?: () => void;
   yesterday: string;
   today: string;
   isLocked?: boolean;
 }
 
-export function DPVendorBlockTable({ data, setData, onSave, yesterday, today, isLocked = false }: DPVendorBlockTableProps) {
+export function DPVendorBlockTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false }: DPVendorBlockTableProps) {
   // Define columns
   const columns = [
     "Activity_ID",
@@ -106,6 +107,7 @@ export function DPVendorBlockTable({ data, setData, onSave, yesterday, today, is
         data={tableData}
         onDataChange={handleDataChange}
         onSave={onSave}
+        onSubmit={onSubmit}
         isReadOnly={isLocked}
       />
     </div>

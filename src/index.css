@@ -1,134 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 47.4% 11.2%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 47.4% 11.2%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 100% 50%;
-    --destructive-foreground: 210 40% 98%;
-    --ring: 215 20.2% 65.1%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 224 71% 4%;
-    --foreground: 213 31% 91%;
-    --muted: 223 47% 11%;
-    --muted-foreground: 215.4 16.3% 56.9%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 215 20.2% 65.1%;
-    --card: 224 71% 4%;
-    --card-foreground: 213 31% 91%;
-    --border: 216 34% 17%;
-    --input: 216 34% 17%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 1.2%;
-    --secondary: 222.2 47.4% 11.2%;
-    --secondary-foreground: 210 40% 98%;
-    --accent: 216 34% 17%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 31%;
-    --destructive-foreground: 210 40% 98%;
-    --ring: 216 34% 17%;
-    --radius: 0.5rem;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
-  }
-}
-
-/* Excel-like styling */
-.excel-container {
-  @apply border rounded-lg overflow-hidden shadow-sm bg-white;
-}
-
-.excel-toolbar {
-  @apply bg-gray-50;
-}
-
-.excel-button {
-  @apply text-gray-700 hover:bg-gray-200;
-}
-
-.excel-save-button {
-  @apply bg-blue-600 text-white hover:bg-blue-700;
-}
-
-.excel-grid-wrapper table {
-  @apply w-full text-xs border-collapse;
-}
-
-.excel-grid-wrapper thead th {
-  @apply bg-gray-100 text-gray-700 font-medium border border-gray-300 px-2 py-1 text-left;
-}
-
-.excel-grid-wrapper tbody tr {
-  @apply hover:bg-blue-50;
-}
-
-.excel-grid-wrapper tbody tr:nth-child(even) {
-  @apply bg-gray-50;
-}
-
-.excel-grid-wrapper tbody tr:nth-child(odd) {
-  @apply bg-white;
-}
-
-.excel-grid-wrapper tbody td {
-  @apply border border-gray-300 p-0;
-}
-
-.excel-grid-wrapper input {
-  @apply border-0 rounded-none focus:ring-0 focus:ring-offset-0 h-8 px-2 py-1 w-full;
-}
-
-.excel-grid-wrapper input:focus {
-  @apply ring-1 ring-blue-500;
-}
-
-.excel-status-bar {
-  @apply bg-gray-50 border-t px-4 py-1 text-xs text-gray-600;
-}
-
-/* Selected cell highlight */
-.excel-grid-wrapper tbody td:focus-within {
-  @apply ring-1 ring-blue-500 z-10 relative;
-}
-
-/* Header cell styling */
-.excel-grid-wrapper thead th:first-child {
-  @apply text-center;
-}
-
-/* Row number styling */
-.excel-grid-wrapper tbody td:first-child {
-  @apply text-center text-gray-500 bg-gray-100;
-}
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
@@ -145,9 +17,9 @@ All colors MUST be HSL.
 @layer base {
   :root {
     /* Adani Brand Colors */
-    --adani-blue: 218 91% 40%;
-    --adani-purple: 271 76% 53%;
-    --adani-dark: 0 0% 10%;
+    --adani-blue: 200 90% 37%; /* #0B74B0 converted to HSL */
+    --adani-purple: 270 36% 44%; /* #75479C converted to HSL */
+    --adani-dark: 340 53% 37%; /* #BD3861 converted to HSL */
     
     /* Base colors */
     --background: 220 20% 97%;
@@ -160,18 +32,18 @@ All colors MUST be HSL.
     --popover-foreground: 0 0% 10%;
 
     /* Adani Blue as Primary */
-    --primary: 218 91% 40%;
+    --primary: 200 90% 37%;
     --primary-foreground: 0 0% 100%;
     
     /* Adani Purple as Secondary */
-    --secondary: 271 76% 53%;
+    --secondary: 270 36% 44%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 220 15% 94%;
     --muted-foreground: 220 10% 40%;
 
-    /* Purple accent */
-    --accent: 271 76% 53%;
+    /* Adani Dark as Accent */
+    --accent: 340 53% 37%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -179,13 +51,13 @@ All colors MUST be HSL.
 
     --border: 220 13% 88%;
     --input: 220 13% 88%;
-    --ring: 218 91% 40%;
+    --ring: 200 90% 37%;
 
     --radius: 0.75rem;
     
     /* Gradients */
-    --gradient-adani: linear-gradient(135deg, hsl(271 76% 53%) 0%, hsl(218 91% 40%) 100%);
-    --gradient-adani-soft: linear-gradient(135deg, hsl(271 76% 53% / 0.1) 0%, hsl(218 91% 40% / 0.1) 100%);
+    --gradient-adani: linear-gradient(135deg, hsl(270 36% 44%) 0%, hsl(200 90% 37%) 100%);
+    --gradient-adani-soft: linear-gradient(135deg, hsl(270 36% 44% / 0.1) 0%, hsl(200 90% 37% / 0.1) 100%);
     
     /* Shadows */
     --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
@@ -198,12 +70,12 @@ All colors MUST be HSL.
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 218 91% 40%;
+    --sidebar-primary: 200 90% 37%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 4.8% 95.9%;
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 218 91% 40%;
+    --sidebar-ring: 200 90% 37%;
   }
 
   .dark {
@@ -216,16 +88,16 @@ All colors MUST be HSL.
     --popover: 220 20% 12%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 218 91% 50%;
+    --primary: 200 90% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 271 76% 60%;
+    --secondary: 270 36% 52%;
     --secondary-foreground: 0 0% 100%;
 
     --muted: 220 20% 15%;
     --muted-foreground: 220 10% 60%;
 
-    --accent: 271 76% 60%;
+    --accent: 340 53% 45%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
@@ -233,7 +105,7 @@ All colors MUST be HSL.
 
     --border: 220 20% 20%;
     --input: 220 20% 20%;
-    --ring: 218 91% 50%;
+    --ring: 200 90% 45%;
     
     --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
     --shadow-neumorphic: 8px 8px 16px rgba(0, 0, 0, 0.4), -8px -8px 16px rgba(255, 255, 255, 0.05);
@@ -241,12 +113,12 @@ All colors MUST be HSL.
     
     --sidebar-background: 220 20% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 218 91% 50%;
+    --sidebar-primary: 200 90% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 20% 15%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 220 20% 18%;
-    --sidebar-ring: 218 91% 50%;
+    --sidebar-ring: 200 90% 45%;
   }
   
   * {
@@ -451,3 +323,125 @@ All colors MUST be HSL.
   height: 22px;
 }
 
+/* Handsontable Customization */
+.handsontable {
+  font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
+  font-size: 11pt !important;
+  z-index: 10 !important;
+}
+
+.htCore {
+  border: none !important;
+}
+
+.ht_master .wtHolder {
+  background: #ffffff !important;
+}
+
+.ht_clone_top_left_corner th,
+.ht_clone_left td:first-of-type,
+.ht_clone_top th:first-of-type {
+  border-color: #a6a6a6 !important;
+}
+
+.ht_clone_top th,
+.ht_clone_left th {
+  background: #f3f3f3 !important;
+  font-weight: 600 !important;
+  color: #333 !important;
+}
+
+.ht_clone_left {
+  z-index: 11 !important;
+}
+
+.ht_clone_top {
+  z-index: 12 !important;
+}
+
+.ht_clone_top_left_corner {
+  z-index: 13 !important;
+}
+
+.ht_master td,
+.ht_clone_left td,
+.ht_clone_top th {
+  border-color: #d4d4d4 !important;
+}
+
+.ht_master tr:nth-of-type(odd) td {
+  background: #ffffff !important;
+}
+
+.ht_master tr:nth-of-type(even) td {
+  background: #fafafa !important;
+}
+
+.handsontable td.htInvalid {
+  background: #ffcccc !important;
+}
+
+.htAutocompleteArrow {
+  color: #333 !important;
+}
+
+.htMenu .ht_master table td {
+  font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
+  font-size: 11pt !important;
+}
+
+/* Excel-like selection highlight */
+.handsontable td.area {
+  background: #e9f1ff !important;
+}
+
+.handsontable td.current {
+  background: #e9f1ff !important;
+}
+
+.handsontable td.area .htBorder.current {
+  background: #1a73e8 !important;
+  width: 2px !important;
+  height: 2px !important;
+}
+
+/* Excel-like active cell */
+.handsontable td.htDimmed {
+  color: #333 !important;
+}
+
+.handsontable .wtBorder.current {
+  background: #1a73e8 !important;
+  width: 2px !important;
+  height: 2px !important;
+  border: 1px solid #1a73e8 !important;
+}
+
+/* Excel-like header styling */
+.handsontable th {
+  font-weight: bold !important;
+  text-align: center !important;
+  background: #f3f3f3 !important;
+  color: #333 !important;
+  border-right: 1px solid #d4d4d4 !important;
+  border-bottom: 1px solid #d4d4d4 !important;
+}
+
+/* Excel-like row header */
+.handsontable .ht__highlight {
+  background: #e9f1ff !important;
+}
+
+/* Excel-like context menu */
+.htContextMenu table.htCore {
+  font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
+  font-size: 11pt !important;
+}
+
+.htContextMenu .ht_master table td {
+  padding: 4px 8px !important;
+}
+
+.htContextMenu .ht_master table td:hover {
+  background: #e9f1ff !important;
+}
