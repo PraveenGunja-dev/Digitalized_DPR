@@ -95,7 +95,7 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, isLocked = false }
         <p>Reporting Date: {today}</p>
         <p>Progress Date: {yesterday}</p>
         {isLocked && (
-          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+          <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 rounded">
             This entry has been submitted and is locked for 2 days. Values remain visible but cannot be edited.
           </div>
         )}

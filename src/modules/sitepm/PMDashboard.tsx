@@ -46,9 +46,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/modules/auth/contexts/AuthContext";
 import { useNotification } from "@/modules/auth/contexts/NotificationContext";
-import { getEntriesForPMReview, approveEntryByPM, rejectEntryByPM } from "@/modules/auth/services/dprSupervisorService";
+import { getEntriesForPMReview, approveEntryByPM, rejectEntryByPM, updateEntryByPM } from "@/modules/auth/services/dprSupervisorService";
 import { registerUser } from "@/modules/auth/services/authService";
 import { getUserProjects, assignProjectToSupervisor } from "@/modules/auth/services/projectService";
+import { ExcelTable } from "@/components/ExcelTable";
 import { toast } from "sonner";
 
 // Function to format date as YYYY-MM-DD
@@ -75,6 +76,8 @@ const PMDashboard = () => {
   const [activeTab, setActiveTab] = useState('dp_qty');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showCreateSupervisorModal, setShowCreateSupervisorModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<any>(null);
+  const [editData, setEditData] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [supervisorForm, setSupervisorForm] = useState({
     Name: "",
@@ -162,6 +165,28 @@ const PMDashboard = () => {
       await fetchEntries();
     } catch (error) {
       toast.error("Failed to approve entry");
+    }
+  };
+
+  // Handle edit entry
+  const handleEditEntry = (entry: any) => {
+    const entryData = typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json;
+    setEditingEntry(entry);
+    setEditData(entryData);
+  };
+
+  // Handle save edited entry
+  const handleSaveEdit = async () => {
+    if (!editingEntry || !editData) return;
+    
+    try {
+      await updateEntryByPM(editingEntry.id, editData);
+      toast.success("Entry updated successfully");
+      setEditingEntry(null);
+      setEditData(null);
+      await fetchEntries();
+    } catch (error) {
+      toast.error("Failed to update entry");
     }
   };
 
@@ -297,6 +322,15 @@ const PMDashboard = () => {
                   </Badge>
                   {entry.status === "submitted_to_pm" && (
                     <>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => handleEditEntry(entry)}
+                        className="transition-colors duration-200 px-3 py-1 h-8"
+                      >
+                        <Edit className="w-4 h-4 mr-1" />
+                        Edit
+                      </Button>
                       <Button 
                         size="sm" 
                         variant="default"
@@ -572,7 +606,7 @@ const PMDashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                Site-PM Dashboard
+                PM Dashboard
               </motion.h1>
               <motion.p 
                 className="text-muted-foreground"
@@ -970,6 +1004,67 @@ const PMDashboard = () => {
               <Button onClick={handleSuccessModalClose}>Close</Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Entry Modal */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Entry - {editingEntry?.sheet_type?.replace(/_/g, ' ').toUpperCase()}</DialogTitle>
+          </DialogHeader>
+          {editingEntry && editData && (
+            <div className="space-y-4">
+              <div className="bg-muted p-3 rounded-lg">
+                <p className="text-sm"><strong>Supervisor:</strong> {editingEntry.supervisor_name || 'Unknown'}</p>
+                <p className="text-sm"><strong>Submitted:</strong> {new Date(editingEntry.submitted_at).toLocaleString()}</p>
+                <p className="text-sm"><strong>Status:</strong> {editingEntry.status}</p>
+              </div>
+              
+              {editData.rows && editData.rows.length > 0 && (
+                <div>
+                  {editData.staticHeader && (
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded mb-4 border border-blue-100 dark:border-blue-800">
+                      <p className="text-sm"><strong>Project:</strong> {editData.staticHeader.projectInfo}</p>
+                      <p className="text-sm"><strong>Reporting Date:</strong> {editData.staticHeader.reportingDate}</p>
+                      <p className="text-sm"><strong>Progress Date:</strong> {editData.staticHeader.progressDate}</p>
+                    </div>
+                  )}
+                  {editData.totalManpower !== undefined && (
+                    <div className="bg-muted p-3 rounded mb-4">
+                      <p className="text-sm"><strong>Total Manpower:</strong> {editData.totalManpower}</p>
+                    </div>
+                  )}
+                  <ExcelTable
+                    title={`Edit ${editingEntry.sheet_type.replace(/_/g, ' ')}`}
+                    columns={Object.keys(editData.rows[0])}
+                    data={editData.rows.map((row: any) => Object.values(row))}
+                    onDataChange={(newData) => {
+                      const updatedRows = newData.map((row: any[]) => {
+                        const rowObj: any = {};
+                        Object.keys(editData.rows[0]).forEach((key, index) => {
+                          rowObj[key] = row[index] || '';
+                        });
+                        return rowObj;
+                      });
+                      setEditData({ ...editData, rows: updatedRows });
+                    }}
+                    onSave={handleSaveEdit}
+                    isReadOnly={false}
+                  />
+                </div>
+              )}
+              
+              <div className="flex justify-end space-x-2">
+                <Button variant="outline" onClick={() => setEditingEntry(null)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveEdit}>
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

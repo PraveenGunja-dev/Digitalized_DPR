@@ -49,7 +49,7 @@ const formatDate = (dateString: string | null | undefined): string => {
   return date.toISOString().split('T')[0];
 };
 
-const PMRGDashboard = () => {
+const PMAGDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, token } = useAuth();
@@ -623,7 +623,7 @@ const PMRGDashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                PMRG Dashboard
+                PMAG Dashboard
               </motion.h1>
               <motion.p 
                 className="text-muted-foreground"
@@ -950,7 +950,7 @@ const PMRGDashboard = () => {
                 onChange={(e) => handleRegisterFormChange("assignProject", e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
               />
-              <Label htmlFor="assignProject">Assign project to this user</Label>
+              <Label htmlFor="assignProject">Assign project to this user (cannot be changed later)</Label>
             </div>
             {registerForm.assignProject && (
               <div>
@@ -1174,4 +1174,4 @@ const PMRGDashboard = () => {
   );
 };
 
-export default PMRGDashboard;
+export default PMAGDashboard;

@@ -86,12 +86,21 @@ const SupervisorDashboard = () => {
     { rfiNo: '', subject: '', module: '', submittedDate: '', responseDate: '', status: '', remarks: '', yesterdayValue: '', todayValue: '' }
   ]);
 
+  // Track if entry is read-only (submitted)
+  const [isEntryReadOnly, setIsEntryReadOnly] = useState(false);
+
   // Initialize data based on sheet type
   useEffect(() => {
     if (currentDraftEntry && currentDraftEntry.data_json) {
       const data = typeof currentDraftEntry.data_json === 'string' 
         ? JSON.parse(currentDraftEntry.data_json) 
         : currentDraftEntry.data_json;
+      
+      // Check if entry is read-only (submitted or approved)
+      const isReadOnly = currentDraftEntry.isReadOnly || 
+                        currentDraftEntry.status === 'submitted_to_pm' || 
+                        currentDraftEntry.status === 'approved_by_pm';
+      setIsEntryReadOnly(isReadOnly);
       
       switch(activeTab) {
         case 'dp_qty':
@@ -115,6 +124,8 @@ const SupervisorDashboard = () => {
           if (data.rows) setMmsModuleRfiData(data.rows);
           break;
       }
+    } else {
+      setIsEntryReadOnly(false);
     }
   }, [currentDraftEntry, activeTab]);
 
@@ -152,6 +163,12 @@ const SupervisorDashboard = () => {
   // Handle entry save
   const handleSaveEntry = async () => {
     if (!currentDraftEntry) return;
+    
+    // Don't allow saving if entry is read-only (submitted)
+    if (isEntryReadOnly || currentDraftEntry.status !== 'draft') {
+      toast.error("Cannot save: This entry has been submitted and is read-only");
+      return;
+    }
     
     try {
       let dataToSave: any = {};
@@ -203,6 +220,12 @@ const SupervisorDashboard = () => {
     if (!currentDraftEntry) {
       toast.error("No entry to submit. Please ensure you have selected a project and sheet type.");
       console.error('No currentDraftEntry found');
+      return;
+    }
+    
+    // Don't allow submission if entry is read-only (already submitted)
+    if (isEntryReadOnly || currentDraftEntry.status !== 'draft') {
+      toast.error("Cannot submit: This entry has already been submitted");
       return;
     }
     
@@ -280,7 +303,9 @@ const SupervisorDashboard = () => {
           <DPQtyTable 
             data={dpQtyData} 
             setData={setDpQtyData} 
-            onSave={handleSaveEntry} 
+            onSave={isEntryReadOnly ? undefined : handleSaveEntry}
+            onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
+            isLocked={isEntryReadOnly}
           />
         );
       case 'dp_vendor_block':
@@ -288,9 +313,11 @@ const SupervisorDashboard = () => {
           <DPVendorBlockTable 
             data={dpVendorBlockData} 
             setData={setDpVendorBlockData} 
-            onSave={handleSaveEntry} 
+            onSave={isEntryReadOnly ? undefined : handleSaveEntry}
+            onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
             yesterday={yesterday}
             today={today}
+            isLocked={isEntryReadOnly}
           />
         );
       case 'manpower_details':
@@ -300,9 +327,11 @@ const SupervisorDashboard = () => {
             setData={setManpowerDetailsData} 
             totalManpower={totalManpower}
             setTotalManpower={setTotalManpower}
-            onSave={handleSaveEntry} 
+            onSave={isEntryReadOnly ? undefined : handleSaveEntry}
+            onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
             yesterday={yesterday}
             today={today}
+            isLocked={isEntryReadOnly}
           />
         );
       case 'dp_block':
@@ -310,9 +339,11 @@ const SupervisorDashboard = () => {
           <DPBlockTable 
             data={dpBlockData} 
             setData={setDpBlockData} 
-            onSave={handleSaveEntry} 
+            onSave={isEntryReadOnly ? undefined : handleSaveEntry}
+            onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
             yesterday={yesterday}
             today={today}
+            isLocked={isEntryReadOnly}
           />
         );
       case 'dp_vendor_idt':
@@ -320,9 +351,11 @@ const SupervisorDashboard = () => {
           <DPVendorIdtTable 
             data={dpVendorIdtData} 
             setData={setDpVendorIdtData} 
-            onSave={handleSaveEntry} 
+            onSave={isEntryReadOnly ? undefined : handleSaveEntry}
+            onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
             yesterday={yesterday}
             today={today}
+            isLocked={isEntryReadOnly}
           />
         );
       case 'mms_module_rfi':
@@ -330,9 +363,11 @@ const SupervisorDashboard = () => {
           <MmsModuleRfiTable 
             data={mmsModuleRfiData} 
             setData={setMmsModuleRfiData} 
-            onSave={handleSaveEntry} 
+            onSave={isEntryReadOnly ? undefined : handleSaveEntry}
+            onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
             yesterday={yesterday}
             today={today}
+            isLocked={isEntryReadOnly}
           />
         );
       case 'supervisor_table':

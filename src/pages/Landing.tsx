@@ -18,16 +18,16 @@ const Landing = () => {
       path: "/supervisor",
     },
     {
-      role: "Project Manager",
+      role: "Site PM",
       icon: Shield,
       description: "Review, modify, and approve workflows",
-      path: "/pm",
+      path: "/sitepm",
     },
     {
-      role: "PMRG",
+      role: "PMAG",
       icon: CheckCircle2,
       description: "Advanced analytics and final approvals",
-      path: "/pmrg",
+      path: "/pmag",
     },
   ]
 

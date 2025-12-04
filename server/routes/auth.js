@@ -407,23 +407,40 @@ router.get('/supervisors', (req, res, next) => {
   }
 });
 
-// Reset users - delete all and create admin (admin only)
+// Reset users - delete all except admin and create admin if needed (admin only)
 router.post('/reset-users', isAdmin, async (req, res) => {
   try {
-    // Delete all existing users
-    await pool.query('DELETE FROM users');
+    // Delete all users except admin (PMAG role or admin email)
+    await pool.query(`
+      DELETE FROM users 
+      WHERE email != 'admin@adani.com' 
+      AND role != 'PMAG'
+    `);
     
-    // Create admin user
-    const adminPassword = 'admin123';
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
-
-    const result = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, name, email, role',
-      ['Admin User', 'admin@adani.com', hashedPassword, 'admin']
+    // Check if admin exists, if not create it
+    const adminCheck = await pool.query(
+      "SELECT user_id FROM users WHERE email = 'admin@adani.com' OR role = 'PMAG' LIMIT 1"
     );
+    
+    let adminUser;
+    if (adminCheck.rows.length === 0) {
+      // Create admin user if it doesn't exist
+      const adminPassword = 'admin123';
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
 
-    const adminUser = result.rows[0];
+      const result = await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, name, email, role',
+        ['Admin User', 'admin@adani.com', hashedPassword, 'PMAG']
+      );
+      adminUser = result.rows[0];
+    } else {
+      // Get existing admin user
+      const result = await pool.query(
+        "SELECT user_id, name, email, role FROM users WHERE email = 'admin@adani.com' OR role = 'PMAG' LIMIT 1"
+      );
+      adminUser = result.rows[0];
+    }
 
     // Oracle P6 API compatible response format
     res.status(200).json({

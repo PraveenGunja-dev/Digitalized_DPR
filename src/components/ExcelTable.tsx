@@ -53,9 +53,9 @@ export const ExcelTable = ({
   };
 
   return (
-    <div className={`border rounded-lg overflow-hidden shadow-sm bg-white ${isFullscreen ? 'fixed inset-0 z-50 m-0 rounded-none' : ''}`}>
+    <div className={`border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-background ${isFullscreen ? 'fixed inset-0 z-50 m-0 rounded-none' : ''}`}>
       {/* Header */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b ${isFullscreen ? 'bg-gray-100' : 'bg-gray-50'}`}>
+      <div className={`flex items-center justify-between px-4 py-3 border-b ${isFullscreen ? 'bg-gray-100 dark:bg-muted' : 'bg-gray-50 dark:bg-muted'}`}>
         <div className="flex items-center space-x-2">
           <h3 className="font-semibold text-lg">{title}</h3>
           <span className="text-sm text-muted-foreground">({data.length} rows)</span>
@@ -88,7 +88,7 @@ export const ExcelTable = ({
 
       {/* Fullscreen header when in fullscreen mode */}
       {isFullscreen && (
-        <div className="p-4 border-b bg-white">
+        <div className="p-4 border-b bg-white dark:bg-background">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-xl font-bold">{title} - Fullscreen View</h2>
@@ -132,18 +132,18 @@ export const ExcelTable = ({
       <div className={`overflow-auto ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'max-h-[600px]'}`}>
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-gray-100 sticky top-0 z-10">
-              <th className="border-r border-b border-gray-300 w-12 h-8 text-center font-medium text-gray-700">#</th>
+            <tr className="bg-gray-100 dark:bg-muted sticky top-0 z-10">
+              <th className="border-r border-b border-gray-300 dark:border-border w-12 h-8 text-center font-medium text-gray-700 dark:text-foreground">#</th>
               {columns.map((column, index) => (
                 <th 
                   key={index} 
-                  className="border-r border-b border-gray-300 px-3 py-2 text-left font-medium text-gray-700 min-w-[120px]"
+                  className="border-r border-b border-gray-300 dark:border-border px-3 py-2 text-left font-medium text-gray-700 dark:text-foreground min-w-[120px]"
                 >
                   {column}
                 </th>
               ))}
               {!isReadOnly && (
-                <th className="border-b border-gray-300 w-12"></th>
+                <th className="border-b border-gray-300 dark:border-border w-12"></th>
               )}
             </tr>
           </thead>
@@ -151,15 +151,15 @@ export const ExcelTable = ({
             {data.map((row, rowIndex) => (
               <tr 
                 key={rowIndex} 
-                className={rowIndex % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                className={rowIndex % 2 === 0 ? "bg-white dark:bg-background" : "bg-gray-50 dark:bg-muted/30"}
               >
-                <td className="border-r border-t border-gray-300 w-12 h-8 text-center text-gray-500 text-xs">
+                <td className="border-r border-t border-gray-300 dark:border-border w-12 h-8 text-center text-gray-500 dark:text-muted-foreground text-xs">
                   {rowIndex + 1}
                 </td>
                 {columns.map((_, colIndex) => (
                   <td 
                     key={colIndex} 
-                    className="border-r border-t border-gray-300 p-0"
+                    className="border-r border-t border-gray-300 dark:border-border p-0"
                   >
                     <Input
                       value={row[colIndex] || ""}
@@ -170,11 +170,11 @@ export const ExcelTable = ({
                   </td>
                 ))}
                 {!isReadOnly && (
-                  <td className="border-t border-gray-300 w-12 p-0">
+                  <td className="border-t border-gray-300 dark:border-border w-12 p-0">
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-8 w-full rounded-none text-red-500 hover:text-red-700 hover:bg-red-50"
+                      className="h-8 w-full rounded-none text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
                       onClick={() => handleDeleteRow(rowIndex)}
                     >
                       ×
@@ -189,7 +189,7 @@ export const ExcelTable = ({
 
       {/* Add row button */}
       {!isReadOnly && (
-        <div className="border-t bg-gray-50 px-4 py-2">
+        <div className="border-t bg-gray-50 dark:bg-muted px-4 py-2">
           <Button 
             size="sm" 
             variant="outline" 
@@ -202,7 +202,7 @@ export const ExcelTable = ({
       )}
 
       {/* Status bar */}
-      <div className="border-t bg-gray-50 px-4 py-1 flex justify-between text-xs text-gray-500">
+      <div className="border-t bg-gray-50 dark:bg-muted px-4 py-1 flex justify-between text-xs text-gray-500 dark:text-muted-foreground">
         <div>
           Ready | {data.length} rows × {columns.length} columns
         </div>

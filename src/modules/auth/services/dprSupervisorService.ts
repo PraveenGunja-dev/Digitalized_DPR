@@ -114,6 +114,14 @@ export const approveEntryByPM = async (entryId: number) => {
   return response.data;
 };
 
+export const updateEntryByPM = async (entryId: number, data: any) => {
+  const response = await axios.put(`${API_URL}/dpr-supervisor/pm/update`, 
+    { entryId, data },
+    { headers: getAuthHeader() }
+  );
+  return response.data;
+};
+
 export const rejectEntryByPM = async (entryId: number) => {
   const response = await axios.post(`${API_URL}/dpr-supervisor/pm/reject`, 
     { entryId },

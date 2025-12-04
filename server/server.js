@@ -158,30 +158,30 @@ app.post('/login', async (req, res, next) => {
 });
 
 // Alternative Oracle P6 compatible register endpoint
-app.post('/register', async (req, res, next) => {
-  try {
-    // Find the register route handler in the auth router
-    // Note: In Express router, paths are relative, so we look for '/register' not '/auth/register'
-    const registerLayer = authRoutes.stack.find(layer => 
-      layer.route && layer.route.path === '/register' && layer.route.methods.post
-    );
+// Mount the auth router temporarily to handle the register route
+app.post('/register', (req, res, next) => {
+  // Temporarily modify the request URL to match the router's expected path
+  const originalUrl = req.url;
+  const originalBaseUrl = req.baseUrl;
+  
+  req.url = '/register';
+  req.baseUrl = '';
+  
+  // Use the router to handle the request
+  authRoutes(req, res, (err) => {
+    // Restore original URL
+    req.url = originalUrl;
+    req.baseUrl = originalBaseUrl;
     
-    if (registerLayer && registerLayer.route && registerLayer.route.stack && registerLayer.route.stack[0]) {
-      // Call the register handler directly
-      return registerLayer.route.stack[0].handle(req, res, next);
-    } else {
-      console.log('Register route not found in auth router. Available routes:', 
-        authRoutes.stack.filter(l => l.route).map(l => ({
-          path: l.route.path,
-          methods: Object.keys(l.route.methods)
-        }))
-      );
+    if (err) {
+      return next(err);
+    }
+    
+    // If the router didn't handle the request (404), return 404
+    if (!res.headersSent) {
       return res.status(404).json({ message: 'Route not found' });
     }
-  } catch (error) {
-    console.error('Error in register endpoint:', error);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
+  });
 });
 
 // Refresh token endpoint

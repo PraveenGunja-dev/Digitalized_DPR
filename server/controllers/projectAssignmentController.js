@@ -5,8 +5,21 @@ const { cache } = require('../cache/redisClient');
 // Assign a project to a supervisor
 const assignProjectToSupervisor = async (req, res) => {
   try {
+    // Normalize role for comparison (handle case variations)
+    const userRole = req.user?.role || '';
+    const normalizedRole = userRole.trim();
+    
+    // Debug logging
+    console.log('Assign project request:', {
+      userId: req.user?.userId,
+      role: userRole,
+      normalizedRole: normalizedRole,
+      projectId: req.body?.projectId,
+      supervisorId: req.body?.supervisorId
+    });
+    
     // Check if user is PMAG (admin) or Site PM
-    if (req.user.role !== 'PMAG' && req.user.role !== 'Site PM') {
+    if (normalizedRole !== 'PMAG' && normalizedRole !== 'Site PM') {
       return res.status(403).json({ message: 'Access denied. PMAG or Site PM privileges required.' });
     }
     
@@ -27,15 +40,17 @@ const assignProjectToSupervisor = async (req, res) => {
       return res.status(404).json({ message: 'Project not found' });
     }
     
-    // Check if supervisor exists and has the correct role
-    const supervisorResult = await pool.query(
-      'SELECT user_id, role FROM users WHERE user_id = $1 AND role = $2',
-      [supervisorId, 'supervisor']
+    // Check if user exists and has a role that can have projects assigned (supervisor or Site PM)
+    const userResult = await pool.query(
+      'SELECT user_id, role FROM users WHERE user_id = $1 AND (role = $2 OR role = $3)',
+      [supervisorId, 'supervisor', 'Site PM']
     );
     
-    if (supervisorResult.rows.length === 0) {
-      return res.status(404).json({ message: 'Supervisor not found or invalid role' });
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({ message: 'User not found or invalid role. Projects can only be assigned to supervisors or Site PM users.' });
     }
+    
+    const targetUser = userResult.rows[0];
     
     // Check if assignment already exists
     const existingAssignment = await pool.query(
@@ -49,19 +64,12 @@ const assignProjectToSupervisor = async (req, res) => {
       });
     }
     
-    // For Site PM users, check if they are trying to assign a project they have access to
-    if (req.user.role === 'Site PM') {
-      // Check if the Site PM has access to this project
-      const sitePMProjectAccess = await pool.query(
-        'SELECT id FROM project_assignments WHERE project_id = $1 AND user_id = $2',
-        [projectId, req.user.userId]
-      );
-      
-      if (sitePMProjectAccess.rows.length === 0) {
-        return res.status(403).json({ 
-          message: 'Access denied. You can only assign projects that you have access to.' 
-        });
-      }
+    // PMAG users can assign any project without restriction
+    // Site PM users can assign projects to supervisors (they can see all projects in the assignment dropdown)
+    // Note: Site PM can only VIEW projects that are assigned to them, but can ASSIGN any project to supervisors
+    if (normalizedRole === 'PMAG' || normalizedRole === 'Site PM') {
+      console.log(`${normalizedRole} ${req.user.userId} assigning project ${projectId} to user ${supervisorId}`);
+      // No additional access check needed - both PMAG and Site PM can assign any project to supervisors
     }
     
     // Assign project to supervisor
@@ -74,7 +82,7 @@ const assignProjectToSupervisor = async (req, res) => {
     await cache.del(`assigned_projects_${supervisorId}`);
     
     res.status(201).json({ 
-      message: 'Project assigned to supervisor successfully. Note: This project cannot be reassigned.',
+      message: 'Project assigned successfully. Note: This project cannot be reassigned.',
       assignment: result.rows[0]
     });
   } catch (error) {
@@ -83,14 +91,14 @@ const assignProjectToSupervisor = async (req, res) => {
   }
 };
 
-// Get assigned projects for a supervisor with caching
+// Get assigned projects for a user (supervisor or Site PM) with caching
 const getAssignedProjects = async (req, res) => {
   try {
     const userId = req.user.userId;
     
-    // Check if user is a supervisor
-    if (req.user.role !== 'supervisor') {
-      return res.status(403).json({ message: 'Access denied. Supervisor privileges required.' });
+    // Check if user is a supervisor or Site PM (both can have assigned projects)
+    if (req.user.role !== 'supervisor' && req.user.role !== 'Site PM') {
+      return res.status(403).json({ message: 'Access denied. Supervisor or Site PM privileges required.' });
     }
     
     // Create cache key for assigned projects
@@ -99,11 +107,11 @@ const getAssignedProjects = async (req, res) => {
     // Try to get data from cache first
     let cachedProjects = await cache.get(cacheKey);
     if (cachedProjects) {
-      console.log(`Returning assigned projects for supervisor ${userId} from cache`);
+      console.log(`Returning assigned projects for user ${userId} from cache`);
       return res.status(200).json(cachedProjects);
     }
     
-    // Get projects assigned to this supervisor
+    // Get projects assigned to this user
     const result = await pool.query(`
       SELECT 
         p.id AS "ObjectId", 

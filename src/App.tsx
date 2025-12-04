@@ -7,8 +7,8 @@ import Landing from "./pages/Landing"
 import ProjectsPage from "@/modules/auth/ProjectsPage"
 import { SupervisorDashboard } from "@/modules/supervisor"
 import DPRDashboard from "@/modules/supervisor/DPRDashboard"
-import PMDashboard from "@/modules/pm/PMDashboard"
-import PMRGDashboard from "@/modules/pmrg/PMAGDashboard"
+import PMDashboard from "@/modules/sitepm/PMDashboard"
+import PMAGDashboard from "@/modules/pmag/PMAGDashboard"
 import NotFound from "./pages/NotFound"
 import { AuthProvider } from "@/modules/auth/contexts/AuthContext"
 import { NotificationProvider } from "@/modules/auth/contexts/NotificationContext"
@@ -56,7 +56,7 @@ const App = () => (
                   } 
                 />
                 <Route 
-                  path="/pm" 
+                  path="/sitepm" 
                   element={
                     <ProtectedRoute requiredRole="Site PM">
                       <PMDashboard />
@@ -64,10 +64,10 @@ const App = () => (
                   } 
                 />
                 <Route 
-                  path="/pmrg" 
+                  path="/pmag" 
                   element={
                     <ProtectedRoute requiredRole="PMAG">
-                      <PMRGDashboard />
+                      <PMAGDashboard />
                     </ProtectedRoute>
                   } 
                 />

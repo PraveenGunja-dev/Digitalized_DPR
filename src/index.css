@@ -445,3 +445,179 @@ All colors MUST be HSL.
 .htContextMenu .ht_master table td:hover {
   background: #e9f1ff !important;
 }
+
+/* Dark Theme Styles for Excel and Tables */
+.dark .excel-container {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.dark .excel-toolbar {
+  background: hsl(var(--muted));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .excel-button {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+.dark .excel-button:hover {
+  background: hsl(var(--accent));
+  border-color: hsl(var(--border));
+}
+
+.dark .excel-grid-wrapper {
+  background: hsl(var(--background));
+}
+
+.dark .excel-column-header {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .excel-row-header {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.dark .excel-data-cell {
+  background: hsl(var(--background));
+}
+
+.dark .excel-readonly-cell {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.dark .excel-readonly-cell .excel-cell-content {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .excel-editable-cell {
+  background: hsl(var(--background));
+}
+
+.dark .excel-editable-cell:hover {
+  border: 1px solid hsl(var(--border));
+}
+
+.dark .excel-input {
+  background: transparent;
+  color: hsl(var(--foreground));
+}
+
+.dark .excel-input:focus {
+  background: hsl(var(--background));
+}
+
+.dark .excel-cell-content {
+  color: hsl(var(--foreground));
+}
+
+.dark .excel-status-bar {
+  background: hsl(var(--muted));
+  border-top: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
+}
+
+/* Dark Theme for Handsontable */
+.dark .handsontable {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .ht_master .wtHolder {
+  background: hsl(var(--background)) !important;
+}
+
+.dark .ht_clone_top_left_corner th,
+.dark .ht_clone_left td:first-of-type,
+.dark .ht_clone_top th:first-of-type {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .ht_clone_top th,
+.dark .ht_clone_left th {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .ht_master td,
+.dark .ht_clone_left td,
+.dark .ht_clone_top th {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .ht_master tr:nth-of-type(odd) td {
+  background: hsl(var(--background)) !important;
+}
+
+.dark .ht_master tr:nth-of-type(even) td {
+  background: hsl(var(--muted) / 0.3) !important;
+}
+
+.dark .handsontable td.htInvalid {
+  background: #7f1d1d !important;
+}
+
+.dark .htAutocompleteArrow {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .handsontable td.area {
+  background: hsl(var(--accent) / 0.3) !important;
+}
+
+.dark .handsontable td.current {
+  background: hsl(var(--accent) / 0.3) !important;
+}
+
+.dark .handsontable td.htDimmed {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .handsontable th {
+  background: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-right: 1px solid hsl(var(--border)) !important;
+  border-bottom: 1px solid hsl(var(--border)) !important;
+}
+
+.dark .handsontable .ht__highlight {
+  background: hsl(var(--accent) / 0.3) !important;
+}
+
+.dark .htContextMenu .ht_master table td {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .htContextMenu .ht_master table td:hover {
+  background: hsl(var(--accent)) !important;
+}
+
+.dark .handsontable .handsontableInput {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark .handsontable .currentRow {
+  background-color: hsl(var(--accent) / 0.2) !important;
+}
+
+.dark .handsontable .currentCol {
+  background-color: hsl(var(--accent) / 0.2) !important;
+}
+
+.dark .handsontable .area {
+  background: hsl(var(--accent) / 0.3) !important;
+}
+
+.dark .handsontable .htCommentCell {
+  border-top: 1px dashed hsl(var(--border)) !important;
+}

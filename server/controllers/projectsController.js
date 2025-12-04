@@ -20,8 +20,8 @@ const getUserProjects = async (req, res) => {
     
     let result;
     
-    if (userRole === 'supervisor') {
-      // For supervisors, get only assigned projects
+    if (userRole === 'supervisor' || userRole === 'Site PM') {
+      // For supervisors and Site PM, get only assigned projects
       result = await pool.query(`
         SELECT 
           p.id AS "ObjectId", 
@@ -39,7 +39,7 @@ const getUserProjects = async (req, res) => {
         ORDER BY p.name
       `, [userId]);
     } else {
-      // For PMAG and Site PM, get all projects
+      // For PMAG, get all projects
       result = await pool.query(`
         SELECT 
           id AS "ObjectId", 
@@ -85,8 +85,8 @@ const getProjectById = async (req, res) => {
     
     let result;
     
-    if (userRole === 'supervisor') {
-      // For supervisors, check if they're assigned to this project
+    if (userRole === 'supervisor' || userRole === 'Site PM') {
+      // For supervisors and Site PM, check if they're assigned to this project
       result = await pool.query(`
         SELECT 
           p.id AS "ObjectId", 
@@ -103,7 +103,7 @@ const getProjectById = async (req, res) => {
         WHERE p.id = $1 AND pa.user_id = $2
       `, [id, userId]);
     } else {
-      // For PMAG and Site PM, get the project directly
+      // For PMAG, get the project directly
       result = await pool.query(`
         SELECT 
           id AS "ObjectId", 
@@ -252,10 +252,83 @@ const deleteProject = async (req, res) => {
   }
 };
 
+// Get projects for assignment (PMAG and Site PM only) - used in dropdowns when assigning projects
+// PMAG sees all projects, Site PM sees only projects assigned to them
+const getAllProjectsForAssignment = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    
+    // Only PMAG and Site PM can get projects for assignment
+    if (userRole !== 'PMAG' && userRole !== 'Site PM') {
+      return res.status(403).json({ message: 'Access denied. PMAG or Site PM privileges required.' });
+    }
+    
+    // Create cache key (user-specific for Site PM, global for PMAG)
+    const cacheKey = userRole === 'PMAG' 
+      ? 'all_projects_for_assignment_pmag' 
+      : `projects_for_assignment_sitepm_${userId}`;
+    
+    // Try to get data from cache first
+    let cachedProjects = await cache.get(cacheKey);
+    if (cachedProjects) {
+      console.log(`Returning projects for assignment from cache for ${userRole}`);
+      return res.status(200).json(cachedProjects);
+    }
+    
+    let result;
+    
+    if (userRole === 'PMAG') {
+      // PMAG sees all projects
+      result = await pool.query(`
+        SELECT 
+          id AS "ObjectId", 
+          name AS "Name", 
+          location AS "Location", 
+          status AS "Status", 
+          progress AS "PercentComplete", 
+          plan_start as "PlannedStartDate", 
+          plan_end as "PlannedFinishDate", 
+          actual_start as "ActualStartDate", 
+          actual_end as "ActualFinishDate"
+        FROM projects
+        ORDER BY name
+      `);
+    } else {
+      // Site PM sees only projects assigned to them
+      result = await pool.query(`
+        SELECT 
+          p.id AS "ObjectId", 
+          p.name AS "Name", 
+          p.location AS "Location", 
+          p.status AS "Status", 
+          p.progress AS "PercentComplete", 
+          p.plan_start as "PlannedStartDate", 
+          p.plan_end as "PlannedFinishDate", 
+          p.actual_start as "ActualStartDate", 
+          p.actual_end as "ActualFinishDate"
+        FROM projects p
+        INNER JOIN project_assignments pa ON p.id = pa.project_id
+        WHERE pa.user_id = $1
+        ORDER BY p.name
+      `, [userId]);
+    }
+    
+    // Cache the result for 5 minutes
+    await cache.set(cacheKey, result.rows, 300);
+    
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error('Error fetching projects for assignment:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   getUserProjects,
   getProjectById,
   createProject,
   updateProject,
-  deleteProject
+  deleteProject,
+  getAllProjectsForAssignment
 };

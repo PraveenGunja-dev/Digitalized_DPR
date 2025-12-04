@@ -54,8 +54,8 @@ const RegisterForm = () => {
 
   const handleModalClose = () => {
     setShowSuccessModal(false);
-    // Navigate back to the PMRG dashboard
-    navigate('/pmrg');
+    // Navigate back to the PMAG dashboard
+    navigate('/pmag');
   };
 
   return (

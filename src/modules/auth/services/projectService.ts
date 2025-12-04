@@ -174,6 +174,20 @@ export const getAssignedProjects = async (): Promise<Project[]> => {
   }
 };
 
+// Get all projects for assignment (PMAG and Site PM only) - used in dropdowns when assigning projects
+export const getAllProjectsForAssignment = async (): Promise<Project[]> => {
+  try {
+    const response = await api.get<Project[]>('/project/all-for-assignment');
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      axios.isAxiosError(error) && error.response
+        ? error.response.data.message || 'Failed to fetch projects for assignment'
+        : 'Network error'
+    );
+  }
+};
+
 // Assign project to supervisor
 export const assignProjectToSupervisor = async (projectId: number, supervisorId: number): Promise<any> => {
   try {

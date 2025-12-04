@@ -19,12 +19,13 @@ interface DPBlockTableProps {
   data: DPBlockData[];
   setData: (data: DPBlockData[]) => void;
   onSave: () => void;
+  onSubmit?: () => void;
   yesterday: string;
   today: string;
   isLocked?: boolean;
 }
 
-export function DPBlockTable({ data, setData, onSave, yesterday, today, isLocked = false }: DPBlockTableProps) {
+export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false }: DPBlockTableProps) {
   // Define columns
   const columns = [
     "Activity_ID",
@@ -73,7 +74,7 @@ export function DPBlockTable({ data, setData, onSave, yesterday, today, isLocked
       <div className="bg-muted p-4 rounded-lg">
         <p className="font-medium">DP Block Table</p>
         {isLocked && (
-          <div className="mt-2 p-2 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+          <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 rounded">
             This entry has been submitted and is locked for 2 days. Values remain visible but cannot be edited.
           </div>
         )}
@@ -85,6 +86,7 @@ export function DPBlockTable({ data, setData, onSave, yesterday, today, isLocked
         data={tableData}
         onDataChange={handleDataChange}
         onSave={onSave}
+        onSubmit={onSubmit}
         isReadOnly={isLocked}
       />
     </div>

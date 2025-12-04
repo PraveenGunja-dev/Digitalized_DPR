@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Building2, Calendar, MapPin, Users, FileText, Loader2, AlertTriangle, Plus, UserPlus } from "lucide-react";
 import { useAuth } from '@/modules/auth/contexts/AuthContext';
-import { getUserProjects, getAssignedProjects } from "./services/projectService";
+import { getUserProjects, getAssignedProjects, getAllProjectsForAssignment } from "./services/projectService";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,7 @@ const ProjectsPage = () => {
   const navigate = useNavigate();
   const { user, token } = useAuth();
   const [projects, setProjects] = useState<any[]>([]);
+  const [projectsForAssignment, setProjectsForAssignment] = useState<any[]>([]); // All projects for assignment dropdown
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -138,6 +139,26 @@ const ProjectsPage = () => {
     }
   }, [token, user]);
 
+  // Fetch all projects for assignment when create user modal opens (for PMAG and Site PM)
+  useEffect(() => {
+    const fetchProjectsForAssignment = async () => {
+      if (showCreateUserModal && (user?.Role === 'PMAG' || user?.Role === 'Site PM')) {
+        try {
+          const allProjects = await getAllProjectsForAssignment();
+          setProjectsForAssignment(allProjects);
+        } catch (err) {
+          console.error('Error fetching projects for assignment:', err);
+          // Fallback to regular projects if this fails
+          setProjectsForAssignment(projects);
+        }
+      }
+    };
+
+    if (showCreateUserModal && token && user) {
+      fetchProjectsForAssignment();
+    }
+  }, [showCreateUserModal, token, user]);
+
   const handleProjectSelect = (project: any) => {
     if (!user) return;
     
@@ -159,7 +180,7 @@ const ProjectsPage = () => {
         break;
         
       case "Site PM":
-        navigate("/pm", { 
+        navigate("/sitepm", { 
           state: { 
             user,
             projectId: project.ObjectId, 
@@ -170,7 +191,7 @@ const ProjectsPage = () => {
         break;
         
       case "PMAG":
-        navigate("/pmrg", { 
+        navigate("/pmag", { 
           state: { 
             user,
             projectId: project.ObjectId, 
@@ -541,7 +562,7 @@ const ProjectsPage = () => {
                     <SelectValue placeholder="Select project to assign" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projects.map((project) => {
+                    {(projectsForAssignment.length > 0 ? projectsForAssignment : projects).map((project) => {
                       // Ensure we have a valid value for the SelectItem
                       const value = (project.ObjectId || project.id || '').toString();
                       

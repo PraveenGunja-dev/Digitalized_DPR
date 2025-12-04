@@ -7,6 +7,7 @@ const {
   submitEntry,
   getEntriesForPMReview,
   approveEntryByPM,
+  updateEntryByPM,
   rejectEntryByPM,
   getEntryById,
   getEntriesForPMAGReview,
@@ -24,6 +25,7 @@ router.post('/submit', submitEntry);  // Submit to PM
 // PM routes
 router.get('/pm/entries', getEntriesForPMReview);  // Get entries for PM review
 router.post('/pm/approve', approveEntryByPM);  // Approve entry
+router.put('/pm/update', updateEntryByPM);  // Update/edit entry
 router.post('/pm/reject', rejectEntryByPM);  // Reject entry
 
 // PMAG routes

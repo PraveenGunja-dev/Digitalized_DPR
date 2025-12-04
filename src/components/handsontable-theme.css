@@ -53,3 +53,59 @@
 .handsontable .htAutocompleteArrow {
   color: #666666;
 }
+
+/* Dark Theme for Handsontable */
+.dark .handsontable {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .handsontable .ht_master handsontable .htCore {
+  background-color: hsl(var(--background));
+}
+
+.dark .handsontable td {
+  background-color: hsl(var(--background));
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .handsontable th {
+  background-color: hsl(var(--muted));
+  color: hsl(var(--foreground));
+  border-right: 1px solid hsl(var(--border));
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.dark .handsontable .handsontableInput {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+.dark .handsontable .currentRow {
+  background-color: hsl(var(--accent) / 0.2);
+}
+
+.dark .handsontable .currentCol {
+  background-color: hsl(var(--accent) / 0.2);
+}
+
+.dark .handsontable .area {
+  background: hsl(var(--accent) / 0.3);
+}
+
+.dark .handsontable .htDimmed {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .handsontable .htInvalid {
+  background-color: #7f1d1d;
+}
+
+.dark .handsontable .htCommentCell {
+  border-top: 1px dashed hsl(var(--border));
+}
+
+.dark .handsontable .htAutocompleteArrow {
+  color: hsl(var(--foreground));
+}

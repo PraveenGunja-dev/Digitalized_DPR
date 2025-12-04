@@ -15,31 +15,49 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD,
 });
 
-// Function to reset users and create admin
+// Function to reset users and keep only admin
 async function resetUsers() {
   try {
-    // Delete all existing users
-    console.log('Deleting all existing users...');
-    await pool.query('DELETE FROM users');
-    console.log('All users deleted successfully.');
-
-    // Create admin PMAG user
-    console.log('Creating admin PMAG user...');
-    const adminPassword = 'admin123';
-    const saltRounds = 10;
-    const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
-
-    const result = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, name, email, role',
-      ['Admin User', 'admin@adani.com', hashedPassword, 'PMAG']
+    // Delete all users except admin (PMAG role or admin email)
+    console.log('Deleting all users except admin...');
+    await pool.query(`
+      DELETE FROM users 
+      WHERE email != 'admin@adani.com' 
+      AND role != 'PMAG'
+    `);
+    console.log('All users except admin deleted successfully.');
+    
+    // Check if admin exists, if not create it
+    const adminCheck = await pool.query(
+      "SELECT user_id FROM users WHERE email = 'admin@adani.com' OR role = 'PMAG' LIMIT 1"
     );
 
-    const adminUser = result.rows[0];
-    console.log('Admin user created successfully:');
-    console.log('Name:', adminUser.name);
-    console.log('Email:', adminUser.email);
-    console.log('Role:', adminUser.role);
-    console.log('Password:', adminPassword);
+    if (adminCheck.rows.length === 0) {
+      // Create admin PMAG user if it doesn't exist
+      console.log('Creating admin PMAG user...');
+      const adminPassword = 'admin123';
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(adminPassword, saltRounds);
+
+      const result = await pool.query(
+        'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, name, email, role',
+        ['Admin User', 'admin@adani.com', hashedPassword, 'PMAG']
+      );
+
+      const adminUser = result.rows[0];
+      console.log('Admin user created successfully:');
+      console.log('Name:', adminUser.name);
+      console.log('Email:', adminUser.email);
+      console.log('Role:', adminUser.role);
+      console.log('Password:', adminPassword);
+    } else {
+      console.log('Admin user already exists, keeping it.');
+      const adminUser = await pool.query(
+        "SELECT user_id, name, email, role FROM users WHERE email = 'admin@adani.com' OR role = 'PMAG' LIMIT 1"
+      );
+      console.log('Admin user:', adminUser.rows[0]);
+    }
+    
     console.log('\n*** IMPORTANT ***');
     console.log('Please change the default password after first login!');
     console.log('******************');

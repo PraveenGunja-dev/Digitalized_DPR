@@ -69,6 +69,27 @@ const getDraftEntry = async (req, res) => {
       return res.status(200).json(result.rows[0]);
     }
 
+    // Check if there's a submitted entry for today (supervisor can view but not edit)
+    result = await pool.query(
+      `SELECT * FROM dpr_supervisor_entries 
+       WHERE supervisor_id = $1 
+       AND project_id = $2 
+       AND sheet_type = $3 
+       AND entry_date = $4
+       AND status IN ('submitted_to_pm', 'approved_by_pm')`,
+      [userId, projectId, sheetType, today]
+    );
+
+    if (result.rows.length > 0) {
+      // Return submitted entry with read-only flag
+      const submittedEntry = {
+        ...result.rows[0],
+        isReadOnly: true,
+        readOnlyMessage: 'This entry has been submitted and cannot be edited.'
+      };
+      return res.status(200).json(submittedEntry);
+    }
+
     // Create new draft with appropriate structure based on sheet type
     let emptyData = { rows: [] };
     
@@ -368,6 +389,54 @@ const approveEntryByPM = async (req, res) => {
   }
 };
 
+// Update entry by PM (edit submitted entry)
+const updateEntryByPM = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const userRole = req.user.role;
+    const { entryId, data } = req.body;
+
+    if (userRole !== 'Site PM') {
+      return res.status(403).json({ message: 'Only Site PM can update entries' });
+    }
+
+    if (!entryId || !data) {
+      return res.status(400).json({ message: 'Entry ID and data are required' });
+    }
+
+    // Check if entry exists and is in a state that can be edited by PM
+    const checkResult = await pool.query(
+      'SELECT * FROM dpr_supervisor_entries WHERE id = $1 AND status IN ($2, $3)',
+      [entryId, 'submitted_to_pm', 'rejected_by_pm']
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ message: 'Entry not found or cannot be edited' });
+    }
+
+    // Update the entry data
+    const result = await pool.query(
+      `UPDATE dpr_supervisor_entries 
+       SET data_json = $1, updated_at = CURRENT_TIMESTAMP
+       WHERE id = $2
+       RETURNING *`,
+      [JSON.stringify(data), entryId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Entry not found' });
+    }
+    
+    // Invalidate cache for PM entries since we've made a change
+    await cache.flushAll();
+
+    res.status(200).json({ message: 'Entry updated successfully', entry: result.rows[0] });
+  } catch (error) {
+    console.error('Error updating entry by PM:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 // Reject entry by PM (back to Supervisor)
 const rejectEntryByPM = async (req, res) => {
   try {
@@ -555,6 +624,7 @@ module.exports = {
   submitEntry,
   getEntriesForPMReview,
   approveEntryByPM,
+  updateEntryByPM,
   rejectEntryByPM,
   getEntryById,
   getEntriesForPMAGReview,
