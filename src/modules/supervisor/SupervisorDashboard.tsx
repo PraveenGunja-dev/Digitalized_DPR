@@ -476,7 +476,7 @@ const SupervisorDashboard = () => {
                     onClick={handleSaveEntry} 
                     variant="outline"
                     disabled={!currentDraftEntry}
-                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-500"
                   >
                     <Save className="w-4 h-4 mr-2" />
                     Save Draft
@@ -496,13 +496,6 @@ const SupervisorDashboard = () => {
                 <AlertCircle className="w-4 h-4 mr-2" />
                 Add Issue Log
               </Button>
-              
-              <div className="bg-primary/10 px-4 py-2 rounded-lg">
-                <div className="flex items-center">
-                  <FileSpreadsheet className="w-5 h-5 text-primary mr-2" />
-                  <span className="font-medium">Sheet Submission</span>
-                </div>
-              </div>
             </motion.div>
           </div>
         </motion.div>

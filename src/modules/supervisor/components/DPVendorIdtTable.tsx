@@ -88,6 +88,13 @@ export function DPVendorIdtTable({ data, setData, onSave, onSubmit, yesterday, t
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
+        editableColumns={[]}
+        columnTypes={{
+          "IDT Date": "date",
+          "Actual Date": "date",
+          [yesterday]: "number",
+          [today]: "number"
+        }}
       />
     </div>
   );

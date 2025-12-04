@@ -2,9 +2,33 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { ExcelTable } from "@/components/ExcelTable";
+import { StyledExcelTable } from "@/components/StyledExcelTable";
 import { getTodayAndYesterday } from "@/modules/auth/services/dprSupervisorService";
 import { toast } from "sonner";
+
+// Chip component for status display
+const StatusChip = ({ status }: { status: string }) => {
+  const getStatusStyles = () => {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'submitted':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'approved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusStyles()}`}>
+      {status}
+    </span>
+  );
+};
 
 interface DPQtyData {
   slNo: string;
@@ -28,9 +52,10 @@ interface DPQtyTableProps {
   onSave: () => void;
   onSubmit?: () => void;
   isLocked?: boolean;
+  status?: string; // Add status prop
 }
 
-export function DPQtyTable({ data, setData, onSave, onSubmit, isLocked = false }: DPQtyTableProps) {
+export function DPQtyTable({ data, setData, onSave, onSubmit, isLocked = false, status = 'draft' }: DPQtyTableProps) {
   const { today, yesterday } = getTodayAndYesterday();
   
   // Convert data to the format expected by ExcelTable
@@ -89,19 +114,23 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, isLocked = false }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-muted p-4 rounded-lg">
+    <div className="space-y-4 w-full">
+      <div className="bg-muted p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-lg mb-2">Project Information</h3>
         <p className="font-medium">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
-        <p>Reporting Date: {today}</p>
-        <p>Progress Date: {yesterday}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+          <p>Reporting Date: {today}</p>
+          <p>Progress Date: {yesterday}</p>
+        </div>
         {isLocked && (
-          <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 rounded">
-            This entry has been submitted and is locked for 2 days. Values remain visible but cannot be edited.
+          <div className="mt-3 flex items-center">
+            <span className="mr-2">Status:</span>
+            <StatusChip status={status} />
           </div>
         )}
       </div>
       
-      <ExcelTable
+      <StyledExcelTable
         title="DP Qty Table"
         columns={columns}
         data={tableData}
@@ -109,6 +138,24 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, isLocked = false }
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
+        excludeColumns={["Sl.No"]}
+        editableColumns={[]}
+        columnTypes={{
+          "Total Quantity": "number",
+          "Balance": "number",
+          "Base Plan Start": "date",
+          "Base Plan Finish": "date",
+          "Actual Start": "date",
+          "Actual Finish": "date",
+          "Forecast Start": "date",
+          "Forecast Finish": "date",
+          "Cumulative": "number"
+        }}
+        initialColumnColors={{
+          "Description": "#0B74B0",
+          "Total Quantity": "#75479C",
+          "Balance": "#BD3861"
+        }}
       />
     </div>
   );

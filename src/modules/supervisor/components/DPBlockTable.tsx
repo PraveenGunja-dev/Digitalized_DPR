@@ -1,7 +1,31 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { ExcelTable } from "@/components/ExcelTable";
+import { StyledExcelTable } from "@/components/StyledExcelTable";
+
+// Chip component for status display
+const StatusChip = ({ status }: { status: string }) => {
+  const getStatusStyles = () => {
+    switch (status.toLowerCase()) {
+      case 'draft':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+      case 'submitted':
+        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+      case 'approved':
+        return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+      case 'rejected':
+        return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+    }
+  };
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusStyles()}`}>
+      {status}
+    </span>
+  );
+};
 
 interface DPBlockData {
   activityId: string;
@@ -23,9 +47,10 @@ interface DPBlockTableProps {
   yesterday: string;
   today: string;
   isLocked?: boolean;
+  status?: string; // Add status prop
 }
 
-export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false }: DPBlockTableProps) {
+export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false, status = 'draft' }: DPBlockTableProps) {
   // Define columns
   const columns = [
     "Activity_ID",
@@ -70,17 +95,18 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-muted p-4 rounded-lg">
-        <p className="font-medium">DP Block Table</p>
+    <div className="space-y-4 w-full">
+      <div className="bg-muted p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-lg mb-2">DP Block Table</h3>
         {isLocked && (
-          <div className="mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-800 dark:text-yellow-200 rounded">
-            This entry has been submitted and is locked for 2 days. Values remain visible but cannot be edited.
+          <div className="mt-3 flex items-center">
+            <span className="mr-2">Status:</span>
+            <StatusChip status={status} />
           </div>
         )}
       </div>
       
-      <ExcelTable
+      <StyledExcelTable
         title="DP Block Table"
         columns={columns}
         data={tableData}
@@ -88,6 +114,17 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
+        editableColumns={[]}
+        columnTypes={{
+          [yesterday]: "number",
+          [today]: "number"
+        }}
+        initialColumnColors={{
+          "Activities": "#0B74B0",
+          "Block": "#75479C",
+          [yesterday]: "#BD3861",
+          [today]: "#22A04B"
+        }}
       />
     </div>
   );

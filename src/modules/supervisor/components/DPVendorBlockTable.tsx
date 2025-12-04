@@ -109,6 +109,14 @@ export function DPVendorBlockTable({ data, setData, onSave, onSubmit, yesterday,
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
+        editableColumns={[]}
+        columnTypes={{
+          "Front": "number",
+          "Actual": "number",
+          "% Completion": "number",
+          [yesterday]: "number",
+          [today]: "number"
+        }}
       />
     </div>
   );

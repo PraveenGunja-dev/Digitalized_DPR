@@ -11,6 +11,10 @@ interface ExcelTableProps {
   onSave?: () => void;
   onSubmit?: () => void;
   isReadOnly?: boolean;
+  hideAddRow?: boolean;
+  excludeColumns?: string[];
+  editableColumns?: string[]; // Columns that can be edited even when isReadOnly is true
+  columnTypes?: Record<string, 'text' | 'number' | 'date'>; // Input types for specific columns
 }
 
 export const ExcelTable = ({ 
@@ -20,12 +24,22 @@ export const ExcelTable = ({
   onDataChange,
   onSave,
   onSubmit,
-  isReadOnly = false
+  isReadOnly = false,
+  hideAddRow = false,
+  excludeColumns = [],
+  editableColumns = [],
+  columnTypes = {}
 }: ExcelTableProps) => {
+  // Filter out excluded columns
+  const filteredColumns = columns.filter(column => !excludeColumns.includes(column));
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const handleCellChange = (rowIndex: number, colIndex: number, value: string) => {
-    if (isReadOnly) return;
+    // Allow editing if not readonly or if the column is in the editableColumns list
+    const columnName = columns[colIndex];
+    const canEdit = !isReadOnly || editableColumns.includes(columnName);
+    
+    if (!canEdit) return;
     
     const newData = [...data];
     newData[rowIndex] = [...newData[rowIndex]];
@@ -54,8 +68,8 @@ export const ExcelTable = ({
 
   return (
     <div className={`border rounded-lg overflow-hidden shadow-sm bg-white dark:bg-background ${isFullscreen ? 'fixed inset-0 z-50 m-0 rounded-none' : ''}`}>
-      {/* Header */}
-      <div className={`flex items-center justify-between px-4 py-3 border-b ${isFullscreen ? 'bg-gray-100 dark:bg-muted' : 'bg-gray-50 dark:bg-muted'}`}>
+      {/* Header - hidden in fullscreen mode */}
+      <div className={`flex items-center justify-between px-4 py-3 border-b ${isFullscreen ? 'hidden' : 'bg-gray-50 dark:bg-muted'}`}>
         <div className="flex items-center space-x-2">
           <h3 className="font-semibold text-lg">{title}</h3>
           <span className="text-sm text-muted-foreground">({data.length} rows)</span>
@@ -130,65 +144,51 @@ export const ExcelTable = ({
 
       {/* Table */}
       <div className={`overflow-auto ${isFullscreen ? 'h-[calc(100vh-140px)]' : 'max-h-[600px]'}`}>
-        <table className="w-full text-sm">
+        <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="bg-gray-100 dark:bg-muted sticky top-0 z-10">
-              <th className="border-r border-b border-gray-300 dark:border-border w-12 h-8 text-center font-medium text-gray-700 dark:text-foreground">#</th>
-              {columns.map((column, index) => (
+              {filteredColumns.map((column, index) => (
                 <th 
                   key={index} 
-                  className="border-r border-b border-gray-300 dark:border-border px-3 py-2 text-left font-medium text-gray-700 dark:text-foreground min-w-[120px]"
+                  className="border-r border-b border-gray-300 dark:border-border px-3 py-2 text-left font-medium text-gray-700 dark:text-foreground min-w-[120px] bg-gray-100 dark:bg-muted"
                 >
                   {column}
                 </th>
               ))}
-              {!isReadOnly && (
-                <th className="border-b border-gray-300 dark:border-border w-12"></th>
-              )}
             </tr>
           </thead>
           <tbody>
             {data.map((row, rowIndex) => (
               <tr 
                 key={rowIndex} 
-                className={rowIndex % 2 === 0 ? "bg-white dark:bg-background" : "bg-gray-50 dark:bg-muted/30"}
+                className={rowIndex % 2 === 0 ? "bg-white dark:bg-background hover:bg-gray-50 dark:hover:bg-gray-900" : "bg-gray-50 dark:bg-muted/30 hover:bg-gray-100 dark:hover:bg-gray-800"}
               >
-                <td className="border-r border-t border-gray-300 dark:border-border w-12 h-8 text-center text-gray-500 dark:text-muted-foreground text-xs">
-                  {rowIndex + 1}
-                </td>
-                {columns.map((_, colIndex) => (
-                  <td 
-                    key={colIndex} 
-                    className="border-r border-t border-gray-300 dark:border-border p-0"
-                  >
-                    <Input
-                      value={row[colIndex] || ""}
-                      onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                      className="border-0 rounded-none focus-visible:ring-1 focus-visible:ring-blue-500 h-8"
-                      readOnly={isReadOnly}
-                    />
-                  </td>
-                ))}
-                {!isReadOnly && (
-                  <td className="border-t border-gray-300 dark:border-border w-12 p-0">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-full rounded-none text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30"
-                      onClick={() => handleDeleteRow(rowIndex)}
+                {filteredColumns.map((_, filteredColIndex) => {
+                  // Find the original column index to map to the correct data
+                  const originalColIndex = columns.findIndex(col => col === filteredColumns[filteredColIndex]);
+                  return (
+                    <td 
+                      key={filteredColIndex} 
+                      className="border-r border-t border-gray-300 dark:border-border p-0 align-middle"
                     >
-                      ×
-                    </Button>
-                  </td>
-                )}
+                      <Input
+                        value={row[originalColIndex] || ""}
+                        onChange={(e) => handleCellChange(rowIndex, originalColIndex, e.target.value)}
+                        className="border-0 rounded-none focus-visible:ring-1 focus-visible:ring-blue-500 h-8 w-full px-2"
+                        readOnly={!editableColumns.includes(columns[originalColIndex]) && isReadOnly}
+                        type={columnTypes[columns[originalColIndex]] || 'text'}
+                      />
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Add row button */}
-      {!isReadOnly && (
+      {/* Add row button - removed as per requirements */}
+      {/* {!isReadOnly && !hideAddRow && (
         <div className="border-t bg-gray-50 dark:bg-muted px-4 py-2">
           <Button 
             size="sm" 
@@ -199,10 +199,10 @@ export const ExcelTable = ({
             + Add Row
           </Button>
         </div>
-      )}
+      )} */}
 
-      {/* Status bar */}
-      <div className="border-t bg-gray-50 dark:bg-muted px-4 py-1 flex justify-between text-xs text-gray-500 dark:text-muted-foreground">
+      {/* Status bar - hidden in fullscreen mode */}
+      <div className={`border-t bg-gray-50 dark:bg-muted px-4 py-1 flex justify-between text-xs text-gray-500 dark:text-muted-foreground ${isFullscreen ? 'hidden' : ''}`}>
         <div>
           Ready | {data.length} rows × {columns.length} columns
         </div>

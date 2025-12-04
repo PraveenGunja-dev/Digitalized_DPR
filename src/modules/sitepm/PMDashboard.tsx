@@ -606,7 +606,7 @@ const PMDashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
               >
-                PM Dashboard
+               Site PM Dashboard
               </motion.h1>
               <motion.p 
                 className="text-muted-foreground"

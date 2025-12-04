@@ -1,7 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
-import { ExcelTable } from "@/components/ExcelTable";
+import { StyledExcelTable } from "@/components/StyledExcelTable";
 
 interface MmsModuleRfiData {
   rfiNo: string;
@@ -80,7 +80,7 @@ export function MmsModuleRfiTable({ data, setData, onSave, onSubmit, yesterday, 
         )}
       </div>
       
-      <ExcelTable
+      <StyledExcelTable
         title="MMS & Module RFI Table"
         columns={columns}
         data={tableData}
@@ -88,6 +88,20 @@ export function MmsModuleRfiTable({ data, setData, onSave, onSubmit, yesterday, 
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
+        editableColumns={[]}
+        columnTypes={{
+          "Submitted Date": "date",
+          "Response Date": "date",
+          [yesterday]: "number",
+          [today]: "number"
+        }}
+        initialColumnColors={{
+          "Subject": "#0B74B0",
+          "Module": "#75479C",
+          "Status": "#BD3861",
+          [yesterday]: "#22A04B",
+          [today]: "#FF6B35"
+        }}
       />
     </div>
   );
