@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
 import { StyledExcelTable } from "@/components/StyledExcelTable";
 import { StatusChip } from "@/components/StatusChip";
+import { fetchMmsModuleRfiData } from "@/modules/supervisor/services/mockDataService";
 
 interface MmsModuleRfiData {
   rfiNo: string;
@@ -25,6 +27,7 @@ interface MmsModuleRfiTableProps {
   today: string;
   isLocked?: boolean;
   status?: string; // Add status prop
+  useMockData?: boolean; // Flag to use mock data
 }
 
 export function MmsModuleRfiTable({ 
@@ -35,8 +38,25 @@ export function MmsModuleRfiTable({
   yesterday, 
   today, 
   isLocked = false,
-  status = 'draft' // Add status prop with default
+  status = 'draft', // Add status prop with default
+  useMockData = false // Flag to use mock data
 }: MmsModuleRfiTableProps) {
+  // Fetch data from mock API when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      if (useMockData) {
+        try {
+          const mockData = await fetchMmsModuleRfiData();
+          setData(mockData);
+        } catch (error) {
+          console.error('Error fetching mock data:', error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [setData, useMockData]);
+  
   // Define columns
   const columns = [
     "RFI No",
@@ -97,7 +117,7 @@ export function MmsModuleRfiTable({
           [yesterday]: "number",
           [today]: "number"
         }}
-        status={status} // Pass status to StyledExcelTable
+
       />
     </div>
   );

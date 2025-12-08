@@ -61,6 +61,9 @@ const SupervisorDashboard = () => {
   // State for reactive project ID
   const [currentProjectId, setCurrentProjectId] = useState(projectIdFromLocation);
   
+  // Flag to use mock data (for development/testing)
+  const useMockData = true; // Set to false to use real API
+  
   // Effect to update state when location changes
   useEffect(() => {
     const locationState = location.state || {};
@@ -84,16 +87,13 @@ const SupervisorDashboard = () => {
       basePlanFinish: '', 
       forecastStart: '', 
       forecastFinish: '', 
-      blockCapacity: '', 
-      phase: '', 
-      block: '', 
-      spvNumber: '', 
       actualStart: '', 
       actualFinish: '', 
       remarks: '', 
-      priority: '', 
       balance: '', 
-      cumulative: '' 
+      cumulative: '',
+      yesterday: '', // Number value, not editable
+      today: '' // Number value, editable
     }
   ]);
   
@@ -121,7 +121,9 @@ const SupervisorDashboard = () => {
       holdDueToWtg: '',
       front: '',
       actual: '',
-      completionPercentage: ''
+      completionPercentage: '',
+      yesterdayValue: '', // Number value, not editable
+      todayValue: '' // Number value, editable
     }
   ]);
   
@@ -143,7 +145,9 @@ const SupervisorDashboard = () => {
       priority: '',
       remarks: '',
       actual: '',
-      completionPercentage: ''
+      completionPercentage: '',
+      yesterdayValue: '', // Number value, not editable
+      todayValue: '' // Number value, editable
     }
   ]);
   
@@ -380,6 +384,7 @@ const SupervisorDashboard = () => {
             today={today}
             isLocked={isEntryReadOnly}
             status={entryStatus}
+            useMockData={useMockData}
           />
         );
       case 'dp_vendor_block':
@@ -393,6 +398,7 @@ const SupervisorDashboard = () => {
             today={today}
             isLocked={isEntryReadOnly}
             status={entryStatus}
+            useMockData={useMockData}
           />
         );
       case 'manpower_details':
@@ -408,6 +414,7 @@ const SupervisorDashboard = () => {
             today={today}
             isLocked={isEntryReadOnly}
             status={entryStatus}
+            useMockData={useMockData}
           />
         );
       case 'dp_block':
@@ -421,6 +428,7 @@ const SupervisorDashboard = () => {
             today={today}
             isLocked={isEntryReadOnly}
             status={entryStatus}
+            useMockData={useMockData}
           />
         );
       case 'dp_vendor_idt':
@@ -434,6 +442,7 @@ const SupervisorDashboard = () => {
             today={today}
             isLocked={isEntryReadOnly}
             status={entryStatus}
+            useMockData={useMockData}
           />
         );
       case 'mms_module_rfi':
@@ -447,34 +456,36 @@ const SupervisorDashboard = () => {
             today={today}
             isLocked={isEntryReadOnly}
             status={entryStatus}
+            useMockData={useMockData}
           />
         );
       case 'supervisor_table':
         return (
           <div className="text-center py-8 text-muted-foreground">
-            <User className="mx-auto h-12 w-12 opacity-50" />
-            <h3 className="mt-2 text-lg font-medium">Supervisor Table</h3>
-            <p className="mt-1">Supervisor entry data will be displayed here.</p>
+            <Package className="w-16 h-16 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Supervisor Table</h3>
+            <p>Supervisor-specific data and controls will be shown here.</p>
           </div>
         );
       case 'issues':
         return (
-          <div className="space-y-6">
-            <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold flex items-center">
-                <AlertCircle className="w-6 h-6 mr-2 text-primary" />
-                Issues Tracking
-              </h2>
-              <Button onClick={() => setIsAddIssueModalOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Issue Log
-              </Button>
-            </div>
+          <>
+            <IssueFormModal 
+              open={isAddIssueModalOpen} 
+              onOpenChange={setIsAddIssueModalOpen} 
+              onSubmit={handleSubmitIssue}
+            />
             <IssuesTable issues={issues} onAddIssue={() => setIsAddIssueModalOpen(true)} />
-          </div>
+          </>
         );
       default:
-        return null;
+        return (
+          <div className="text-center py-8 text-muted-foreground">
+            <AlertCircle className="w-16 h-16 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold mb-2">Sheet Not Found</h3>
+            <p>The requested sheet could not be found.</p>
+          </div>
+        );
     }
   };
 
@@ -489,172 +500,105 @@ const SupervisorDashboard = () => {
         userName={user?.Name || "User"} 
         userRole={user?.Role || "supervisor"} 
         projectName={projectName}
-        onAddUser={() => alert("Add User functionality is only available for PMAG users")}
-        onAddProject={() => alert("Add Project functionality is only available for PMAG users")}
-        onAssignProject={() => alert("Assign Project functionality is only available for PMAG users")}
-        onAddIssue={() => setIsAddIssueModalOpen(true)}
-      />
-      
-      <IssueFormModal 
-        open={isAddIssueModalOpen} 
-        onOpenChange={setIsAddIssueModalOpen} 
-        onSubmit={handleSubmitIssue} 
       />
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <motion.div
-          className="mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 100, 
-            damping: 15,
-            duration: 0.5 
-          }}
+          className="mb-6 sm:mb-8"
         >
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <motion.h1 
-                className="text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1, duration: 0.5 }}
-              >
-                Welcome, {user?.Name || "Supervisor"}
-              </motion.h1>
-              <motion.p 
-                className="text-muted-foreground"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2, duration: 0.5 }}
-              >
-                {projectName ? `Project: ${projectName}` : "Project dashboard for supervisor activities"}
-              </motion.p>
-              {projectDetails && (
-                <motion.div 
-                  className="mt-2 text-sm text-muted-foreground"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3, duration: 0.5 }}
-                >
-                  <p>Plan: {formatDate(projectDetails.PlannedStartDate)} to {formatDate(projectDetails.PlannedFinishDate)}</p>
-                  <p>Actual: {formatDate(projectDetails.ActualStartDate) || "Not started"} to {formatDate(projectDetails.ActualFinishDate) || "Not completed"}</p>
-                </motion.div>
-              )}
+              <h1 className="text-2xl sm:text-3xl font-bold">Daily Progress Report</h1>
+              <p className="text-muted-foreground mt-1">{projectName}</p>
             </div>
-            <motion.div 
-              className="flex items-center space-x-4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2, duration: 0.5 }}
-            >
-              {activeTab !== 'issues' && activeTab !== 'supervisor_table' && activeTab !== 'summary' && (
-                <>
-                  <Button 
-                    onClick={handleSaveEntry} 
-                    variant="outline"
-                    disabled={!currentDraftEntry}
-                    className="border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-500"
-                  >
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Draft
-                  </Button>
-                  <Button 
-                    onClick={handleSubmitEntry} 
-                    disabled={!currentDraftEntry}
-                    className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Submit to PM
-                  </Button>
-                </>
-              )}
-              
-              <Button onClick={() => setIsAddIssueModalOpen(true)} className="bg-orange-500 hover:bg-orange-600">
-                <AlertCircle className="w-4 h-4 mr-2" />
-                Add Issue Log
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate("/projects")}
+                className="flex items-center"
+              >
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Change Project
               </Button>
-            </motion.div>
+            </div>
           </div>
         </motion.div>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.4 }}
+          transition={{ delay: 0.2 }}
         >
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-2 scrollbar-hide">
-              <TabsList className="flex w-max min-w-full space-x-0 p-1 bg-muted rounded-lg">
-                <TabsTrigger value="summary" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  <span>Summary</span>
+          <Card className="border-0 shadow-sm">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 p-1 bg-muted rounded-lg">
+                <TabsTrigger value="summary" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <Grid3X3 className="w-4 h-4 mr-1 sm:mr-2" />
+                  Summary
                 </TabsTrigger>
-                <TabsTrigger value="dp_qty" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
-                  <span>DP Qty</span>
+                <TabsTrigger value="dp_qty" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <Building className="w-4 h-4 mr-1 sm:mr-2" />
+                  DP Qty
                 </TabsTrigger>
-                <TabsTrigger value="dp_block" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <Grid3X3 className="w-4 h-4 mr-2" />
-                  <span>DP Block</span>
+                <TabsTrigger value="dp_block" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <Building className="w-4 h-4 mr-1 sm:mr-2" />
+                  DP Block
                 </TabsTrigger>
-                <TabsTrigger value="dp_vendor_idt" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <Wrench className="w-4 h-4 mr-2" />
-                  <span>DP Vendor IDT</span>
+                <TabsTrigger value="dp_vendor_idt" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <User className="w-4 h-4 mr-1 sm:mr-2" />
+                  DP Vendor IDT
                 </TabsTrigger>
-                <TabsTrigger value="mms_module_rfi" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <Building className="w-4 h-4 mr-2" />
-                  <span>MMS & Module</span>
+                <TabsTrigger value="dp_vendor_block" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <User className="w-4 h-4 mr-1 sm:mr-2" />
+                  DP Vendor Block
                 </TabsTrigger>
-                <TabsTrigger value="dp_vendor_block" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <Package className="w-4 h-4 mr-2" />
-                  <span>DP Vendor Block</span>
+                <TabsTrigger value="manpower_details" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <User className="w-4 h-4 mr-1 sm:mr-2" />
+                  Manpower
                 </TabsTrigger>
-                <TabsTrigger value="manpower_details" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <User className="w-4 h-4 mr-2" />
-                  <span>Manpower Details</span>
+                <TabsTrigger value="mms_module_rfi" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <Wrench className="w-4 h-4 mr-1 sm:mr-2" />
+                  MMS RFI
                 </TabsTrigger>
-                <TabsTrigger value="supervisor_table" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <User className="w-4 h-4 mr-2" />
-                  <span>Supervisor Table</span>
-                </TabsTrigger>
-                <TabsTrigger value="issues" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <AlertCircle className="w-4 h-4 mr-2" />
-                  <span>Issues ({issues.length})</span>
+                <TabsTrigger value="issues" className="text-xs sm:text-sm data-[state=active]:bg-background">
+                  <AlertCircle className="w-4 h-4 mr-1 sm:mr-2" />
+                  Issues
                 </TabsTrigger>
               </TabsList>
-            </div>
-
-            <TabsContent value={activeTab}>
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-6">
-                  {renderActiveTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-          </Tabs>
+              
+              <TabsContent value="summary" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="dp_qty" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="dp_block" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="dp_vendor_idt" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="dp_vendor_block" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="manpower_details" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="mms_module_rfi" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+              <TabsContent value="issues" className="mt-0 border-0 p-0 pt-4">
+                {renderActiveTable()}
+              </TabsContent>
+            </Tabs>
+          </Card>
         </motion.div>
       </div>
     </motion.div>
   );
-};
-
-// Function to format date as YYYY-MM-DD
-const formatDate = (dateString: string | null | undefined): string => {
-  if (!dateString) return "Not set";
-  const date = new Date(dateString);
-  return date.toISOString().split('T')[0];
 };
 
 export default SupervisorDashboard;

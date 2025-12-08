@@ -1,0 +1,9 @@
+{
+  "/p6/dp-qty": "/dpQty",
+  "/p6/dp-block": "/dpBlock",
+  "/p6/vendor-idt": "/dpVendorIdt",
+  "/p6/vendor-block": "/vendorBlock",
+  "/p6/mms-rfi": "/mmsRfi",
+  "/p6/manpower": "/manpower",
+  "/p6/vendor-idt-categories": "/dpVendorIdtCategories"
+}

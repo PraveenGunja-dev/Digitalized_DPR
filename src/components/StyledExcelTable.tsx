@@ -190,7 +190,7 @@ export const StyledExcelTable = ({
     // Determine text alignment based on column type
     let textAlign: 'left' | 'center' | 'right' = 'left';
     if (columnTypes[columnName] === 'number') {
-      textAlign = 'right';
+      textAlign = 'center'; // Center align numeric values instead of right align
     } else if (['date', 'boolean'].includes(columnTypes[columnName])) {
       textAlign = 'center';
     }
@@ -262,6 +262,33 @@ export const StyledExcelTable = ({
             </Button>
           )}
           
+          {/* Submit button - visible when not read-only and onSubmit is provided */}
+          {!isReadOnly && onSubmit && (
+            <Button 
+              size="sm" 
+              onClick={() => {
+                const confirmed = window.confirm("Check once - if submitted, editing is not possible. Do you want to proceed?");
+                if (confirmed) {
+                  onSubmit();
+                }
+              }}
+              className="flex items-center"
+              style={{
+                backgroundColor: currentColor,
+                color: '#FFFFFF'
+              }}
+              onMouseOver={(e) => {
+                const darkerColor = currentColor === '#0B74B0' ? '#095a8a' : 
+                                 currentColor === '#75479C' ? '#5d387a' : 
+                                 currentColor === '#BD3861' ? '#9a2d4e' : '#1b803d';
+                e.currentTarget.style.backgroundColor = darkerColor;
+              }}
+              onMouseOut={(e) => e.currentTarget.style.backgroundColor = currentColor}
+            >
+              Submit
+            </Button>
+          )}
+          
           {/* Fullscreen toggle button */}
           <Button 
             size="sm" 
@@ -287,8 +314,7 @@ export const StyledExcelTable = ({
                 Fullscreen
               </>
             )}
-          </Button>
-        </div>
+          </Button>        </div>
       </div>
 
       {/* Fullscreen header when in fullscreen mode */}
@@ -395,6 +421,10 @@ export const StyledExcelTable = ({
                   const originalColIndex = columns.findIndex(col => col === filteredColumns[filteredColIndex]);
                   const isActive = activeCell?.row === rowIndex && activeCell?.col === originalColIndex;
                   
+                  // Determine if this cell should show number input without increment/decrement controls
+                  const columnType = columnTypes[columns[originalColIndex]] || 'text';
+                  const isNumberField = columnType === 'number';
+                  
                   return (
                     <td 
                       key={filteredColIndex} 
@@ -406,7 +436,7 @@ export const StyledExcelTable = ({
                         onChange={(e) => handleCellChange(rowIndex, originalColIndex, e.target.value)}
                         className="border-0 rounded-none focus-visible:ring-0 h-6 w-full px-1"
                         readOnly={!editableColumns.includes(columns[originalColIndex]) && isReadOnly}
-                        type={columnTypes[columns[originalColIndex]] || 'text'}
+                        type={columnType}
                         style={{
                           backgroundColor: 'transparent',
                           color: 'var(--excel-text-color)',
@@ -416,11 +446,26 @@ export const StyledExcelTable = ({
                           padding: '2px 4px',
                           textAlign: getCellStyling(rowIndex, originalColIndex, filteredColumns[filteredColIndex]).textAlign,
                           width: '100%',
-                          boxSizing: 'border-box'
+                          boxSizing: 'border-box',
+                          // Hide increment/decrement controls for number inputs
+                          ...(isNumberField ? {
+                            MozAppearance: 'textfield',
+                            appearance: 'textfield'
+                          } : {})
                         }}
                         onFocus={() => setActiveCell({row: rowIndex, col: originalColIndex})}
                         onBlur={() => setActiveCell(null)}
                       />
+                      {/* Additional CSS to hide spinner for number inputs */}
+                      {isNumberField && (
+                        <style>{`
+                          input[type=number]::-webkit-outer-spin-button,
+                          input[type=number]::-webkit-inner-spin-button {
+                            -webkit-appearance: none;
+                            margin: 0;
+                          }
+                        `}</style>
+                      )}
                     </td>
                   );
                 })}

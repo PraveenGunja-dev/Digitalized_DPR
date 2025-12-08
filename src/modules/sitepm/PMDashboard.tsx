@@ -38,10 +38,7 @@ import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
 import { StatsCard } from "@/components/StatsCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar } from "recharts";
-import { PieChart, Pie, Cell } from "recharts";
-
-// Function to format date as YYYY-MM-DD
+import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";// Function to format date as YYYY-MM-DD
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "Not set";
   const date = new Date(dateString);
@@ -1038,10 +1035,16 @@ const PMDashboard = () => {
                       setEditData({ ...editData, rows: updatedRows });
                     }}
                     onSave={handleSaveEdit}
+                    onSubmit={() => {
+                      const confirmed = window.confirm("Are you sure you want to submit these changes? This action cannot be undone.");
+                      if (confirmed) {
+                        handleSaveEdit();
+                      }
+                    }}
                     isReadOnly={false}
+                    status={editingEntry?.status || 'draft'}
                   />
-                </div>
-              )}
+                </div>              )}
               
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setEditingEntry(null)}>

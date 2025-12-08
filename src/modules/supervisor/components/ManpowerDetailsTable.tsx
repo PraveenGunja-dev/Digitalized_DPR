@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { StyledExcelTable } from "@/components/StyledExcelTable";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
 import { StatusChip } from "@/components/StatusChip";
+import { fetchManpowerDetailsData } from "@/modules/supervisor/services/mockDataService";
 
 interface ManpowerDetailsData {
   activityId: string;
@@ -26,6 +28,7 @@ interface ManpowerDetailsTableProps {
   today: string;
   isLocked?: boolean;
   status?: string; // Add status prop
+  useMockData?: boolean; // Flag to use mock data
 }
 
 export function ManpowerDetailsTable({ 
@@ -38,8 +41,32 @@ export function ManpowerDetailsTable({
   yesterday, 
   today,
   isLocked = false,
-  status = 'draft' // Add status prop with default value
+  status = 'draft', // Add status prop with default value
+  useMockData = false // Flag to use mock data
 }: ManpowerDetailsTableProps) {
+  // Fetch data from mock API when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      if (useMockData) {
+        try {
+          const mockData = await fetchManpowerDetailsData();
+          setData(mockData);
+          
+          // Calculate total manpower
+          const total = mockData.reduce((sum, row) => {
+            const todayValue = parseInt(row.todayValue) || 0;
+            return sum + todayValue;
+          }, 0);
+          setTotalManpower(total);
+        } catch (error) {
+          console.error('Error fetching mock data:', error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [setData, setTotalManpower, useMockData]);
+  
   // Define columns
   const columns = [
     "Activity_ID",
@@ -89,6 +116,13 @@ export function ManpowerDetailsTable({
       todayValue: row[7] || ""
     }));
     setData(updatedData);
+    
+    // Recalculate total manpower
+    const total = updatedData.reduce((sum, row) => {
+      const todayValue = parseInt(row.todayValue) || 0;
+      return sum + todayValue;
+    }, 0);
+    setTotalManpower(total);
   };
 
   return (
@@ -101,7 +135,7 @@ export function ManpowerDetailsTable({
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
-        editableColumns={[yesterday, today]}
+        editableColumns={[today]}
         columnTypes={{
           [yesterday]: "number",
           [today]: "number"

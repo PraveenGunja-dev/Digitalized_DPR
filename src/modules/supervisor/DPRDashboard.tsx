@@ -276,6 +276,7 @@ const DPRDashboard = () => {
         isLocked={currentDraftEntry?.status !== 'draft'}
         status={currentDraftEntry?.status}
         projectId={projectId ? parseInt(projectId) : undefined}
+        useMockData={true} // Enable mock data
       />
     );
   };
@@ -290,6 +291,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
+        useMockData={true} // Enable mock data
       />
     );
   };
@@ -306,6 +308,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
+        useMockData={true} // Enable mock data
       />
     );
   };
@@ -320,6 +323,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
+        useMockData={true} // Enable mock data
       />
     );
   };
@@ -334,6 +338,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
+        useMockData={true} // Enable mock data
       />
     );
   };
@@ -348,6 +353,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
+        useMockData={true} // Enable mock data
       />
     );
   };
@@ -364,6 +370,27 @@ const DPRDashboard = () => {
         userRole={user?.Role || "supervisor"} 
         projectName={projectName}
       />
+      
+      {/* Add custom CSS for responsive tabs */}
+      <style>{`
+        .responsive-tabs-container {
+          display: flex;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none; /* Firefox */
+        }
+        .responsive-tabs-container::-webkit-scrollbar {
+          display: none; /* Chrome, Safari, Opera*/
+        }
+        .responsive-tabs-list {
+          display: flex;
+          flex-wrap: nowrap;
+          min-width: 100%;
+        }
+        .responsive-tab-trigger {
+          flex: 0 0 auto;
+        }
+      `}</style>
       
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <motion.div
@@ -434,33 +461,34 @@ const DPRDashboard = () => {
           className="w-full"
         >
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="overflow-x-auto pb-2 scrollbar-hide">
-              <TabsList className="flex w-max min-w-full space-x-0 p-1 bg-muted rounded-lg">
-                <TabsTrigger value="dp-qty" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+            {/* Improved responsive tabs container */}
+            <div className="responsive-tabs-container pb-2">
+              <TabsList className="responsive-tabs-list space-x-0 p-1 bg-muted rounded-lg">
+                <TabsTrigger value="dp-qty" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <FileSpreadsheet className="w-4 h-4 mr-2" />
                   <span>DP Qty</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp-block" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                <TabsTrigger value="dp-block" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <Grid3X3 className="w-4 h-4 mr-2" />
                   <span>DP Block</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp-vendor-idt" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                <TabsTrigger value="dp-vendor-idt" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <Wrench className="w-4 h-4 mr-2" />
                   <span>DP Vendor IDT</span>
                 </TabsTrigger>
-                <TabsTrigger value="mms-module-rfi" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                <TabsTrigger value="mms-module-rfi" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <FileText className="w-4 h-4 mr-2" />
                   <span>MMS Module RFI</span>
                 </TabsTrigger>
-                <TabsTrigger value="manpower" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                <TabsTrigger value="manpower" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <User className="w-4 h-4 mr-2" />
                   <span>Manpower</span>
                 </TabsTrigger>
-                <TabsTrigger value="supervisor-table" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                <TabsTrigger value="supervisor-table" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <User className="w-4 h-4 mr-2" />
                   <span>Supervisor</span>
                 </TabsTrigger>
-                <TabsTrigger value="issues" className="flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                <TabsTrigger value="issues" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
                   <AlertCircle className="w-4 h-4 mr-2" />
                   <span>Issues</span>
                 </TabsTrigger>

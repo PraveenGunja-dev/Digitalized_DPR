@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { StyledExcelTable } from "@/components/StyledExcelTable";
 import { StatusChip } from "@/components/StatusChip";
+import { fetchDpVendorIdtData } from "@/modules/supervisor/services/mockDataService";
 
 interface DPVendorIdtData {
-  // P6 fields (read-only)
+  // From P6 API
   activityId: string;
   activities: string;
   plot: string;
@@ -12,17 +14,21 @@ interface DPVendorIdtData {
   front: string;
   
   // User-editable fields
-  actualStartDate: string;
-  actualFinishDate: string;
-  forecastStartDate: string;
-  forecastFinishDate: string;
-  contractorName: string;
   priority: string;
+  contractorName: string;
   remarks: string;
   
   // Calculated fields
   actual: string;
   completionPercentage: string;
+  
+  // Date values
+  yesterdayValue?: string; // Number value, not editable
+  todayValue?: string; // Number value, editable
+  
+  // Category row fields
+  category?: string;
+  isCategoryRow?: boolean;
 }
 
 interface DPVendorIdtTableProps {
@@ -34,6 +40,7 @@ interface DPVendorIdtTableProps {
   today: string;
   isLocked?: boolean;
   status?: string; // Add status prop
+  useMockData?: boolean; // Flag to use mock data
 }
 
 export function DPVendorIdtTable({ 
@@ -44,121 +51,152 @@ export function DPVendorIdtTable({
   yesterday, 
   today, 
   isLocked = false,
-  status = 'draft' // Add status prop with default
+  status = 'draft', // Add status prop with default
+  useMockData = false // Flag to use mock data
 }: DPVendorIdtTableProps) {
+  // Fetch data from mock API when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      if (useMockData) {
+        try {
+          const mockData = await fetchDpVendorIdtData();
+          setData(mockData);
+        } catch (error) {
+          console.error('Error fetching mock data:', error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [setData, useMockData]);
+  
   // Define columns
   const columns = [
-    "Activity_ID (p6)",
-    "Activities (p6)",
-    "Plot (p6)",
-    "New Block Nom (p6)",
-    "Baseline Priority (p6)",
-    "Scope (p6)",
-    "Front (p6)",
-    "Actual Start Date (user)",
-    "Actual Finish Date (user)",
-    "Forecast Start Date (user)",
-    "Forecast Finish Date (user)",
-    "Contractor Name (user)",
-    "Priority (user)",
-    "Remarks (user)",
-    "Actual (calc)",
-    "% Completion (calc)"
+    "Activity_ID(p6)",
+    "Activities(p6)",
+    "Plot(p6)",
+    "New Block Nom(p6)",
+    "Priority(user)",
+    "Baseline Priority(p6)",
+    "Contractor Name(user)",
+    "Scope(p6)edit",
+    "Front(p6)edit",
+    "Actual(calc)",
+    "% Completion(calc)",
+    "Remarks(user)",
+    yesterday, // Number value, not editable
+    today // Number value, editable
   ];
   
   // Convert array of objects to array of arrays
-  const tableData = data.map(row => [
-    row.activityId || '',
-    row.activities || '',
-    row.plot || '',
-    row.newBlockNom || '',
-    row.baselinePriority || '',
-    row.scope || '',
-    row.front || '',
-    row.actualStartDate || '',
-    row.actualFinishDate || '',
-    row.forecastStartDate || '',
-    row.forecastFinishDate || '',
-    row.contractorName || '',
-    row.priority || '',
-    row.remarks || '',
-    row.actual || '',
-    row.completionPercentage || ''
-  ]);
+  const tableData = data.map(row => {
+    if (row.isCategoryRow) {
+      // Category row - only show category in first column, rest empty
+      return [
+        row.category || '',
+        '', '', '', '', '', '', '', '', '', '', '',
+        '', ''
+      ];
+    } else {
+      // Activity row - show all data
+      return [
+        row.activityId || '',
+        row.activities || '',
+        row.plot || '',
+        row.newBlockNom || '',
+        row.priority || '',
+        row.baselinePriority || '',
+        row.contractorName || '',
+        row.scope || '',
+        row.front || '',
+        row.actual || '',
+        row.completionPercentage || '',
+        row.remarks || '',
+        row.yesterdayValue || '', // Number value for yesterday
+        row.todayValue || '' // Number value for today (editable)
+      ];
+    }
+  });
   
   // Handle data changes from ExcelTable
   const handleDataChange = (newData: any[][]) => {
     // Convert array of arrays back to array of objects
-    const updatedData = newData.map(row => ({
-      activityId: row[0] || '',
-      activities: row[1] || '',
-      plot: row[2] || '',
-      newBlockNom: row[3] || '',
-      baselinePriority: row[4] || '',
-      scope: row[5] || '',
-      front: row[6] || '',
-      actualStartDate: row[7] || '',
-      actualFinishDate: row[8] || '',
-      forecastStartDate: row[9] || '',
-      forecastFinishDate: row[10] || '',
-      contractorName: row[11] || '',
-      priority: row[12] || '',
-      remarks: row[13] || '',
-      actual: row[14] || '',
-      completionPercentage: row[15] || ''
-    }));
+    const updatedData = newData.map((row, index) => {
+      const originalRow = data[index];
+      
+      if (originalRow?.isCategoryRow) {
+        // Category row - preserve category data
+        return {
+          ...originalRow,
+          category: row[0] || ''
+        };
+      } else {
+        // Activity row - update all fields
+        return {
+          activityId: row[0] || '',
+          activities: row[1] || '',
+          plot: row[2] || '',
+          newBlockNom: row[3] || '',
+          priority: row[4] || '',
+          baselinePriority: row[5] || '',
+          contractorName: row[6] || '',
+          scope: row[7] || '',
+          front: row[8] || '',
+          actual: row[9] || '',
+          completionPercentage: row[10] || '',
+          remarks: row[11] || '',
+          yesterdayValue: row[12] || '', // Number value for yesterday (not editable)
+          todayValue: row[13] || '' // Number value for today (editable)
+        };
+      }
+    });
     setData(updatedData);
   };
 
   // Define which columns are editable
   const editableColumns = [
-    "Actual Start Date (user)",
-    "Actual Finish Date (user)",
-    "Forecast Start Date (user)",
-    "Forecast Finish Date (user)",
-    "Contractor Name (user)",
-    "Priority (user)",
-    "Remarks (user)"
+    "Priority(user)",
+    "Contractor Name(user)",
+    "Scope(p6)edit",
+    "Front(p6)edit",
+    "Remarks(user)",
+    today // Number value, editable
   ];
 
   // Define column types
   const columnTypes: Record<string, 'text' | 'number' | 'date'> = {
-    "Activity_ID (p6)": "text",
-    "Activities (p6)": "text",
-    "Plot (p6)": "text",
-    "New Block Nom (p6)": "text",
-    "Baseline Priority (p6)": "text",
-    "Scope (p6)": "text",
-    "Front (p6)": "number",
-    "Actual Start Date (user)": "date",
-    "Actual Finish Date (user)": "date",
-    "Forecast Start Date (user)": "date",
-    "Forecast Finish Date (user)": "date",
-    "Contractor Name (user)": "text",
-    "Priority (user)": "text",
-    "Remarks (user)": "text",
-    "Actual (calc)": "number",
-    "% Completion (calc)": "number"
+    "Activity_ID(p6)": "text",
+    "Activities(p6)": "text",
+    "Plot(p6)": "text",
+    "New Block Nom(p6)": "text",
+    "Priority(user)": "text",
+    "Baseline Priority(p6)": "text",
+    "Contractor Name(user)": "text",
+    "Scope(p6)edit": "number",
+    "Front(p6)edit": "number",
+    "Actual(calc)": "number",
+    "% Completion(calc)": "number",
+    "Remarks(user)": "text",
+    [yesterday]: "number", // Number value, not editable
+    [today]: "number" // Number value, editable
   };
 
   // Define column widths for better alignment
   const columnWidths = {
-    "Activity_ID (p6)": 120,
-    "Activities (p6)": 200,
-    "Plot (p6)": 80,
-    "New Block Nom (p6)": 120,
-    "Baseline Priority (p6)": 100,
-    "Scope (p6)": 100,
-    "Front (p6)": 80,
-    "Actual Start Date (user)": 120,
-    "Actual Finish Date (user)": 120,
-    "Forecast Start Date (user)": 120,
-    "Forecast Finish Date (user)": 120,
-    "Contractor Name (user)": 150,
-    "Priority (user)": 100,
-    "Remarks (user)": 150,
-    "Actual (calc)": 100,
-    "% Completion (calc)": 100
+    "Activity_ID(p6)": 120,
+    "Activities(p6)": 200,
+    "Plot(p6)": 80,
+    "New Block Nom(p6)": 120,
+    "Priority(user)": 100,
+    "Baseline Priority(p6)": 100,
+    "Contractor Name(user)": 150,
+    "Scope(p6)edit": 100,
+    "Front(p6)edit": 80,
+    "Actual(calc)": 100,
+    "% Completion(calc)": 100,
+    "Remarks(user)": 150,
+    [yesterday]: 100,
+    [today]: 100
   };
 
   return (

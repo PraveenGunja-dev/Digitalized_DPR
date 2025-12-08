@@ -6,6 +6,7 @@ import { StyledExcelTable } from "@/components/StyledExcelTable";
 import { getTodayAndYesterday } from "@/modules/auth/services/dprSupervisorService";
 import { toast } from "sonner";
 import { StatusChip } from "@/components/StatusChip";
+import { fetchDpQtyData } from "@/modules/supervisor/services/mockDataService";
 
 interface DPQtyData {
   slNo: string;
@@ -16,16 +17,13 @@ interface DPQtyData {
   basePlanFinish: string;
   forecastStart: string;
   forecastFinish: string;
-  blockCapacity: string;
-  phase: string;
-  block: string;
-  spvNumber: string;
   actualStart: string;
   actualFinish: string;
   remarks: string;
-  priority: string;
   balance: string;
   cumulative: string;
+  yesterday?: string; // Number value, not editable
+  today?: string; // Number value, editable
 }
 
 interface DPQtyTableProps {
@@ -38,90 +36,96 @@ interface DPQtyTableProps {
   isLocked?: boolean;
   status?: 'draft' | 'submitted_to_pm' | 'approved_by_pm' | 'rejected_by_pm' | 'final_approved';
   projectId?: number; // Add projectId prop for P6 integration
+  useMockData?: boolean; // Flag to use mock data
 }
 
-export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false, status = 'draft', projectId }: DPQtyTableProps) {
+export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false, status = 'draft', projectId, useMockData = false }: DPQtyTableProps) {
   const { today: currentDate, yesterday: previousDate } = getTodayAndYesterday();
   
   // Fetch data from Oracle P6 when component mounts and projectId is provided
   useEffect(() => {
-    const fetchP6Data = async () => {
-      if (!projectId) return;
-      
-      try {
-        const response = await fetch(`/api/oracle-p6/dp-qty-data?projectId=${projectId}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.data && result.data.length > 0) {
-            setData(result.data);
-          }
-        } else {
-          console.error('Failed to fetch P6 data:', await response.text());
+    const fetchData = async () => {
+      if (useMockData) {
+        // Fetch from mock API
+        try {
+          const mockData = await fetchDpQtyData();
+          setData(mockData);
+        } catch (error) {
+          console.error('Error fetching mock data:', error);
         }
-      } catch (error) {
-        console.error('Error fetching P6 data:', error);
+      } else if (projectId) {
+        // Fetch from Oracle P6
+        try {
+          const response = await fetch(`/api/oracle-p6/dp-qty-data?projectId=${projectId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('token')}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.data && result.data.length > 0) {
+              setData(result.data);
+            }
+          } else {
+            console.error('Failed to fetch P6 data:', await response.text());
+          }
+        } catch (error) {
+          console.error('Error fetching P6 data:', error);
+        }
       }
     };
 
-    fetchP6Data();
-  }, [projectId, setData]);
+    fetchData();
+  }, [projectId, setData, useMockData]);
   
   // Convert data to the format expected by ExcelTable
   const columns = [
-    "Sl.No",
-    "Description",
-    "Total Quantity",
-    "UOM",
-    "Base Plan Start",
-    "Base Plan Finish",
-    "Forecast Start",
-    "Forecast Finish",
-    "Block Capacity (Mwac)",
-    "Phase",
-    "Block",
-    "SPV Number",
-    "Actual Start",
-    "Actual Finish",
-    "Remarks",
-    "Priority",
-    "Balance",
-    "Cumulative"
+    "Sl.No (p6)",
+    "Description (p6)",
+    "Total Quantity (p6 edit)",
+    "UOM (p6 edit)",
+    "Balance (auto)",
+    "Base Plan Start (p6)",
+    "Base Plan Finish (p6)",
+    "Actual Start (p6 edit)",
+    "Actual Finish (p6 edit)",
+    "Forecast Start (p6)",
+    "Forecast Finish (p6)",
+    "Remarks (user)",
+    "Cumulative (auto)",
+    yesterday,
+    today
   ];
   
   // Define column widths for better alignment
   const columnWidths = {
-    "Sl.No": 60,
-    "Description": 200,
-    "Total Quantity": 120,
-    "UOM": 80,
-    "Base Plan Start": 120,
-    "Base Plan Finish": 120,
-    "Forecast Start": 120,
-    "Forecast Finish": 120,
-    "Block Capacity (Mwac)": 150,
-    "Phase": 80,
-    "Block": 80,
-    "SPV Number": 120,
-    "Actual Start": 120,
-    "Actual Finish": 120,
-    "Remarks": 150,
-    "Priority": 100,
-    "Balance": 100,
-    "Cumulative": 100
+    "Sl.No (p6)": 60,
+    "Description (p6)": 200,
+    "Total Quantity (p6 edit)": 120,
+    "UOM (p6 edit)": 80,
+    "Balance (auto)": 100,
+    "Base Plan Start (p6)": 120,
+    "Base Plan Finish (p6)": 120,
+    "Actual Start (p6 edit)": 120,
+    "Actual Finish (p6 edit)": 120,
+    "Forecast Start (p6)": 120,
+    "Forecast Finish (p6)": 120,
+    "Remarks (user)": 150,
+    "Cumulative (auto)": 100,
+    [yesterday]: 100,
+    [today]: 100
   };
   
   // Define which columns are editable by the user
   const editableColumns = [
-    "Actual Start",
-    "Actual Finish",
-    "Remarks",
-    "Priority"
+    "Total Quantity (p6 edit)",
+    "UOM (p6 edit)",
+    "Actual Start (p6 edit)",
+    "Actual Finish (p6 edit)",
+    "Remarks (user)",
+    today // Today value is editable
   ];
   
   // Convert array of objects to array of arrays
@@ -130,20 +134,17 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
     row.description,
     row.totalQuantity,
     row.uom,
+    row.balance,
     row.basePlanStart,
     row.basePlanFinish,
-    row.forecastStart,
-    row.forecastFinish,
-    row.blockCapacity,
-    row.phase,
-    row.block,
-    row.spvNumber,
     row.actualStart,
     row.actualFinish,
+    row.forecastStart,
+    row.forecastFinish,
     row.remarks,
-    row.priority,
-    row.balance,
-    row.cumulative
+    row.cumulative,
+    row.yesterday || "", // Number value for yesterday
+    row.today || "" // Number value for today (editable)
   ]);
   
   // Handle data changes from ExcelTable
@@ -154,20 +155,17 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
       description: row[1] || "",
       totalQuantity: row[2] || "",
       uom: row[3] || "",
-      basePlanStart: row[4] || "",
-      basePlanFinish: row[5] || "",
-      forecastStart: row[6] || "",
-      forecastFinish: row[7] || "",
-      blockCapacity: row[8] || "",
-      phase: row[9] || "",
-      block: row[10] || "",
-      spvNumber: row[11] || "",
-      actualStart: row[12] || "",
-      actualFinish: row[13] || "",
-      remarks: row[14] || "",
-      priority: row[15] || "",
-      balance: row[16] || "",
-      cumulative: row[17] || ""
+      balance: row[4] || "",
+      basePlanStart: row[5] || "",
+      basePlanFinish: row[6] || "",
+      actualStart: row[7] || "",
+      actualFinish: row[8] || "",
+      forecastStart: row[9] || "",
+      forecastFinish: row[10] || "",
+      remarks: row[11] || "",
+      cumulative: row[12] || "",
+      yesterday: row[13] || "", // Number value for yesterday (not editable)
+      today: row[14] || "" // Number value for today (editable)
     }));
     setData(updatedData);
   };
@@ -191,26 +189,23 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
-        editableColumns={["Actual Start", "Actual Finish", "Remarks", "Priority"]}
+        editableColumns={editableColumns}
         columnTypes={{
-          "Sl.No": "text",
-          "Description": "text",
-          "Total Quantity": "number",
-          "UOM": "text",
-          "Base Plan/Start": "date",
-          "Base Plan/Finish": "date",
-          "Forecast Start": "date",
-          "Forecast Finish": "date",
-          "Block Capacity": "number",
-          "Phase": "text",
-          "Block": "text",
-          "SPV Number": "text",
-          "Actual Start": "date",
-          "Actual Finish": "date",
-          "Remarks": "text",
-          "Priority": "text",
-          "Balance": "number",
-          "Cumulative": "number"
+          "Sl.No (p6)": "text",
+          "Description (p6)": "text",
+          "Total Quantity (p6 edit)": "number",
+          "UOM (p6 edit)": "text",
+          "Balance (auto)": "number",
+          "Base Plan Start (p6)": "date",
+          "Base Plan Finish (p6)": "date",
+          "Actual Start (p6 edit)": "date",
+          "Actual Finish (p6 edit)": "date",
+          "Forecast Start (p6)": "date",
+          "Forecast Finish (p6)": "date",
+          "Remarks (user)": "text",
+          "Cumulative (auto)": "number",
+          [yesterday]: "number", // Number value, not editable
+          [today]: "number" // Number value, editable
         }}
         columnWidths={columnWidths}
         status={status} // Pass status to StyledExcelTable

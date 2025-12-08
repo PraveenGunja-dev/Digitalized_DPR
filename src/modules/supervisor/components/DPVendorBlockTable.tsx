@@ -1,8 +1,10 @@
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save } from "lucide-react";
 import { StyledExcelTable } from "@/components/StyledExcelTable";
 import { StatusChip } from "@/components/StatusChip";
+import { fetchDpVendorBlockData } from "@/modules/supervisor/services/mockDataService";
 
 interface DPVendorBlockData {
   activityId: string;
@@ -20,6 +22,9 @@ interface DPVendorBlockData {
   remarks: string;
   yesterdayValue: string;
   todayValue: string;
+  // Category row properties
+  category?: string;
+  isCategoryRow?: boolean;
 }
 
 interface DPVendorBlockTableProps {
@@ -31,6 +36,7 @@ interface DPVendorBlockTableProps {
   today: string;
   isLocked?: boolean;
   status?: string; // Add status prop
+  useMockData?: boolean; // Flag to use mock data
 }
 
 export function DPVendorBlockTable({ 
@@ -41,21 +47,38 @@ export function DPVendorBlockTable({
   yesterday, 
   today, 
   isLocked = false,
-  status = 'draft' // Add status prop with default
+  status = 'draft', // Add status prop with default
+  useMockData = false // Flag to use mock data
 }: DPVendorBlockTableProps) {
+  // Fetch data from mock API when component mounts
+  useEffect(() => {
+    const fetchData = async () => {
+      if (useMockData) {
+        try {
+          const mockData = await fetchDpVendorBlockData();
+          setData(mockData);
+        } catch (error) {
+          console.error('Error fetching mock data:', error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [setData, useMockData]);
+  
   // Define columns
   const columns = [
-    "Activity_ID",
-    "Activities",
-    "Plot",
-    "New Block Nom",
-    "Priority",
-    "Baseline Priority",
-    "Contractor Name",
-    "Scope",
-    "Hold Due to WTG",
-    "Front",
-    "Actual",
+    "Activity_ID(p6)",
+    "Activities(p6)",
+    "Plot(p6)",
+    "New Block Nom(p6)",
+    "Priority(user)",
+    "Baseline Priority(p6)",
+    "Contractor Name(user)",
+    "Scope(user)",
+    "Hold Due to WTG(user)",
+    "Front(auto)",
+    "Actual(auto)",
     "% Completion",
     "Remarks",
     yesterday,
@@ -64,17 +87,17 @@ export function DPVendorBlockTable({
 
   // Define column widths for better alignment
   const columnWidths = {
-    "Activity_ID": 120,
-    "Activities": 200,
-    "Plot": 80,
-    "New Block Nom": 120,
-    "Priority": 100,
-    "Baseline Priority": 100,
-    "Contractor Name": 150,
-    "Scope": 100,
-    "Hold Due to WTG": 120,
-    "Front": 80,
-    "Actual": 100,
+    "Activity_ID(p6)": 120,
+    "Activities(p6)": 200,
+    "Plot(p6)": 80,
+    "New Block Nom(p6)": 120,
+    "Priority(user)": 100,
+    "Baseline Priority(p6)": 100,
+    "Contractor Name(user)": 150,
+    "Scope(user)": 100,
+    "Hold Due to WTG(user)": 120,
+    "Front(auto)": 80,
+    "Actual(auto)": 100,
     "% Completion": 100,
     "Remarks": 150,
     [yesterday]: 100,
@@ -82,44 +105,69 @@ export function DPVendorBlockTable({
   };
   
   // Convert array of objects to array of arrays
-  const tableData = data.map(row => [
-    row.activityId,
-    row.activities,
-    row.plot,
-    row.newBlockNom,
-    row.priority,
-    row.baselinePriority,
-    row.contractorName,
-    row.scope,
-    row.holdDueToWtg,
-    row.front,
-    row.actual,
-    row.completionPercentage,
-    row.remarks,
-    row.yesterdayValue,
-    row.todayValue
-  ]);
+  const tableData = data.map(row => {
+    if (row.isCategoryRow) {
+      // Category row - only show category in first column, rest empty
+      return [
+        row.category || '',
+        '', '', '', '', '', '', '', '', '', '', '',
+        '', ''
+      ];
+    } else {
+      // Activity row - show all data
+      return [
+        row.activityId,
+        row.activities,
+        row.plot,
+        row.newBlockNom,
+        row.priority,
+        row.baselinePriority,
+        row.contractorName,
+        row.scope,
+        row.holdDueToWtg,
+        row.front,
+        row.actual,
+        row.completionPercentage,
+        row.remarks,
+        row.yesterdayValue,
+        row.todayValue
+      ];
+    }
+  });
   
   // Handle data changes from ExcelTable
   const handleDataChange = (newData: any[][]) => {
     // Convert array of arrays back to array of objects
-    const updatedData = newData.map(row => ({
-      activityId: row[0] || "",
-      activities: row[1] || "",
-      plot: row[2] || "",
-      newBlockNom: row[3] || "",
-      priority: row[4] || "",
-      baselinePriority: row[5] || "",
-      contractorName: row[6] || "",
-      scope: row[7] || "",
-      holdDueToWtg: row[8] || "",
-      front: row[9] || "",
-      actual: row[10] || "",
-      completionPercentage: row[11] || "",
-      remarks: row[12] || "",
-      yesterdayValue: row[13] || "",
-      todayValue: row[14] || ""
-    }));
+    const updatedData = newData.map((row, index) => {
+      const originalRow = data[index];
+      
+      if (originalRow?.isCategoryRow) {
+        // Category row - preserve category data
+        return {
+          ...originalRow,
+          category: row[0] || ''
+        };
+      } else {
+        // Activity row - update all fields
+        return {
+          activityId: row[0] || "",
+          activities: row[1] || "",
+          plot: row[2] || "",
+          newBlockNom: row[3] || "",
+          priority: row[4] || "",
+          baselinePriority: row[5] || "",
+          contractorName: row[6] || "",
+          scope: row[7] || "",
+          holdDueToWtg: row[8] || "",
+          front: row[9] || "",
+          actual: row[10] || "",
+          completionPercentage: row[11] || "",
+          remarks: row[12] || "",
+          yesterdayValue: row[13] || "",
+          todayValue: row[14] || ""
+        };
+      }
+    });
     setData(updatedData);
   };
 
@@ -133,8 +181,15 @@ export function DPVendorBlockTable({
         onSave={onSave}
         onSubmit={onSubmit}
         isReadOnly={isLocked}
-        editableColumns={[yesterday, today]}
+        editableColumns={["Priority(user)", "Contractor Name(user)", "Scope(user)", "Hold Due to WTG(user)", "Remarks", today]}
         columnTypes={{
+          "Priority(user)": "text",
+          "Contractor Name(user)": "text",
+          "Scope(user)": "number",
+          "Hold Due to WTG(user)": "text",
+          "Front(auto)": "number",
+          "Actual(auto)": "number",
+          "% Completion": "number",
           [yesterday]: "number",
           [today]: "number"
         }}
