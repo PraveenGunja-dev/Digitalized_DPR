@@ -271,7 +271,7 @@ All colors MUST be HSL.
   border-collapse: collapse;
   width: 100%;
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif;
-  font-size: 11pt;
+  font-size: 12px;
   table-layout: fixed; /* Added for better column alignment */
 }
 
@@ -283,12 +283,13 @@ All colors MUST be HSL.
   display: table-cell;
   border: 1px solid #d4d4d4;
   padding: 0;
-  height: 21px;
+  height: 28px;
   vertical-align: middle;
   position: relative;
-  overflow: hidden; /* Added for text overflow handling */
-  text-overflow: ellipsis; /* Added for text overflow handling */
-  white-space: nowrap; /* Added for text overflow handling */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .excel-header-row {
@@ -301,28 +302,31 @@ All colors MUST be HSL.
   background: #f3f3f3;
   font-weight: 600;
   text-align: center;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-right: 1px solid #d4d4d4;
   border-bottom: 1px solid #a6a6a6;
   color: #333;
-  font-size: 11pt;
+  font-size: 12px;
   user-select: none;
-  overflow: hidden; /* Added for text overflow handling */
-  text-overflow: ellipsis; /* Added for text overflow handling */
-  white-space: nowrap; /* Added for text overflow handling */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  height: 32px;
 }
 
 .excel-row-header {
   background: #f3f3f3;
   font-weight: 500;
   text-align: center;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border-right: 1px solid #a6a6a6;
   color: #333;
-  font-size: 11pt;
+  font-size: 12px;
   min-width: 40px;
   max-width: 40px;
   user-select: none;
+  height: 28px;
 }
 
 .excel-data-cell {
@@ -359,7 +363,7 @@ All colors MUST be HSL.
   outline: none;
   padding: 4px 8px;
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif;
-  font-size: 11pt;
+  font-size: 12px;
   background: transparent;
   color: #000;
   box-sizing: border-box; /* Added for proper sizing */
@@ -373,7 +377,9 @@ All colors MUST be HSL.
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding: 4px 8px; /* Added for consistent padding */
+  padding: 4px 8px;
+  box-sizing: border-box;
+  font-size: 12px;
 }
 
 .excel-status-bar {
@@ -390,7 +396,7 @@ All colors MUST be HSL.
 /* Handsontable Customization */
 .handsontable {
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
-  font-size: 11pt !important;
+  font-size: 12px !important;
   z-index: 10 !important;
 }
 
@@ -451,7 +457,7 @@ All colors MUST be HSL.
 
 .htMenu .ht_master table td {
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
-  font-size: 11pt !important;
+  font-size: 12px !important;
 }
 
 /* Excel-like selection highlight */
@@ -489,9 +495,13 @@ All colors MUST be HSL.
   color: #333 !important;
   border-right: 1px solid #d4d4d4 !important;
   border-bottom: 1px solid #d4d4d4 !important;
-  white-space: nowrap; /* Added for text overflow handling */
-  overflow: hidden; /* Added for text overflow handling */
-  text-overflow: ellipsis; /* Added for text overflow handling */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  height: 32px !important;
 }
 
 /* Excel-like row header */
@@ -502,7 +512,7 @@ All colors MUST be HSL.
 /* Excel-like context menu */
 .htContextMenu table.htCore {
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
-  font-size: 11pt !important;
+  font-size: 12px !important;
 }
 
 .htContextMenu .ht_master table td {
@@ -545,12 +555,30 @@ All colors MUST be HSL.
   color: hsl(var(--foreground));
   border-right: 1px solid hsl(var(--border));
   border-bottom: 1px solid hsl(var(--border));
+  text-align: center;
+  padding: 6px 8px;
+  font-weight: 600;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  font-size: 12px;
+  height: 32px;
 }
 
 .dark .excel-row-header {
   background: hsl(var(--muted));
   color: hsl(var(--foreground));
   border-right: 1px solid hsl(var(--border));
+  text-align: center;
+  padding: 6px 8px;
+  font-weight: 500;
+  font-size: 12px;
+  min-width: 40px;
+  max-width: 40px;
+  user-select: none;
+  height: 28px;
 }
 
 .dark .excel-data-cell {
@@ -576,6 +604,14 @@ All colors MUST be HSL.
 .dark .excel-input {
   background: transparent;
   color: hsl(var(--foreground));
+  width: 100%;
+  height: 100%;
+  border: none;
+  outline: none;
+  padding: 4px 8px;
+  font-family: 'Adani', 'Calibri', 'Arial', sans-serif;
+  font-size: 12px;
+  box-sizing: border-box;
 }
 
 .dark .excel-input:focus {
@@ -584,6 +620,12 @@ All colors MUST be HSL.
 
 .dark .excel-cell-content {
   color: hsl(var(--foreground));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  font-size: 12px;
 }
 
 .dark .excel-status-bar {
@@ -596,6 +638,7 @@ All colors MUST be HSL.
 .dark .handsontable {
   background-color: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
+  font-size: 12px !important;
 }
 
 .dark .ht_master .wtHolder {
@@ -653,9 +696,13 @@ All colors MUST be HSL.
   color: hsl(var(--foreground)) !important;
   border-right: 1px solid hsl(var(--border)) !important;
   border-bottom: 1px solid hsl(var(--border)) !important;
-  white-space: nowrap; /* Added for text overflow handling */
-  overflow: hidden; /* Added for text overflow handling */
-  text-overflow: ellipsis; /* Added for text overflow handling */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
+  padding: 6px 8px !important;
+  font-size: 12px !important;
+  height: 32px !important;
 }
 
 .dark .handsontable .ht__highlight {
@@ -665,6 +712,7 @@ All colors MUST be HSL.
 .dark .htContextMenu .ht_master table td {
   background: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
+  font-size: 12px !important;
 }
 
 .dark .htContextMenu .ht_master table td:hover {

@@ -137,24 +137,28 @@ export function DPVendorIdtCategoriesTable({
   
   // Define column widths for better alignment
   const columnWidths = {
-    "Activity ID": 120,
-    "Activity": 200,
-    "Plot": 80,
-    "Block": 120,
-    "Priority": 100,
-    "Baseline Priority": 120,
-    "Contractor": 150,
-    "Scope": 80,
-    "Front": 80,
-    "Actual": 80,
-    "% Completion": 100,
-    "Remarks": 150,
-    [yesterday]: 100,
-    [today]: 100
+    "Activity ID": 40,
+    "Activity": 120,
+    "Plot": 60,
+    "Block": 80,
+    "Priority": 60,
+    "Baseline Priority": 80,
+    "Contractor": 80,
+    "Scope": 60,
+    "Front": 60,
+    "Actual": 60,
+    "% Completion": 60,
+    "Remarks": 100,
+    [yesterday]: 60,
+    [today]: 60
   };
 
   return (
     <div className="space-y-2 w-full">
+      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-base mb-1">DP Vendor IDT Categories</h3>
+        <p className="text-xs">Reporting Date: {today}</p>
+      </div>
       <StyledExcelTable
         title="DP Vendor IDT Categories Table"
         columns={columns}

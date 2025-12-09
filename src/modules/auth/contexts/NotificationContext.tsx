@@ -20,6 +20,7 @@ interface NotificationContextType {
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   clearNotifications: () => void;
+  getRecentNotifications: () => Notification[]; // Add this new function
 }
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
@@ -45,7 +46,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     return [];
   });
 
-  const unreadCount = notifications.filter(notification => !notification.read).length;
+  // Filter notifications to only include those from the last 2 days
+  const getRecentNotifications = (): Notification[] => {
+    const twoDaysAgo = new Date();
+    twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+    
+    return notifications.filter(notification => 
+      new Date(notification.timestamp) >= twoDaysAgo
+    );
+  };
+
+  const recentNotifications = getRecentNotifications();
+  const unreadCount = recentNotifications.filter(notification => !notification.read).length;
 
   // Save notifications to localStorage whenever they change
   useEffect(() => {
@@ -83,12 +95,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   return (
     <NotificationContext.Provider value={{ 
-      notifications, 
+      notifications: recentNotifications, 
       unreadCount, 
       addNotification, 
       markAsRead, 
       markAllAsRead, 
-      clearNotifications 
+      clearNotifications,
+      getRecentNotifications
     }}>
       {children}
     </NotificationContext.Provider>

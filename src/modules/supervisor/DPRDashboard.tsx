@@ -1,5 +1,6 @@
 // src/modules/supervisor/DPRDashboard.tsx
 import { useState, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
@@ -390,6 +391,15 @@ const DPRDashboard = () => {
         .responsive-tab-trigger {
           flex: 0 0 auto;
         }
+        
+        /* Reduce font sizes for better fit */
+        .card-title {
+          font-size: 0.75rem; /* text-xs */
+        }
+        
+        .card-content {
+          font-size: 0.625rem; /* text-xs */
+        }
       `}</style>
       
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -407,7 +417,7 @@ const DPRDashboard = () => {
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div className="flex-1">
               <motion.h1 
-                className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+                className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
@@ -415,14 +425,13 @@ const DPRDashboard = () => {
                 DPR Dashboard - {user?.Name || "Supervisor"}
               </motion.h1>
               <motion.p 
-                className="text-muted-foreground text-sm sm:text-base"
+                className="text-muted-foreground text-xs sm:text-sm"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2, duration: 0.5 }}
               >
                 {projectName ? `Project: ${projectName}` : "Project dashboard for supervisor activities"}
-              </motion.p>
-              {projectDetails && (
+              </motion.p>              {projectDetails && (
                 <motion.div 
                   className="mt-2 text-xs sm:text-sm text-muted-foreground"
                   initial={{ opacity: 0, x: -20 }}
@@ -464,207 +473,130 @@ const DPRDashboard = () => {
             {/* Improved responsive tabs container */}
             <div className="responsive-tabs-container pb-2">
               <TabsList className="responsive-tabs-list space-x-0 p-1 bg-muted rounded-lg">
-                <TabsTrigger value="dp-qty" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                <TabsTrigger value="dp-qty" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <FileSpreadsheet className="w-3 h-3 mr-1" />
                   <span>DP Qty</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp-block" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <Grid3X3 className="w-4 h-4 mr-2" />
+                <TabsTrigger value="dp-block" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <Grid3X3 className="w-3 h-3 mr-1" />
                   <span>DP Block</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp-vendor-idt" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <Wrench className="w-4 h-4 mr-2" />
+                <TabsTrigger value="dp-vendor-idt" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <Wrench className="w-3 h-3 mr-1" />
                   <span>DP Vendor IDT</span>
                 </TabsTrigger>
-                <TabsTrigger value="mms-module-rfi" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <FileText className="w-4 h-4 mr-2" />
+                <TabsTrigger value="mms-module-rfi" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <FileText className="w-3 h-3 mr-1" />
                   <span>MMS Module RFI</span>
                 </TabsTrigger>
-                <TabsTrigger value="manpower" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <User className="w-4 h-4 mr-2" />
+                <TabsTrigger value="manpower" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <User className="w-3 h-3 mr-1" />
                   <span>Manpower</span>
                 </TabsTrigger>
-                <TabsTrigger value="supervisor-table" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <User className="w-4 h-4 mr-2" />
+                <TabsTrigger value="supervisor-table" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <User className="w-3 h-3 mr-1" />
                   <span>Supervisor</span>
                 </TabsTrigger>
-                <TabsTrigger value="issues" className="responsive-tab-trigger flex items-center justify-center py-2 px-3 text-sm data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
-                  <AlertCircle className="w-4 h-4 mr-2" />
+                <TabsTrigger value="issues" className="responsive-tab-trigger flex items-center justify-center py-1 px-2 text-xs data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow rounded-md transition-all duration-200 whitespace-nowrap border border-transparent data-[state=active]:border-primary">
+                  <AlertCircle className="w-3 h-3 mr-1" />
                   <span>Issues</span>
                 </TabsTrigger>
               </TabsList>
             </div>
 
-            <TabsContent value="dp-qty" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {renderDPQtyTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="dp-vendor-block" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {renderDPVendorBlockTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="manpower-details" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {renderManpowerDetailsTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="dp-block" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {renderDPBlockTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="dp-vendor-idt" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {renderDPVendorIdtTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="mms-module-rfi" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  {renderMmsModuleRfiTable()}
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="supervisor-table" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <User className="mx-auto h-12 w-12 opacity-50" />
-                    <h3 className="mt-2 text-lg font-medium">Supervisor Table</h3>
-                    <p className="mt-1">Supervisor entry data will be displayed here.</p>
-                  </div>
-                </Card>
-              </motion.div>
-            </TabsContent>
-
-            <TabsContent value="issues" className="mt-0">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ 
-                  type: "spring", 
-                  stiffness: 100, 
-                  damping: 15,
-                  duration: 0.4 
-                }}
-                className="w-full"
-              >
-                <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
-                  <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl sm:text-2xl font-bold flex items-center">
-                      <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary" />
-                      Issues Tracking
-                    </h2>
-                    <Button className="text-sm sm:text-base">
-                      <Plus className="w-4 h-4 mr-1 sm:mr-2" />
-                      <span className="hidden xs:inline">Add Issue Log</span>
-                      <span className="xs:hidden">Add</span>
-                    </Button>
-                  </div>
+            {/* Animate tab transitions with AnimatePresence */}
+            <AnimatePresence mode="wait">
+              <TabsContent key={activeTab} value={activeTab} className="mt-0">
+                <motion.div
+                  key={activeTab}
+                  initial={{ opacity: 0, x: 30 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -30 }}
+                  transition={{ 
+                    type: "spring", 
+                    stiffness: 300, 
+                    damping: 30,
+                    duration: 0.3 
+                  }}
+                  className="w-full"
+                >
+                  {activeTab === "dp-qty" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      {renderDPQtyTable()}
+                    </Card>
+                  )}
                   
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertCircle className="mx-auto h-12 w-12 opacity-50" />
-                    <h3 className="mt-2 text-lg font-medium">No issues reported</h3>
-                    <p className="mt-1">Get started by adding a new issue.</p>
-                    <div className="mt-4">
-                      <Button className="text-sm sm:text-base">
-                        <Plus className="w-4 h-4 mr-1 sm:mr-2" />
-                        <span className="hidden xs:inline">Add Your First Issue Log</span>
-                        <span className="xs:hidden">Add Issue</span>
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </motion.div>
-            </TabsContent>
+                  {activeTab === "dp-vendor-block" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      {renderDPVendorBlockTable()}
+                    </Card>
+                  )}
+                  
+                  {activeTab === "manpower-details" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      {renderManpowerDetailsTable()}
+                    </Card>
+                  )}
+                  
+                  {activeTab === "dp-block" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      {renderDPBlockTable()}
+                    </Card>
+                  )}
+                  
+                  {activeTab === "dp-vendor-idt" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      {renderDPVendorIdtTable()}
+                    </Card>
+                  )}
+                  
+                  {activeTab === "mms-module-rfi" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      {renderMmsModuleRfiTable()}
+                    </Card>
+                  )}
+                  
+                  {activeTab === "supervisor-table" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="text-center py-8 text-muted-foreground">
+                        <User className="mx-auto h-12 w-12 opacity-50" />
+                        <h3 className="mt-2 text-lg font-medium">Supervisor Table</h3>
+                        <p className="mt-1">Supervisor entry data will be displayed here.</p>
+                      </div>
+                    </Card>
+                  )}
+                  
+                  {activeTab === "issues" && (
+                    <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
+                      <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-xl sm:text-2xl font-bold flex items-center">
+                          <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-primary" />
+                          Issues Tracking
+                        </h2>
+                        <Button className="text-sm sm:text-base">
+                          <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                          <span className="hidden xs:inline">Add Issue Log</span>
+                          <span className="xs:hidden">Add</span>
+                        </Button>
+                      </div>
+                      
+                      <div className="text-center py-8 text-muted-foreground">
+                        <AlertCircle className="mx-auto h-12 w-12 opacity-50" />
+                        <h3 className="mt-2 text-lg font-medium">No issues reported</h3>
+                        <p className="mt-1">Get started by adding a new issue.</p>
+                        <div className="mt-4">
+                          <Button className="text-sm sm:text-base">
+                            <Plus className="w-4 h-4 mr-1 sm:mr-2" />
+                            <span className="hidden xs:inline">Add Your First Issue Log</span>
+                            <span className="xs:hidden">Add Issue</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </motion.div>
+              </TabsContent>
+            </AnimatePresence>
           </Tabs>
         </motion.div>
       </div>

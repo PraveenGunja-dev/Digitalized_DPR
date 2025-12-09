@@ -101,21 +101,21 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
   
   // Define column widths for better alignment
   const columnWidths = {
-    "Sl.No (p6)": 60,
-    "Description (p6)": 200,
-    "Total Quantity (p6 edit)": 120,
-    "UOM (p6 edit)": 80,
-    "Balance (auto)": 100,
-    "Base Plan Start (p6)": 120,
-    "Base Plan Finish (p6)": 120,
-    "Actual Start (p6 edit)": 120,
-    "Actual Finish (p6 edit)": 120,
-    "Forecast Start (p6)": 120,
-    "Forecast Finish (p6)": 120,
-    "Remarks (user)": 150,
-    "Cumulative (auto)": 100,
-    [yesterday]: 100,
-    [today]: 100
+    "Sl.No (p6)": 40,
+    "Description (p6)": 120,
+    "Total Quantity (p6 edit)": 80,
+    "UOM (p6 edit)": 60,
+    "Balance (auto)": 70,
+    "Base Plan Start (p6)": 80,
+    "Base Plan Finish (p6)": 80,
+    "Actual Start (p6 edit)": 80,
+    "Actual Finish (p6 edit)": 80,
+    "Forecast Start (p6)": 80,
+    "Forecast Finish (p6)": 80,
+    "Remarks (user)": 100,
+    "Cumulative (auto)": 70,
+    [yesterday]: 70,
+    [today]: 70
   };
   
   // Define which columns are editable by the user
@@ -172,12 +172,12 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
 
   return (
     <div className="space-y-4 w-full">
-      <div className="bg-muted p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h3 className="font-bold text-lg mb-2">Project Information</h3>
-        <p className="font-medium">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-          <p>Reporting Date: {today}</p>
-          <p>Progress Date: {yesterday}</p>
+      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-base mb-1">Project Information</h3>
+        <p className="font-medium text-sm">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1">
+          <p className="text-xs">Reporting Date: {today}</p>
+          <p className="text-xs">Progress Date: {yesterday}</p>
         </div>
       </div>
       

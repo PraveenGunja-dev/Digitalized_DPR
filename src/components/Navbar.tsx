@@ -215,19 +215,21 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                       No notifications
                     </div>
                   ) : (
-                    notifications.slice(0, 5).map((notification) => (
-                      <DropdownMenuItem 
-                        key={notification.id} 
-                        className={`flex flex-col items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted' : ''}`}
-                        onClick={() => handleNotificationClick(notification)}
-                      >
-                        <div className="font-medium">{notification.title}</div>
-                        <div className="text-sm text-muted-foreground">{notification.message}</div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {new Date(notification.timestamp).toLocaleDateString()} {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </div>
-                      </DropdownMenuItem>
-                    ))
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <DropdownMenuItem 
+                          key={notification.id} 
+                          className={`flex flex-col items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted' : ''}`}
+                          onClick={() => handleNotificationClick(notification)}
+                        >
+                          <div className="font-medium">{notification.title}</div>
+                          <div className="text-sm text-muted-foreground">{notification.message}</div>
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {new Date(notification.timestamp).toLocaleDateString()} {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
                   )}
                 </DropdownMenuGroup>
               </motion.div>

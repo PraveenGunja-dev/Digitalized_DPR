@@ -80,14 +80,14 @@ export function ManpowerDetailsTable({
   ];
 
   const columnWidths = {
-    "Activity_ID": 100,
-    "Sl No": 50,
-    "Block": 100,
-    "Contractor Name": 150,
-    "Activity": 150,
-    "Section": 100,
-    [yesterday]: 100,
-    [today]: 100
+    "Activity_ID": 60,
+    "Sl No": 30,
+    "Block": 60,
+    "Contractor Name": 100,
+    "Activity": 100,
+    "Section": 60,
+    [yesterday]: 60,
+    [today]: 60
   };
   
   // Convert array of objects to array of arrays
@@ -126,7 +126,14 @@ export function ManpowerDetailsTable({
   };
 
   return (
-    <div className="space-y-4 w-full">      
+    <div className="space-y-4 w-full">
+      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-base mb-1">Manpower Details</h3>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs">Total Manpower: <span className="font-bold">{totalManpower}</span></p>
+          <p className="text-xs">Reporting Date: {today}</p>
+        </div>
+      </div>
       <StyledExcelTable
         title="Manpower Details Table"
         columns={columns}

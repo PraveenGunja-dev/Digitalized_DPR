@@ -85,25 +85,25 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
   
   // Define column widths for better alignment
   const columnWidths = {
-    "Activity_ID (p6)": 120,
-    "Activities (p6)": 200,
-    "Plot (p6)": 80,
-    "New Block Nom (p6)": 120,
-    "Baseline Priority (p6)": 100,
-    "Scope (p6)": 100,
-    "Hold Due to WTG (p6)": 120,
-    "Front (auto)": 80,
-    "Actual (auto)": 100,
-    "% Completion (auto)": 100,
-    "Balance (auto)": 100,
-    "Baseline Start (p6)": 120,
-    "Baseline Finish (p6)": 120,
-    "Actual Start (user)": 120,
-    "Actual Finish (user)": 120,
-    "Forecast Start (p6)": 120,
-    "Forecast Finish (p6)": 120,
-    [yesterday]: 100,
-    [today]: 100
+    "Activity_ID (p6)": 40,
+    "Activities (p6)": 120,
+    "Plot (p6)": 60,
+    "New Block Nom (p6)": 80,
+    "Baseline Priority (p6)": 80,
+    "Scope (p6)": 60,
+    "Hold Due to WTG (p6)": 60,
+    "Front (auto)": 60,
+    "Actual (auto)": 60,
+    "% Completion (auto)": 60,
+    "Balance (auto)": 60,
+    "Baseline Start (p6)": 80,
+    "Baseline Finish (p6)": 80,
+    "Actual Start (user)": 80,
+    "Actual Finish (user)": 80,
+    "Forecast Start (p6)": 80,
+    "Forecast Finish (p6)": 80,
+    [yesterday]: 60,
+    [today]: 60
   };
   
   // Define which columns are editable by the user
@@ -165,8 +165,8 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
 
   return (
     <div className="space-y-4 w-full">
-      <div className="bg-muted p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h3 className="font-bold text-lg mb-2">DP Block Table</h3>
+      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-base mb-1">DP Block Table</h3>
       </div>
       
       <StyledExcelTable

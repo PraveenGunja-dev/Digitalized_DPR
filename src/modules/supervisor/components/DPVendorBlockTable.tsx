@@ -87,21 +87,21 @@ export function DPVendorBlockTable({
 
   // Define column widths for better alignment
   const columnWidths = {
-    "Activity_ID(p6)": 120,
-    "Activities(p6)": 200,
-    "Plot(p6)": 80,
-    "New Block Nom(p6)": 120,
-    "Priority(user)": 100,
-    "Baseline Priority(p6)": 100,
-    "Contractor Name(user)": 150,
-    "Scope(user)": 100,
-    "Hold Due to WTG(user)": 120,
-    "Front(auto)": 80,
-    "Actual(auto)": 100,
-    "% Completion": 100,
-    "Remarks": 150,
-    [yesterday]: 100,
-    [today]: 100
+    "Activity_ID(p6)": 40,
+    "Activities(p6)": 120,
+    "Plot(p6)": 60,
+    "New Block Nom(p6)": 80,
+    "Priority(user)": 60,
+    "Baseline Priority(p6)": 80,
+    "Contractor Name(user)": 80,
+    "Scope(user)": 60,
+    "Hold Due to WTG(user)": 80,
+    "Front(auto)": 60,
+    "Actual(auto)": 60,
+    "% Completion": 60,
+    "Remarks": 100,
+    [yesterday]: 60,
+    [today]: 60
   };
   
   // Convert array of objects to array of arrays
@@ -172,7 +172,15 @@ export function DPVendorBlockTable({
   };
 
   return (
-    <div className="space-y-4 w-full">      
+    <div className="space-y-4 w-full">
+      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-base mb-1">Project Information</h3>
+        <p className="font-medium text-sm">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1">
+          <p className="text-xs">Reporting Date: {today}</p>
+          <p className="text-xs">Progress Date: {yesterday}</p>
+        </div>
+      </div>
       <StyledExcelTable
         title="DP Vendor Block Table"
         columns={columns}

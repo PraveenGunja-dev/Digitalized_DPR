@@ -115,7 +115,7 @@ export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
   return (
     <div className={`w-full p-4 rounded-lg shadow-md ${getContainerBgClass()}`}>
       {/* Full-width title bar */}
-      <div className={`w-full ${getTitleBarBgClass()} ${getBorderClass()} text-center font-bold text-base py-2 mb-4 ${getTitleBarTextClass()}`}>
+      <div className={`w-full ${getTitleBarBgClass()} ${getBorderClass()} text-center font-bold text-sm py-2 mb-4 ${getTitleBarTextClass()}`}>
         DAILY PROGRESS REPORT – KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025–26)
       </div>
       {/* Main activity table with grouped headers */}
@@ -147,20 +147,20 @@ export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
             "Remarks": "text"
           }}
           columnWidths={{
-            "Activity": 180,
-            "UOM": 90,
-            "Total Scope Qty": 120,
-            "Front Available": 120,
-            "Today's Qty - Base Plan": 110,
-            "Today's Qty - Catch Up Plan": 110,
-            "Today's Qty - Actual": 110,
-            "Cumulative Qty - Base Plan": 110,
-            "Cumulative Qty - Catch Up Plan": 110,
-            "Cumulative Qty - Actual": 110,
-            "Deviation Plan vs Actual": 110,
-            "Total Scope Balance Qty": 110,
-            "% Status as on date": 110,
-            "Remarks": 160
+            "Activity": 100,
+            "UOM": 60,
+            "Total Scope Qty": 80,
+            "Front Available": 80,
+            "Today's Qty - Base Plan": 70,
+            "Today's Qty - Catch Up Plan": 70,
+            "Today's Qty - Actual": 70,
+            "Cumulative Qty - Base Plan": 70,
+            "Cumulative Qty - Catch Up Plan": 70,
+            "Cumulative Qty - Actual": 70,
+            "Deviation Plan vs Actual": 70,
+            "Total Scope Balance Qty": 70,
+            "% Status as on date": 70,
+            "Remarks": 100
           }}
           isReadOnly={true}
           hideAddRow={true}
@@ -189,15 +189,15 @@ export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
             "Forecast Completion Date": "date"
           }}
           columnWidths={{
-            "UoM": 90,
-            "Scope": 120,
-            "Total Completed": 120,
-            "Balance": 120,
-            "Base Plan Start": 120,
-            "Base Plan Finish": 120,
-            "Actual Start": 120,
-            "Actual Finish": 120,
-            "Forecast Completion Date": 120
+            "UoM": 60,
+            "Scope": 80,
+            "Total Completed": 80,
+            "Balance": 80,
+            "Base Plan Start": 80,
+            "Base Plan Finish": 80,
+            "Actual Start": 80,
+            "Actual Finish": 80,
+            "Forecast Completion Date": 80
           }}
           isReadOnly={true}
           hideAddRow={true}

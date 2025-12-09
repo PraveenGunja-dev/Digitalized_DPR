@@ -23,22 +23,34 @@ export const ProjectCard = ({ name, code, progress, metadata, onClick, delay = 0
       transition={{ delay, type: "spring", stiffness: 100 }}
       whileHover={{ scale: 1.03, y: -5 }}
       whileTap={{ scale: 0.98 }}
+      className="w-full"
     >
       <Card
         onClick={onClick}
-        className="relative overflow-hidden cursor-pointer p-6 glass-effect border-2 border-border hover:border-primary transition-all group"
+        className="relative overflow-hidden cursor-pointer p-6 glass-effect border-2 border-border hover:border-primary transition-all group w-full"
       >
         <div className="absolute inset-0 gradient-adani-soft opacity-0 group-hover:opacity-100 transition-opacity" />
         
-        <div className="relative z-10">
-          <div className="flex items-start justify-between mb-4">
+        <div className="relative z-10 w-full">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-4">
             <div className="flex items-center space-x-3">
               <div className="p-2 rounded-lg bg-primary/10">
                 <Building2 className="w-6 h-6 text-primary" />
               </div>
-              <div>
-                <h3 className="text-xl font-bold text-foreground">{name}</h3>
-                <p className="text-sm text-muted-foreground">{code}</p>
+              <div className="min-w-0">
+                <h3 className="text-xl font-bold text-foreground truncate">{name}</h3>
+                <p className="text-sm text-muted-foreground truncate">{code}</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="flex items-center text-sm">
+                <span className="text-muted-foreground mr-2">Location:</span>
+                <span className="font-medium">{metadata.location}</span>
+              </div>
+              <div className="flex items-center text-sm">
+                <span className="text-muted-foreground mr-2">Start:</span>
+                <span className="font-medium">{metadata.startDate}</span>
               </div>
             </div>
           </div>
@@ -50,11 +62,6 @@ export const ProjectCard = ({ name, code, progress, metadata, onClick, delay = 0
                 <span className="font-semibold text-primary">{progress}%</span>
               </div>
               <Progress value={progress} className="h-2" />
-            </div>
-            
-            <div className="flex justify-between text-sm pt-3 border-t border-border/50">
-              <span className="text-muted-foreground">{metadata.location}</span>
-              <span className="text-muted-foreground">{metadata.startDate}</span>
             </div>
           </div>
         </div>

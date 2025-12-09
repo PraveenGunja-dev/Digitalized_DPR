@@ -101,7 +101,11 @@ export function MmsModuleRfiTable({
   };
 
   return (
-    <div className="space-y-4 w-full">      
+    <div className="space-y-4 w-full">
+      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h3 className="font-bold text-base mb-1">MMS & Module RFI</h3>
+        <p className="text-xs">Reporting Date: {today}</p>
+      </div>
       <StyledExcelTable
         title="MMS & Module RFI Table"
         columns={columns}
@@ -117,7 +121,17 @@ export function MmsModuleRfiTable({
           [yesterday]: "number",
           [today]: "number"
         }}
-
+        columnWidths={{
+          "RFI No": 60,
+          "Subject": 100,
+          "Module": 60,
+          "Submitted Date": 80,
+          "Response Date": 80,
+          "Status": 60,
+          "Remarks": 100,
+          [yesterday]: 60,
+          [today]: 60
+        }}
       />
     </div>
   );
