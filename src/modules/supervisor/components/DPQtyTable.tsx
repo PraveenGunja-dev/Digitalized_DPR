@@ -175,10 +175,6 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
       <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
         <h3 className="font-bold text-base mb-1">Project Information</h3>
         <p className="font-medium text-sm">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1">
-          <p className="text-xs">Reporting Date: {today}</p>
-          <p className="text-xs">Progress Date: {yesterday}</p>
-        </div>
       </div>
       
       <StyledExcelTable
@@ -208,6 +204,38 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
           [today]: "number" // Number value, editable
         }}
         columnWidths={columnWidths}
+        columnTextColors={{
+          "Actual Start (p6 edit)": "#00B050",
+          "Actual Finish (p6 edit)": "#00B050",
+          "Forecast Start (p6)": "#0070C0",
+          "Forecast Finish (p6)": "#0070C0"
+        }}
+        columnFontWeights={{
+          "Actual Start (p6 edit)": "bold",
+          "Actual Finish (p6 edit)": "bold",
+          "Forecast Start (p6)": "bold",
+          "Forecast Finish (p6)": "bold"
+        }}
+        headerStructure={[
+          // First header row - main column names
+          [
+            { label: "Sl.No (p6)", colSpan: 1 },
+            { label: "Description (p6)", colSpan: 1 },
+            { label: "Total Quantity (p6 edit)", colSpan: 1 },
+            { label: "UOM (p6 edit)", colSpan: 1 },
+            { label: "Balance (auto)", colSpan: 1 },
+            { label: "Base Plan Start (p6)", colSpan: 1 },
+            { label: "Base Plan Finish (p6)", colSpan: 1 },
+            { label: "Actual Start (p6 edit)", colSpan: 1 },
+            { label: "Actual Finish (p6 edit)", colSpan: 1 },
+            { label: "Forecast Start (p6)", colSpan: 1 },
+            { label: "Forecast Finish (p6)", colSpan: 1 },
+            { label: "Remarks (user)", colSpan: 1 },
+            { label: "Cumulative (auto)", colSpan: 1 },
+            { label: yesterday, colSpan: 1 },
+            { label: today, colSpan: 1 }
+          ]
+        ]}
         status={status} // Pass status to StyledExcelTable
       />
     </div>

@@ -8,6 +8,8 @@ interface DPRSummarySectionProps {
 export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
   // State for theme mode
   const [themeMode, setThemeMode] = useState<'light' | 'dark'>('light');
+  // State for active table
+  const [activeTable, setActiveTable] = useState<'main' | 'charging'>('main');
   
   // Detect theme changes
   useEffect(() => {
@@ -118,91 +120,116 @@ export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
       <div className={`w-full ${getTitleBarBgClass()} ${getBorderClass()} text-center font-bold text-sm py-2 mb-4 ${getTitleBarTextClass()}`}>
         DAILY PROGRESS REPORT – KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025–26)
       </div>
-      {/* Main activity table with grouped headers */}
-      <div className="mb-6">
-        <StyledExcelTable
-          title="Main Activity"
-          columns={[
-            "Activity", "UOM", "Total Scope Qty", "Front Available",
-            "Today's Qty - Base Plan", "Today's Qty - Catch Up Plan", "Today's Qty - Actual",
-            "Cumulative Qty - Base Plan", "Cumulative Qty - Catch Up Plan", "Cumulative Qty - Actual",
-            "Deviation Plan vs Actual", "Total Scope Balance Qty", "% Status as on date", "Remarks"
-          ]}
-          data={mainActivityData}
-          onDataChange={() => {}}
-          columnTypes={{
-            "Activity": "text",
-            "UOM": "text",
-            "Total Scope Qty": "number",
-            "Front Available": "number",
-            "Today's Qty - Base Plan": "number",
-            "Today's Qty - Catch Up Plan": "number",
-            "Today's Qty - Actual": "number",
-            "Cumulative Qty - Base Plan": "number",
-            "Cumulative Qty - Catch Up Plan": "number",
-            "Cumulative Qty - Actual": "number",
-            "Deviation Plan vs Actual": "text",
-            "Total Scope Balance Qty": "number",
-            "% Status as on date": "text",
-            "Remarks": "text"
-          }}
-          columnWidths={{
-            "Activity": 100,
-            "UOM": 60,
-            "Total Scope Qty": 80,
-            "Front Available": 80,
-            "Today's Qty - Base Plan": 70,
-            "Today's Qty - Catch Up Plan": 70,
-            "Today's Qty - Actual": 70,
-            "Cumulative Qty - Base Plan": 70,
-            "Cumulative Qty - Catch Up Plan": 70,
-            "Cumulative Qty - Actual": 70,
-            "Deviation Plan vs Actual": 70,
-            "Total Scope Balance Qty": 70,
-            "% Status as on date": 70,
-            "Remarks": 100
-          }}
-          isReadOnly={true}
-          hideAddRow={true}
-        />
+      
+      {/* Dropdown selector for tables */}
+      <div className="mb-4 flex flex-col justify-end items-end">
+        <select
+          id="table-selector"
+          value={activeTable}
+          onChange={(e) => setActiveTable(e.target.value as 'main' | 'charging')}
+          className={`w-fit p-2 border rounded ${
+            themeMode === 'light' 
+              ? 'bg-white border-gray-300 text-gray-900' 
+              : 'bg-gray-800 border-gray-600 text-white'
+          }`}
+        >
+          <option value="main">Main Activity</option>
+          <option value="charging">Charging Plan</option>
+        </select>
       </div>
-
-      {/* Charging plan table */}
-      <div>
-        <StyledExcelTable
-          title="Charging Plan"
-          columns={[
-            "UoM", "Scope", "Total Completed", "Balance", "Base Plan Start", 
-            "Base Plan Finish", "Actual Start", "Actual Finish", "Forecast Completion Date"
-          ]}
-          data={chargingPlanData}
-          onDataChange={() => {}}
-          columnTypes={{
-            "UoM": "text",
-            "Scope": "number",
-            "Total Completed": "number",
-            "Balance": "number",
-            "Base Plan Start": "date",
-            "Base Plan Finish": "date",
-            "Actual Start": "date",
-            "Actual Finish": "date",
-            "Forecast Completion Date": "date"
-          }}
-          columnWidths={{
-            "UoM": 60,
-            "Scope": 80,
-            "Total Completed": 80,
-            "Balance": 80,
-            "Base Plan Start": 80,
-            "Base Plan Finish": 80,
-            "Actual Start": 80,
-            "Actual Finish": 80,
-            "Forecast Completion Date": 80
-          }}
-          isReadOnly={true}
-          hideAddRow={true}
-        />
-      </div>
+      
+      {/* Conditionally render the selected table */}
+      {activeTable === 'main' && (
+        <div>
+          <StyledExcelTable
+            title="Main Activity"
+            columns={[
+              "Activity", "UOM", "Total Scope Qty", "Front Available",
+              "Today's Qty - Base Plan", "Today's Qty - Catch Up Plan", "Today's Qty - Actual",
+              "Cumulative Qty - Base Plan", "Cumulative Qty - Catch Up Plan", "Cumulative Qty - Actual",
+              "Deviation Plan vs Actual", "Total Scope Balance Qty", "% Status as on date", "Remarks"
+            ]}
+            data={mainActivityData}
+            onDataChange={() => {}}
+            onSave={() => {}}
+            onSubmit={() => {}}
+            columnTypes={{
+              "Activity": "text",
+              "UOM": "text",
+              "Total Scope Qty": "number",
+              "Front Available": "number",
+              "Today's Qty - Base Plan": "number",
+              "Today's Qty - Catch Up Plan": "number",
+              "Today's Qty - Actual": "number",
+              "Cumulative Qty - Base Plan": "number",
+              "Cumulative Qty - Catch Up Plan": "number",
+              "Cumulative Qty - Actual": "number",
+              "Deviation Plan vs Actual": "text",
+              "Total Scope Balance Qty": "number",
+              "% Status as on date": "text",
+              "Remarks": "text"
+            }}
+            columnWidths={{
+              "Activity": 100,
+              "UOM": 60,
+              "Total Scope Qty": 80,
+              "Front Available": 80,
+              "Today's Qty - Base Plan": 70,
+              "Today's Qty - Catch Up Plan": 70,
+              "Today's Qty - Actual": 70,
+              "Cumulative Qty - Base Plan": 70,
+              "Cumulative Qty - Catch Up Plan": 70,
+              "Cumulative Qty - Actual": 70,
+              "Deviation Plan vs Actual": 70,
+              "Total Scope Balance Qty": 70,
+              "% Status as on date": 70,
+              "Remarks": 100
+            }}
+            isReadOnly={true}
+            hideAddRow={true}
+          />
+        </div>
+      )}
+      
+      {activeTable === 'charging' && (
+        <div>
+          <StyledExcelTable
+            title="Charging Plan"
+            columns={[
+              "UoM", "Scope", "Total Completed", "Balance", "Base Plan Start", 
+              "Base Plan Finish", "Actual Start", "Actual Finish", "Forecast Completion Date"
+            ]}
+            data={chargingPlanData}
+            onDataChange={() => {}}
+            onSave={() => {}}
+            onSubmit={() => {}}
+            columnTypes={{
+              "UoM": "text",
+              "Scope": "number",
+              "Total Completed": "number",
+              "Balance": "number",
+              "Base Plan Start": "date",
+              "Base Plan Finish": "date",
+              "Actual Start": "date",
+              "Actual Finish": "date",
+              "Forecast Completion Date": "date"
+            }}
+            columnWidths={{
+              "UoM": 60,
+              "Scope": 80,
+              "Total Completed": 80,
+              "Balance": 80,
+              "Base Plan Start": 80,
+              "Base Plan Finish": 80,
+              "Actual Start": 80,
+              "Actual Finish": 80,
+              "Forecast Completion Date": 80
+            }}
+            isReadOnly={true}
+            hideAddRow={true}
+          />
+        </div>
+      )}
     </div>
   );
 };

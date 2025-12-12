@@ -72,8 +72,7 @@ export function IssuesTable({ issues, onAddIssue }: IssuesTableProps) {
       title="Issue Logs"
       columns={columns}
       data={tableData}
-      onDataChange={() => {}} // Read-only table
-      isReadOnly={true}
-    />
+      onDataChange={() => { } } // Read-only table
+      isReadOnly={true} onSave={undefined} onSubmit={undefined}    />
   );
 }

@@ -1,44 +1,63 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
 import { 
-  FileSpreadsheet, 
-  Grid3X3, 
-  Wrench, 
-  Building, 
-  Package, 
-  User, 
+  FileText, 
   Check, 
   X, 
-  Plus, 
-  Eye,
-  FileText,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Edit,
+  Edit, 
+  Clock, 
+  AlertCircle, 
+  CheckCircle, 
+  FileCheck,
+  Calendar,
+  User,
   Maximize,
   Minimize,
-  RefreshCw
+  FileSpreadsheet,
+  Grid3X3,
+  Wrench,
+  Building,
+  Package,
+  RefreshCw,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/modules/auth/contexts/AuthContext";
-import { useNotification } from "@/modules/auth/contexts/NotificationContext";
-import { getEntriesForPMReview, approveEntryByPM, rejectEntryByPM, updateEntryByPM } from "@/modules/auth/services/dprSupervisorService";
-import { registerUser } from "@/modules/auth/services/authService";
-import { getUserProjects, assignProjectToSupervisor } from "@/modules/auth/services/projectService";
-import { StyledExcelTable } from "@/components/StyledExcelTable";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { StatsCard } from "@/components/StatsCard";
+import { StyledExcelTable } from "@/components/StyledExcelTable";
+import { 
+  getEntriesForPMReview,
+  approveEntryByPM, 
+  rejectEntryByPM, 
+  updateEntryByPM,
+  getTodayAndYesterday
+} from "@/modules/auth/services/dprSupervisorService";
+import { getUserProjects } from "@/modules/auth/services/projectService";
+import { 
+  DPQtyTable,
+  DPVendorBlockTable,
+  ManpowerDetailsTable,
+  DPBlockTable,
+  DPVendorIdtTable,
+  MmsModuleRfiTable
+} from "@/modules/supervisor/components";
+import { toast } from "sonner";
+import { useNotification } from "@/modules/auth/contexts/NotificationContext";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Bar, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";// Function to format date as YYYY-MM-DD
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { registerUser } from "@/modules/auth/services/authService";
+import { assignProjectToSupervisor } from "@/modules/auth/services/projectService";
+
+// Function to format date as YYYY-MM-DD
 const formatDate = (dateString: string | null | undefined): string => {
   if (!dateString) return "Not set";
   const date = new Date(dateString);
@@ -73,6 +92,9 @@ const PMDashboard = () => {
     ProjectId: "" as string | number
   });
   
+  // State for collapsible entries
+  const [expandedEntries, setExpandedEntries] = useState<Record<number, boolean>>({});
+  
   // Note: Site PM can only create supervisors, not other roles
   // This is a business rule enforced in both frontend and backend
   const [supervisorLoading, setSupervisorLoading] = useState(false);
@@ -85,16 +107,21 @@ const PMDashboard = () => {
     projectName: "" as string | null
   });
 
-  // Filter entries by sheet type
+  // Filter entries by sheet type - ONLY SHOW SUBMITTED ENTRIES
   const getEntriesBySheetType = (sheetType: string) => {
-    // Filter by sheet type and optionally by project ID if specified
+    // Filter by sheet type and status (only submitted_to_pm)
     if (projectId) {
       return submittedEntries.filter(entry => 
-        entry.sheet_type === sheetType && entry.project_id === projectId
+        entry.sheet_type === sheetType && 
+        entry.project_id === projectId &&
+        entry.status === 'submitted_to_pm'  // Only show submitted entries
       );
     } else {
-      // If no project specified, show all entries for this sheet type
-      return submittedEntries.filter(entry => entry.sheet_type === sheetType);
+      // If no project specified, show all submitted entries for this sheet type
+      return submittedEntries.filter(entry => 
+        entry.sheet_type === sheetType && 
+        entry.status === 'submitted_to_pm'  // Only show submitted entries
+      );
     }
   };
 
@@ -151,7 +178,8 @@ const PMDashboard = () => {
       // Refresh entries
       await fetchEntries();
     } catch (error) {
-      toast.error("Failed to approve entry");
+      console.error(`Failed to approve entry ${entryId}:`, error);
+      toast.error(`Failed to approve entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
 
@@ -173,7 +201,8 @@ const PMDashboard = () => {
       setEditData(null);
       await fetchEntries();
     } catch (error) {
-      toast.error("Failed to update entry");
+      console.error(`Failed to update entry ${editingEntry?.id}:`, error);
+      toast.error(`Failed to update entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
 
@@ -201,7 +230,8 @@ const PMDashboard = () => {
       // Refresh entries
       await fetchEntries();
     } catch (error) {
-      toast.error("Failed to reject entry");
+      console.error(`Failed to reject entry ${entryId}:`, error);
+      toast.error(`Failed to reject entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
 
@@ -240,9 +270,38 @@ const PMDashboard = () => {
     fetchEntries();
   };
 
+  // Handle update entry
+  const handleUpdateEntry = async (entryId: number, data: any) => {
+    try {
+      await updateEntryByPM(entryId, data);
+      toast.success("Entry updated successfully");
+      await fetchEntries();
+    } catch (error) {
+      console.error(`Failed to update entry ${entryId}:`, error);
+      toast.error(`Failed to update entry: ${(error as Error).message || 'Unknown error'}`);
+    }
+  };
+  
+  // Handle save entry
+  const handleSaveEntry = async (entryId: number, data: any) => {
+    try {
+      await updateEntryByPM(entryId, data);
+      toast.success("Entry saved successfully");
+      await fetchEntries();
+    } catch (error) {
+      console.error(`Failed to save entry ${entryId}:`, error);
+      toast.error(`Failed to save entry: ${(error as Error).message || 'Unknown error'}`);
+    }
+  };
+  
   // Toggle fullscreen mode
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
+  };
+  
+  // Close fullscreen mode
+  const closeFullscreen = () => {
+    setIsFullscreen(false);
   };
 
   // Render sheet entries for a specific sheet type
@@ -263,10 +322,30 @@ const PMDashboard = () => {
       );
     }
 
+    // Get selected entries for this sheet type
+    // Removed bulk selection state and related functions
+    
+    // Toggle entry expansion
+    const toggleEntryExpansion = (entryId: number) => {
+      setExpandedEntries(prev => ({
+        ...prev,
+        [entryId]: !prev[entryId]
+      }));
+    };
+    
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
+        {/* Removed Bulk Actions Toolbar */}
+        
         {entries.map((entry, entryIndex) => {
           const entryData = typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json;
+          const { today, yesterday } = getTodayAndYesterday();
+          
+          // Determine if entry is locked (submitted or approved)
+          const isLocked = entry.status !== 'submitted_to_pm';
+          
+          // Check if entry is expanded
+          const isExpanded = expandedEntries[entry.id] || false;
           
           return (
             <motion.div 
@@ -274,178 +353,444 @@ const PMDashboard = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: entryIndex * 0.1 }}
-              className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 bg-white"
+              className="border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800"
             >
-              {/* Entry Header */}
+              {/* Collapsible Entry Header */}
               <motion.div 
-                className="flex flex-col md:flex-row md:items-center justify-between mb-4 pb-3 border-b border-gray-200 bg-gray-50 rounded-t-lg p-3"
+                className="flex flex-col md:flex-row md:items-center justify-between p-3 cursor-pointer"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: entryIndex * 0.1 + 0.1 }}
+                onClick={() => toggleEntryExpansion(entry.id)}
               >
-                <div className="flex flex-col mb-3 md:mb-0">
-                  <span className="font-semibold text-lg">Entry #{entry.id}</span>
-                  <span className="text-sm text-muted-foreground">
-                    Submitted by: {entry.supervisor_name || 'Supervisor'} ({entry.supervisor_email})
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(entry.submitted_at).toLocaleString()}
-                  </span>
-                  <span className="text-xs font-medium text-primary mt-1">
-                    Project ID: {entry.project_id}
-                  </span>
-                </div>
-                <div className="flex items-center space-x-2 flex-wrap">
-                  <Badge 
-                    variant={
-                      entry.status === "submitted_to_pm" ? "secondary" : 
-                      entry.status === "approved_by_pm" ? "default" : 
-                      "destructive"
-                    }
-                    className="px-3 py-1 text-xs font-medium"
-                  >
-                    {entry.status === "submitted_to_pm" ? "Pending Review" : 
-                     entry.status === "approved_by_pm" ? "Approved" : 
-                     "Rejected"}
-                  </Badge>
-                  {entry.status === "submitted_to_pm" && (
-                    <>
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={() => handleEditEntry(entry)}
-                        className="transition-colors duration-200 px-3 py-1 h-8"
-                      >
-                        <Edit className="w-4 h-4 mr-1" />
-                        Edit
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="default"
-                        onClick={() => handleApprove(entry.id)}
-                        className="bg-green-600 hover:bg-green-700 transition-colors duration-200 px-3 py-1 h-8"
-                      >
-                        <Check className="w-4 h-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button 
-                        size="sm" 
-                        variant="destructive"
-                        onClick={() => handleReject(entry.id)}
-                        className="transition-colors duration-200 px-3 py-1 h-8"
-                      >
-                        <X className="w-4 h-4 mr-1" />
-                        Reject
-                      </Button>
-                    </>
-                  )}
-                  {entry.status === "approved_by_pm" && (
-                    <Badge variant="outline" className="text-green-600 border-green-600 px-3 py-1 text-xs font-medium">
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Sent to PMAG
-                    </Badge>
-                  )}
+                <div className="flex items-start space-x-3 w-full">
+                  {/* Removed checkbox input */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-semibold">Entry #{entry.id}</span>
+                        <Badge 
+                          variant={
+                            entry.status === "submitted_to_pm" ? "secondary" : 
+                            entry.status === "approved_by_pm" ? "default" : 
+                            "destructive"
+                          }
+                          className="px-2 py-0.5 text-xs font-medium"
+                        >
+                          {entry.status === "submitted_to_pm" ? "Pending" : 
+                           entry.status === "approved_by_pm" ? "Approved" : 
+                           "Rejected"}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1 md:mt-0">
+                        {new Date(entry.submitted_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-1">
+                      <span className="text-sm text-muted-foreground truncate">
+                        {entry.supervisor_name || 'Supervisor'} ({entry.supervisor_email})
+                      </span>
+                      <span className="text-xs font-medium text-primary hidden md:block">
+                        Project ID: {entry.project_id}
+                      </span>
+                      <span className="text-xs text-muted-foreground mt-1 md:mt-0">
+                        {sheetType.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    {entry.status === "submitted_to_pm" && (
+                      <>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditEntry(entry);
+                          }}
+                          className="transition-colors duration-200 px-2 py-1 h-7"
+                        >
+                          <Edit className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="default"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleApprove(entry.id);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 transition-colors duration-200 px-2 py-1 h-7"
+                        >
+                          <Check className="w-3 h-3" />
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleReject(entry.id);
+                          }}
+                          className="transition-colors duration-200 px-2 py-1 h-7"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </>
+                    )}
+                    {entry.status === "approved_by_pm" && (
+                      <Badge variant="outline" className="text-green-600 border-green-600 px-2 py-0.5 text-xs font-medium">
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Sent to PMAG
+                      </Badge>
+                    )}
+                    {isExpanded ? (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </div>
                 </div>
               </motion.div>
 
-              {/* Sheet Information */}
-              {entryData?.staticHeader && (
-                <motion.div 
-                  className="bg-blue-50 p-3 rounded mb-4 border border-blue-100"
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: entryIndex * 0.1 + 0.2 }}
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <p className="text-sm"><strong>Project:</strong> {entryData.staticHeader.projectInfo}</p>
-                  <p className="text-sm"><strong>Reporting Date:</strong> {entryData.staticHeader.reportingDate}</p>
-                  <p className="text-sm"><strong>Progress Date:</strong> {entryData.staticHeader.progressDate}</p>
-                </motion.div>
-              )}
+              {/* Expanded Content */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div 
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
+                  >
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700">
+                      {/* Sheet Information */}
+                      {entryData?.staticHeader && (
+                        <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded mb-3 border border-blue-100 dark:border-blue-800">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                            <p className="text-sm"><strong>Project:</strong> {entryData.staticHeader.projectInfo}</p>
+                            <p className="text-sm"><strong>Reporting Date:</strong> {entryData.staticHeader.reportingDate}</p>
+                            <p className="text-sm"><strong>Progress Date:</strong> {entryData.staticHeader.progressDate}</p>
+                          </div>
+                        </div>
+                      )}
 
-              {/* Data Table */}
-              {entryData?.rows && entryData.rows.length > 0 && (
-                <motion.div 
-                  className={`overflow-x-auto mb-4 rounded-lg border border-gray-200 ${isFullscreen ? 'fixed inset-0 z-50 bg-white p-4 overflow-auto' : ''}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: entryIndex * 0.1 + 0.3 }}
-                >
-                  {isFullscreen && (
-                    <div className="flex justify-between items-center mb-4 p-2 border-b">
-                      <h3 className="text-lg font-semibold">Fullscreen View - {entryData.rows.length} Rows</h3>
-                      <Button 
-                        onClick={toggleFullscreen}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Minimize className="w-4 h-4 mr-1" />
-                        Exit Fullscreen
-                      </Button>
-                    </div>
-                  )}
-                  <div className={isFullscreen ? 'overflow-auto max-h-[calc(100vh-120px)]' : 'max-h-96 overflow-y-auto'}>
-                    <table className="w-full border-collapse min-w-full">
-                      <thead>
-                        <tr className="bg-gray-100 sticky top-0 z-10">
-                          {Object.keys(entryData.rows[0]).map((key) => (
-                            <th key={key} className="border border-gray-300 p-2 text-left text-xs font-semibold whitespace-nowrap bg-gray-50">
-                              {key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {entryData.rows.map((row: any, rowIndex: number) => (
-                          <motion.tr 
-                            key={rowIndex} 
-                            className="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
-                            initial={{ opacity: 0, x: -5 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: entryIndex * 0.1 + 0.4 + rowIndex * 0.05 }}
-                            whileHover={{ backgroundColor: '#f9fafb' }}
-                          >
-                            {Object.values(row).map((value: any, colIndex: number) => (
-                              <td key={`${rowIndex}-${colIndex}`} className="border border-gray-300 p-2 text-sm align-top">
-                                {value || '-'}
-                              </td>
-                            ))}
-                          </motion.tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {!isFullscreen && entryData.rows.length > 50 && (
-                    <div className="mt-2 text-right">
-                      <Button 
-                        onClick={toggleFullscreen}
-                        variant="outline"
-                        size="sm"
-                        className="text-xs"
-                      >
-                        <Maximize className="w-3 h-3 mr-1" />
-                        View Fullscreen ({entryData.rows.length} rows)
-                      </Button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
+                      {/* Data Table - Using the same components as Supervisor Dashboard */}
+                      {entryData?.rows && entryData.rows.length > 0 && (
+                        <div className="mb-3">
+                          <div className={isFullscreen ? 'overflow-auto max-h-[calc(100vh-120px)]' : ''}>
+                            {/* Render the appropriate table component based on sheet type */}
+                            {sheetType === 'dp_qty' && (
+                              <DPQtyTable 
+                                data={entryData.rows} 
+                                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                                onSave={() => handleSaveEntry(entry.id, entryData)}
+                                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                                today={entryData.staticHeader?.reportingDate || today}
+                                isLocked={isLocked}
+                                status={entry.status}
+                                useMockData={false}
+                              />
+                            )}
+                            
+                            {sheetType === 'dp_block' && (
+                              <DPBlockTable 
+                                data={entryData.rows} 
+                                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                                onSave={() => handleSaveEntry(entry.id, entryData)}
+                                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                                today={entryData.staticHeader?.reportingDate || today}
+                                isLocked={isLocked}
+                                status={entry.status}
+                                useMockData={false}
+                              />
+                            )}
+                            
+                            {sheetType === 'dp_vendor_idt' && (
+                              <DPVendorIdtTable 
+                                data={entryData.rows} 
+                                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                                onSave={() => handleSaveEntry(entry.id, entryData)}
+                                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                                today={entryData.staticHeader?.reportingDate || today}
+                                isLocked={isLocked}
+                                status={entry.status}
+                                useMockData={false}
+                              />
+                            )}
+                            
+                            {sheetType === 'dp_vendor_block' && (
+                              <DPVendorBlockTable 
+                                data={entryData.rows} 
+                                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                                onSave={() => handleSaveEntry(entry.id, entryData)}
+                                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                                today={entryData.staticHeader?.reportingDate || today}
+                                isLocked={isLocked}
+                                status={entry.status}
+                                useMockData={false}
+                              />
+                            )}
+                            
+                            {sheetType === 'manpower_details' && (
+                              <ManpowerDetailsTable 
+                                data={entryData.rows} 
+                                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                                totalManpower={entryData.totalManpower || 0}
+                                setTotalManpower={(total) => handleUpdateEntry(entry.id, { ...entryData, totalManpower: total })}
+                                onSave={() => handleSaveEntry(entry.id, entryData)}
+                                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                                today={entryData.staticHeader?.reportingDate || today}
+                                isLocked={isLocked}
+                                status={entry.status}
+                                useMockData={false}
+                              />
+                            )}
+                            
+                            {sheetType === 'mms_module_rfi' && (
+                              <MmsModuleRfiTable 
+                                data={entryData.rows} 
+                                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                                onSave={() => handleSaveEntry(entry.id, entryData)}
+                                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                                today={entryData.staticHeader?.reportingDate || today}
+                                isLocked={isLocked}
+                                status={entry.status}
+                                useMockData={false}
+                              />
+                            )}
+                            
+                            {/* Fallback for unknown sheet types */}
+                            {!['dp_qty', 'dp_block', 'dp_vendor_idt', 'dp_vendor_block', 'manpower_details', 'mms_module_rfi'].includes(sheetType) && (
+                              <div className="overflow-x-auto">
+                                <table className="w-full border-collapse min-w-full">
+                                  <thead>
+                                    <tr className="bg-gray-100 sticky top-0 z-10">
+                                      {Object.keys(entryData.rows[0]).map((key) => (
+                                        <th key={key} className="border border-gray-300 p-2 text-left text-xs font-semibold whitespace-nowrap bg-gray-50">
+                                          {key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
+                                        </th>
+                                      ))}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {entryData.rows.map((row: any, rowIndex: number) => (
+                                      <motion.tr 
+                                        key={rowIndex} 
+                                        className="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
+                                        initial={{ opacity: 0, x: -5 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: entryIndex * 0.1 + 0.4 + rowIndex * 0.05 }}
+                                        whileHover={{ backgroundColor: '#f9fafb' }}
+                                      >
+                                        {Object.values(row).map((value: any, colIndex: number) => (
+                                          <td key={`${rowIndex}-${colIndex}`} className="border border-gray-300 p-2 text-sm align-top">
+                                            {value || '-'}
+                                          </td>
+                                        ))}
+                                      </motion.tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {entryData.rows.length > 50 && (
+                            <div className="mt-2 text-right">
+                              <Button 
+                                onClick={toggleFullscreen}
+                                variant="outline"
+                                size="sm"
+                                className="text-xs"
+                              >
+                                <Maximize className="w-3 h-3 mr-1" />
+                                View Fullscreen ({entryData.rows.length} rows)
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-              {/* Total Manpower (if applicable) */}
-              {entryData?.totalManpower !== undefined && (
-                <motion.div 
-                  className="mt-4 p-3 bg-green-50 rounded border border-green-200"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: entryIndex * 0.1 + 0.5 }}
-                  whileHover={{ scale: 1.01 }}
-                >
-                  <p className="text-sm font-semibold">Total Manpower: {entryData.totalManpower}</p>
-                </motion.div>
-              )}
+                      {/* Total Manpower (if applicable) */}
+                      {entryData?.totalManpower !== undefined && (
+                        <div className="p-3 bg-green-50 rounded border border-green-200">
+                          <p className="text-sm font-semibold">Total Manpower: {entryData.totalManpower}</p>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           );
         })}
+      </div>
+    );
+  };
+  
+  // Render fullscreen overlay
+  const renderFullscreenOverlay = () => {
+    if (!isFullscreen) return null;
+    
+    // Find the currently expanded entry
+    const expandedEntryId = Object.keys(expandedEntries).find(id => expandedEntries[Number(id)]);
+    if (!expandedEntryId) return null;
+    
+    const entry = submittedEntries.find(e => e.id === Number(expandedEntryId));
+    if (!entry) return null;
+    
+    const entryData = typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json;
+    const { today, yesterday } = getTodayAndYesterday();
+    const isLocked = entry.status !== 'submitted_to_pm';
+    
+    return (
+      <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4 md:p-6 overflow-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 p-2 border-b dark:border-gray-700">
+          <h3 className="text-lg font-semibold">Fullscreen View - Entry #{entry.id}</h3>
+          <Button 
+            onClick={closeFullscreen}
+            variant="outline"
+            size="sm"
+          >
+            <Minimize className="w-4 h-4 mr-1" />
+            Exit Fullscreen
+          </Button>
+        </div>
+        
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-4 border dark:border-gray-700">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+              <p className="text-sm font-medium">Entry ID</p>
+              <p className="text-sm">#{entry.id}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Submitted By</p>
+              <p className="text-sm">{entry.supervisor_name || 'Supervisor'} ({entry.supervisor_email})</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Submitted At</p>
+              <p className="text-sm">{new Date(entry.submitted_at).toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-sm font-medium">Sheet Type</p>
+              <p className="text-sm">{entry.sheet_type.replace(/_/g, ' ')}</p>
+            </div>
+          </div>
+        </div>
+        
+        {entryData?.staticHeader && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4 border border-blue-100 dark:border-blue-800">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div>
+                <p className="text-sm font-medium">Project</p>
+                <p className="text-sm">{entryData.staticHeader.projectInfo}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Reporting Date</p>
+                <p className="text-sm">{entryData.staticHeader.reportingDate}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Progress Date</p>
+                <p className="text-sm">{entryData.staticHeader.progressDate}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {entryData?.rows && entryData.rows.length > 0 && (
+          <div className="overflow-auto max-h-[calc(100vh-300px)]">
+            {activeTab === 'dp_qty' && (
+              <DPQtyTable 
+                data={entryData.rows} 
+                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                onSave={() => handleSaveEntry(entry.id, entryData)}
+                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                today={entryData.staticHeader?.reportingDate || today}
+                isLocked={isLocked}
+                status={entry.status}
+                useMockData={false}
+              />
+            )}
+            
+            {activeTab === 'dp_block' && (
+              <DPBlockTable 
+                data={entryData.rows} 
+                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                onSave={() => handleSaveEntry(entry.id, entryData)}
+                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                today={entryData.staticHeader?.reportingDate || today}
+                isLocked={isLocked}
+                status={entry.status}
+                useMockData={false}
+              />
+            )}
+            
+            {activeTab === 'dp_vendor_idt' && (
+              <DPVendorIdtTable 
+                data={entryData.rows} 
+                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                onSave={() => handleSaveEntry(entry.id, entryData)}
+                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                today={entryData.staticHeader?.reportingDate || today}
+                isLocked={isLocked}
+                status={entry.status}
+                useMockData={false}
+              />
+            )}
+            
+            {activeTab === 'dp_vendor_block' && (
+              <DPVendorBlockTable 
+                data={entryData.rows} 
+                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                onSave={() => handleSaveEntry(entry.id, entryData)}
+                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                today={entryData.staticHeader?.reportingDate || today}
+                isLocked={isLocked}
+                status={entry.status}
+                useMockData={false}
+              />
+            )}
+            
+            {activeTab === 'manpower_details' && (
+              <ManpowerDetailsTable 
+                data={entryData.rows} 
+                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                totalManpower={entryData.totalManpower || 0}
+                setTotalManpower={(total) => handleUpdateEntry(entry.id, { ...entryData, totalManpower: total })}
+                onSave={() => handleSaveEntry(entry.id, entryData)}
+                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                today={entryData.staticHeader?.reportingDate || today}
+                isLocked={isLocked}
+                status={entry.status}
+                useMockData={false}
+              />
+            )}
+            
+            {activeTab === 'mms_module_rfi' && (
+              <MmsModuleRfiTable 
+                data={entryData.rows} 
+                setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
+                onSave={() => handleSaveEntry(entry.id, entryData)}
+                onSubmit={() => handleSaveEntry(entry.id, entryData)}
+                yesterday={entryData.staticHeader?.progressDate || yesterday}
+                today={entryData.staticHeader?.reportingDate || today}
+                isLocked={isLocked}
+                status={entry.status}
+                useMockData={false}
+              />
+            )}
+          </div>
+        )}
       </div>
     );
   };
@@ -869,6 +1214,9 @@ const PMDashboard = () => {
         </div>
       </div>
 
+      {/* Fullscreen Overlay */}
+      {renderFullscreenOverlay()}
+
       {/* Create Supervisor Modal */}
       <Dialog open={showCreateSupervisorModal} onOpenChange={setShowCreateSupervisorModal}>
         <DialogContent className="max-w-md">
@@ -1000,7 +1348,7 @@ const PMDashboard = () => {
           </DialogHeader>
           {editingEntry && editData && (
             <div className="space-y-4">
-              <div className="bg-muted p-3 rounded-lg">
+              <div className="bg-muted p-3 rounded-lg dark:bg-gray-800">
                 <p className="text-sm"><strong>Supervisor:</strong> {editingEntry.supervisor_name || 'Unknown'}</p>
                 <p className="text-sm"><strong>Submitted:</strong> {new Date(editingEntry.submitted_at).toLocaleString()}</p>
                 <p className="text-sm"><strong>Status:</strong> {editingEntry.status}</p>
@@ -1016,7 +1364,7 @@ const PMDashboard = () => {
                     </div>
                   )}
                   {editData.totalManpower !== undefined && (
-                    <div className="bg-muted p-3 rounded mb-4">
+                    <div className="bg-muted p-3 rounded mb-4 dark:bg-gray-800">
                       <p className="text-sm"><strong>Total Manpower:</strong> {editData.totalManpower}</p>
                     </div>
                   )}

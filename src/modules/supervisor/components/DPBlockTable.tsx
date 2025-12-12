@@ -44,7 +44,7 @@ interface DPBlockTableProps {
 }
 
 export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false, status = 'draft', useMockData = false }: DPBlockTableProps) {
-  // Fetch data from mock API when component mounts
+  // Fetch data from mock API when component mounts or when useMockData changes
   useEffect(() => {
     const fetchData = async () => {
       if (useMockData) {
@@ -58,7 +58,7 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
     };
 
     fetchData();
-  }, [setData, useMockData]);
+  }, [setData, useMockData, data.length]); // Add data.length to dependencies to trigger reload when data changes
   
   // Define columns based on user requirements
   const columns = [
@@ -164,11 +164,7 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
   };
 
   return (
-    <div className="space-y-4 w-full">
-      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h3 className="font-bold text-base mb-1">DP Block Table</h3>
-      </div>
-      
+    <div className="space-y-4 w-full">    
       <StyledExcelTable
         title="DP Block Table"
         columns={columns}
@@ -200,6 +196,42 @@ export function DPBlockTable({ data, setData, onSave, onSubmit, yesterday, today
           [today]: "number" // Number value, editable
         }}
         columnWidths={columnWidths}
+        columnTextColors={{
+          "Actual Start (user)": "#00B050",
+          "Actual Finish (user)": "#00B050",
+          "Forecast Start (p6)": "#0070C0",
+          "Forecast Finish (p6)": "#0070C0"
+        }}
+        columnFontWeights={{
+          "Actual Start (user)": "bold",
+          "Actual Finish (user)": "bold",
+          "Forecast Start (p6)": "bold",
+          "Forecast Finish (p6)": "bold"
+        }}
+        headerStructure={[
+          // First header row - main column names
+          [
+            { label: "Activity_ID (p6)", colSpan: 1 },
+            { label: "Activities (p6)", colSpan: 1 },
+            { label: "Plot (p6)", colSpan: 1 },
+            { label: "New Block Nom (p6)", colSpan: 1 },
+            { label: "Baseline Priority (p6)", colSpan: 1 },
+            { label: "Scope (p6)", colSpan: 1 },
+            { label: "Hold Due to WTG (p6)", colSpan: 1 },
+            { label: "Front (auto)", colSpan: 1 },
+            { label: "Actual (auto)", colSpan: 1 },
+            { label: "% Completion (auto)", colSpan: 1 },
+            { label: "Balance (auto)", colSpan: 1 },
+            { label: "Baseline Start (p6)", colSpan: 1 },
+            { label: "Baseline Finish (p6)", colSpan: 1 },
+            { label: "Actual Start (user)", colSpan: 1 },
+            { label: "Actual Finish (user)", colSpan: 1 },
+            { label: "Forecast Start (p6)", colSpan: 1 },
+            { label: "Forecast Finish (p6)", colSpan: 1 },
+            { label: yesterday, colSpan: 1 },
+            { label: today, colSpan: 1 }
+          ]
+        ]}
         status={status} // Pass status to StyledExcelTable
       />
     </div>

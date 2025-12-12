@@ -41,7 +41,7 @@ export function MmsModuleRfiTable({
   status = 'draft', // Add status prop with default
   useMockData = false // Flag to use mock data
 }: MmsModuleRfiTableProps) {
-  // Fetch data from mock API when component mounts
+  // Fetch data from mock API when component mounts or when useMockData changes
   useEffect(() => {
     const fetchData = async () => {
       if (useMockData) {
@@ -55,7 +55,7 @@ export function MmsModuleRfiTable({
     };
 
     fetchData();
-  }, [setData, useMockData]);
+  }, [setData, useMockData, data.length]); // Add data.length to dependencies to trigger reload when data changes
   
   // Define columns
   const columns = [
@@ -132,6 +132,20 @@ export function MmsModuleRfiTable({
           [yesterday]: 60,
           [today]: 60
         }}
+        headerStructure={[
+          // First header row - main column names
+          [
+            { label: "RFI No", colSpan: 1 },
+            { label: "Subject", colSpan: 1 },
+            { label: "Module", colSpan: 1 },
+            { label: "Submitted Date", colSpan: 1 },
+            { label: "Response Date", colSpan: 1 },
+            { label: "Status", colSpan: 1 },
+            { label: "Remarks", colSpan: 1 },
+            { label: yesterday, colSpan: 1 },
+            { label: today, colSpan: 1 }
+          ]
+        ]}
       />
     </div>
   );

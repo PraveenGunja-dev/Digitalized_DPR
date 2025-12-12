@@ -34,17 +34,17 @@ interface ManpowerDetailsTableProps {
 export function ManpowerDetailsTable({ 
   data, 
   setData, 
-  totalManpower, 
-  setTotalManpower, 
+  totalManpower,
+  setTotalManpower,
   onSave, 
-  onSubmit,
+  onSubmit, 
   yesterday, 
-  today,
+  today, 
   isLocked = false,
-  status = 'draft', // Add status prop with default value
+  status = 'draft', // Add status prop with default
   useMockData = false // Flag to use mock data
 }: ManpowerDetailsTableProps) {
-  // Fetch data from mock API when component mounts
+  // Fetch data from mock API when component mounts or when useMockData changes
   useEffect(() => {
     const fetchData = async () => {
       if (useMockData) {
@@ -65,7 +65,7 @@ export function ManpowerDetailsTable({
     };
 
     fetchData();
-  }, [setData, setTotalManpower, useMockData]);
+  }, [setData, setTotalManpower, useMockData, data.length]); // Add data.length to dependencies to trigger reload when data changes
   
   // Define columns
   const columns = [
@@ -148,6 +148,19 @@ export function ManpowerDetailsTable({
           [today]: "number"
         }}
         columnWidths={columnWidths}
+        headerStructure={[
+          // First header row - main column names
+          [
+            { label: "Activity_ID", colSpan: 1 },
+            { label: "Sl No", colSpan: 1 },
+            { label: "Block", colSpan: 1 },
+            { label: "Contractor Name", colSpan: 1 },
+            { label: "Activity", colSpan: 1 },
+            { label: "Section", colSpan: 1 },
+            { label: yesterday, colSpan: 1 },
+            { label: today, colSpan: 1 }
+          ]
+        ]}
         status={status} // Pass status to StyledExcelTable
       />
     </div>

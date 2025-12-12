@@ -271,7 +271,7 @@ All colors MUST be HSL.
   border-collapse: collapse;
   width: 100%;
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif;
-  font-size: 12px;
+  font-size: 8px;
   table-layout: fixed; /* Added for better column alignment */
 }
 
@@ -306,7 +306,7 @@ All colors MUST be HSL.
   border-right: 1px solid #d4d4d4;
   border-bottom: 1px solid #a6a6a6;
   color: #333;
-  font-size: 12px;
+  font-size: 8px;
   user-select: none;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -322,7 +322,7 @@ All colors MUST be HSL.
   padding: 6px 8px;
   border-right: 1px solid #a6a6a6;
   color: #333;
-  font-size: 12px;
+  font-size: 8px;
   min-width: 40px;
   max-width: 40px;
   user-select: none;
@@ -363,7 +363,7 @@ All colors MUST be HSL.
   outline: none;
   padding: 4px 8px;
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif;
-  font-size: 12px;
+  font-size: 8px;
   background: transparent;
   color: #000;
   box-sizing: border-box; /* Added for proper sizing */
@@ -379,7 +379,7 @@ All colors MUST be HSL.
   text-overflow: ellipsis;
   padding: 4px 8px;
   box-sizing: border-box;
-  font-size: 12px;
+  font-size: 8px;
 }
 
 .excel-status-bar {
@@ -396,7 +396,7 @@ All colors MUST be HSL.
 /* Handsontable Customization */
 .handsontable {
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif !important;
-  font-size: 12px !important;
+  font-size: 8px !important;
   z-index: 10 !important;
 }
 
@@ -610,7 +610,7 @@ All colors MUST be HSL.
   outline: none;
   padding: 4px 8px;
   font-family: 'Adani', 'Calibri', 'Arial', sans-serif;
-  font-size: 12px;
+  font-size: 8px;
   box-sizing: border-box;
 }
 
@@ -625,7 +625,7 @@ All colors MUST be HSL.
   text-overflow: ellipsis;
   padding: 4px 8px;
   box-sizing: border-box;
-  font-size: 12px;
+  font-size: 8px;
 }
 
 .dark .excel-status-bar {
@@ -638,7 +638,7 @@ All colors MUST be HSL.
 .dark .handsontable {
   background-color: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
-  font-size: 12px !important;
+  font-size: 8px !important;
 }
 
 .dark .ht_master .wtHolder {
@@ -701,7 +701,7 @@ All colors MUST be HSL.
   text-overflow: ellipsis;
   box-sizing: border-box;
   padding: 6px 8px !important;
-  font-size: 12px !important;
+  font-size: 8px !important;
   height: 32px !important;
 }
 
@@ -712,7 +712,7 @@ All colors MUST be HSL.
 .dark .htContextMenu .ht_master table td {
   background: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
-  font-size: 12px !important;
+  font-size: 8px !important;
 }
 
 .dark .htContextMenu .ht_master table td:hover {

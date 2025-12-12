@@ -33,17 +33,17 @@ interface DPVendorIdtCategoriesTableProps {
 }
 
 export function DPVendorIdtCategoriesTable({ 
-  onSave, 
-  onSubmit, 
   yesterday, 
   today, 
+  onSave, 
+  onSubmit, 
   isLocked = false,
   status = 'draft',
   useMockData = false
 }: DPVendorIdtCategoriesTableProps) {
   const [data, setData] = useState<DPVendorIdtCategoryData[]>([]);
   
-  // Fetch data from mock API when component mounts
+  // Fetch data from mock API when component mounts or when useMockData changes
   useEffect(() => {
     const fetchData = async () => {
       if (useMockData) {
@@ -57,7 +57,7 @@ export function DPVendorIdtCategoriesTable({
     };
 
     fetchData();
-  }, [useMockData]);
+  }, [useMockData, data.length]); // Add data.length to dependencies to trigger reload when data changes
   
   // Define columns
   const columns = [
@@ -137,8 +137,8 @@ export function DPVendorIdtCategoriesTable({
   
   // Define column widths for better alignment
   const columnWidths = {
-    "Activity ID": 40,
-    "Activity": 120,
+    "Activity ID": 80,
+    "Activity": 80,
     "Plot": 60,
     "Block": 80,
     "Priority": 60,
@@ -155,10 +155,6 @@ export function DPVendorIdtCategoriesTable({
 
   return (
     <div className="space-y-2 w-full">
-      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h3 className="font-bold text-base mb-1">DP Vendor IDT Categories</h3>
-        <p className="text-xs">Reporting Date: {today}</p>
-      </div>
       <StyledExcelTable
         title="DP Vendor IDT Categories Table"
         columns={columns}

@@ -98,7 +98,27 @@ const SupervisorDashboard = () => {
   ]);
   
   // DP Vendor Block state
-  const [dpVendorBlockData, setDpVendorBlockData] = useState([
+  interface DPVendorBlockData {
+    activityId: string;
+    activities: string;
+    plot: string;
+    newBlockNom: string;
+    priority: string;
+    baselinePriority: string;
+    contractorName: string;
+    scope: string;
+    holdDueToWtg: string;
+    front: string;
+    actual: string;
+    completionPercentage: string;
+    remarks: string;
+    yesterdayValue: string;
+    todayValue: string;
+    category?: string;
+    isCategoryRow?: boolean;
+  }
+  
+  const [dpVendorBlockData, setDpVendorBlockData] = useState<DPVendorBlockData[]>([
     { activityId: '', activities: '', plot: '', newBlockNom: '', priority: '', baselinePriority: '', contractorName: '', scope: '', holdDueToWtg: '', front: '', actual: '', completionPercentage: '', remarks: '', yesterdayValue: '', todayValue: '' }
   ]);
   
@@ -109,26 +129,73 @@ const SupervisorDashboard = () => {
   const [totalManpower, setTotalManpower] = useState(0);
   
   // DP Block state
-  const [dpBlockData, setDpBlockData] = useState([
+  interface DPBlockData {
+    activityId: string;
+    activities: string;
+    plot: string;
+    newBlockNom: string;
+    baselinePriority: string;
+    scope: string;
+    holdDueToWtg: string;
+    front: string;
+    actual: string;
+    completionPercentage: string;
+    balance: string;
+    baselineStart: string;
+    baselineFinish: string;
+    actualStart: string;
+    actualFinish: string;
+    forecastStart: string;
+    forecastFinish: string;
+    yesterdayValue?: string; // Optional
+    todayValue?: string; // Optional
+  }
+  
+  const [dpBlockData, setDpBlockData] = useState<DPBlockData[]>([
     { 
       activityId: '', 
       activities: '', 
       plot: '', 
       newBlockNom: '',
       baselinePriority: '',
-      contractorName: '',
       scope: '',
       holdDueToWtg: '',
       front: '',
       actual: '',
       completionPercentage: '',
-      yesterdayValue: '', // Number value, not editable
-      todayValue: '' // Number value, editable
+      balance: '',
+      baselineStart: '',
+      baselineFinish: '',
+      actualStart: '',
+      actualFinish: '',
+      forecastStart: '',
+      forecastFinish: '',
+      yesterdayValue: undefined, // Number value, not editable (optional)
+      todayValue: undefined // Number value, editable (optional)
     }
   ]);
   
   // DP Vendor IDT state
-  const [dpVendorIdtData, setDpVendorIdtData] = useState([
+  interface DPVendorIdtData {
+    activityId: string;
+    activities: string;
+    plot: string;
+    newBlockNom: string;
+    baselinePriority: string;
+    scope: string;
+    front: string;
+    priority: string;
+    contractorName: string;
+    remarks: string;
+    actual: string;
+    completionPercentage: string;
+    yesterdayValue?: string; // Optional
+    todayValue?: string; // Optional
+    category?: string;
+    isCategoryRow?: boolean;
+  }
+  
+  const [dpVendorIdtData, setDpVendorIdtData] = useState<DPVendorIdtData[]>([
     { 
       activityId: '', 
       activities: '', 
@@ -137,17 +204,13 @@ const SupervisorDashboard = () => {
       baselinePriority: '',
       scope: '',
       front: '',
-      actualStartDate: '', 
-      actualFinishDate: '', 
-      forecastStartDate: '',
-      forecastFinishDate: '',
-      contractorName: '',
       priority: '',
+      contractorName: '',
       remarks: '',
       actual: '',
       completionPercentage: '',
-      yesterdayValue: '', // Number value, not editable
-      todayValue: '' // Number value, editable
+      yesterdayValue: undefined, // Number value, not editable (optional)
+      todayValue: undefined // Number value, editable (optional)
     }
   ]);
   
@@ -532,40 +595,40 @@ const SupervisorDashboard = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm p-4">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-1 p-1 bg-muted rounded-lg">
-                <TabsTrigger value="summary" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <Grid3X3 className="w-4 h-4 mr-1 sm:mr-2" />
-                  Summary
+              <TabsList className="flex flex-wrap w-full gap-1 p-1 rounded-lg">
+                <TabsTrigger value="summary" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">Summary</span>
+                  <span className="xs:hidden">Summary</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp_qty" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <Building className="w-4 h-4 mr-1 sm:mr-2" />
-                  DP Qty
+                <TabsTrigger value="dp_qty" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">DP Qty</span>
+                  <span className="xs:hidden">DP Qty</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp_block" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <Building className="w-4 h-4 mr-1 sm:mr-2" />
-                  DP Block
+                <TabsTrigger value="dp_block" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">DP Block</span>
+                  <span className="xs:hidden">DP Block</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp_vendor_idt" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <User className="w-4 h-4 mr-1 sm:mr-2" />
-                  DP Vendor IDT
+                <TabsTrigger value="dp_vendor_idt" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">DP Vendor IDT</span>
+                  <span className="xs:hidden">Vender IDT</span>
                 </TabsTrigger>
-                <TabsTrigger value="dp_vendor_block" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <User className="w-4 h-4 mr-1 sm:mr-2" />
-                  DP Vendor Block
+                <TabsTrigger value="dp_vendor_block" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">DP Vendor Block</span>
+                  <span className="xs:hidden">DP Vendor Block</span>
                 </TabsTrigger>
-                <TabsTrigger value="manpower_details" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <User className="w-4 h-4 mr-1 sm:mr-2" />
-                  Manpower
+                <TabsTrigger value="manpower_details" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">Manpower</span>
+                  <span className="xs:hidden">Manpower</span>
                 </TabsTrigger>
-                <TabsTrigger value="mms_module_rfi" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <Wrench className="w-4 h-4 mr-1 sm:mr-2" />
-                  MMS RFI
+                <TabsTrigger value="mms_module_rfi" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">MMS RFI</span>
+                  <span className="xs:hidden">MMS & RFI</span>
                 </TabsTrigger>
-                <TabsTrigger value="issues" className="text-xs sm:text-sm data-[state=active]:bg-background">
-                  <AlertCircle className="w-4 h-4 mr-1 sm:mr-2" />
-                  Issues
+                <TabsTrigger value="issues" className="flex-1 min-w-[100px] text-xs sm:text-sm data-[state=active]:bg-background">
+                  <span className="hidden xs:inline">Issues</span>
+                  <span className="xs:hidden">Issue</span>
                 </TabsTrigger>
               </TabsList>
               

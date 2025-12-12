@@ -54,7 +54,7 @@ export function DPVendorIdtTable({
   status = 'draft', // Add status prop with default
   useMockData = false // Flag to use mock data
 }: DPVendorIdtTableProps) {
-  // Fetch data from mock API when component mounts
+  // Fetch data from mock API when component mounts or when useMockData changes
   useEffect(() => {
     const fetchData = async () => {
       if (useMockData) {
@@ -68,7 +68,7 @@ export function DPVendorIdtTable({
     };
 
     fetchData();
-  }, [setData, useMockData]);
+  }, [setData, useMockData, data.length]); // Add data.length to dependencies to trigger reload when data changes
   
   // Define columns
   const columns = [
@@ -118,6 +118,18 @@ export function DPVendorIdtTable({
     }
   });
   
+  // Create row styles for category rows
+  const rowStyles: Record<number, any> = {};
+  data.forEach((row, index) => {
+    if (row.isCategoryRow) {
+      rowStyles[index] = {
+        backgroundColor: '#49415B',
+        color: '#fffff',
+        fontWeight: 'bold'
+      };
+    }
+  });
+
   // Handle data changes from ExcelTable
   const handleDataChange = (newData: any[][]) => {
     // Convert array of arrays back to array of objects
@@ -201,10 +213,6 @@ export function DPVendorIdtTable({
 
   return (
     <div className="space-y-2 w-full">
-      <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-        <h3 className="font-bold text-base mb-1">DP Vendor IDT</h3>
-        <p className="text-xs">Reporting Date: {today}</p>
-      </div>
       <StyledExcelTable
         title="DP Vendor IDT Table"
         columns={columns}
@@ -216,6 +224,32 @@ export function DPVendorIdtTable({
         editableColumns={editableColumns}
         columnTypes={columnTypes}
         columnWidths={columnWidths}
+        columnTextColors={{
+          "% Completion(calc)": "#74DB4B"
+        }}
+        columnFontWeights={{
+          "% Completion(calc)": "bold"
+        }}
+        rowStyles={rowStyles}
+        headerStructure={[
+          // First header row - main column names
+          [
+            { label: "Activity_ID(p6)", colSpan: 1 },
+            { label: "Activities(p6)", colSpan: 1 },
+            { label: "Plot(p6)", colSpan: 1 },
+            { label: "New Block Nom(p6)", colSpan: 1 },
+            { label: "Priority(user)", colSpan: 1 },
+            { label: "Baseline Priority(p6)", colSpan: 1 },
+            { label: "Contractor Name(user)", colSpan: 1 },
+            { label: "Scope(p6)edit", colSpan: 1 },
+            { label: "Front(p6)edit", colSpan: 1 },
+            { label: "Actual(calc)", colSpan: 1 },
+            { label: "% Completion(calc)", colSpan: 1 },
+            { label: "Remarks(user)", colSpan: 1 },
+            { label: yesterday, colSpan: 1 },
+            { label: today, colSpan: 1 }
+          ]
+        ]}
         status={status} // Pass status to StyledExcelTable
       />
     </div>

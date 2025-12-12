@@ -50,7 +50,7 @@ export function DPVendorBlockTable({
   status = 'draft', // Add status prop with default
   useMockData = false // Flag to use mock data
 }: DPVendorBlockTableProps) {
-  // Fetch data from mock API when component mounts
+  // Fetch data from mock API when component mounts or when useMockData changes
   useEffect(() => {
     const fetchData = async () => {
       if (useMockData) {
@@ -64,7 +64,7 @@ export function DPVendorBlockTable({
     };
 
     fetchData();
-  }, [setData, useMockData]);
+  }, [setData, useMockData, data.length]); // Add data.length to dependencies to trigger reload when data changes
   
   // Define columns
   const columns = [
@@ -135,6 +135,18 @@ export function DPVendorBlockTable({
     }
   });
   
+  // Create row styles for category rows
+  const rowStyles: Record<number, any> = {};
+  data.forEach((row, index) => {
+    if (row.isCategoryRow) {
+      rowStyles[index] = {
+        backgroundColor: '#DFC57B',
+        color: '#000000',
+        fontWeight: 'bold'
+      };
+    }
+  });
+
   // Handle data changes from ExcelTable
   const handleDataChange = (newData: any[][]) => {
     // Convert array of arrays back to array of objects
@@ -176,10 +188,6 @@ export function DPVendorBlockTable({
       <div className="bg-muted p-3 rounded-lg border border-gray-200 dark:border-gray-700">
         <h3 className="font-bold text-base mb-1">Project Information</h3>
         <p className="font-medium text-sm">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-1 mt-1">
-          <p className="text-xs">Reporting Date: {today}</p>
-          <p className="text-xs">Progress Date: {yesterday}</p>
-        </div>
       </div>
       <StyledExcelTable
         title="DP Vendor Block Table"
@@ -202,6 +210,33 @@ export function DPVendorBlockTable({
           [today]: "number"
         }}
         columnWidths={columnWidths}
+        columnTextColors={{
+          "% Completion": "#00B050"
+        }}
+        columnFontWeights={{
+          "% Completion": "bold"
+        }}
+        rowStyles={rowStyles}
+        headerStructure={[
+          // First header row - main column names
+          [
+            { label: "Activity_ID(p6)", colSpan: 1 },
+            { label: "Activities(p6)", colSpan: 1 },
+            { label: "Plot(p6)", colSpan: 1 },
+            { label: "New Block Nom(p6)", colSpan: 1 },
+            { label: "Priority(user)", colSpan: 1 },
+            { label: "Baseline Priority(p6)", colSpan: 1 },
+            { label: "Contractor Name(user)", colSpan: 1 },
+            { label: "Scope(user)", colSpan: 1 },
+            { label: "Hold Due to WTG(user)", colSpan: 1 },
+            { label: "Front(auto)", colSpan: 1 },
+            { label: "Actual(auto)", colSpan: 1 },
+            { label: "% Completion", colSpan: 1 },
+            { label: "Remarks", colSpan: 1 },
+            { label: yesterday, colSpan: 1 },
+            { label: today, colSpan: 1 }
+          ]
+        ]}
         status={status} // Pass status to StyledExcelTable
       />
     </div>

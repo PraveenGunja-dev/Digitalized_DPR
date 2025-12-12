@@ -18,7 +18,7 @@ interface ProjectListingProps {
 
 export const ProjectListing: React.FC<ProjectListingProps> = ({ projects, onProjectClick }) => {
   return (
-    <div className="p-6 md:p-8">
+    <div className="py-6 md:py-8">
       <div className="space-y-5 md:space-y-5">
         {projects.map((project, index) => (
           <Card 

@@ -1,34 +1,10 @@
 import { useState, useEffect } from "react";
+import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Maximize, Minimize, Save } from "lucide-react";
 import { StatusChip } from "./StatusChip";
-
-// ========================
-// EXCEL THEMES (LIGHT + DARK)
-// ========================
-const excelThemes = {
-  light: {
-    bg: "#FFFFFF",
-    headerBg: "#F2F2F2",
-    headerText: "#000",
-    text: "#000",
-    grid: "#D4D4D4",
-    activeBorder: "#0B74B0",
-    hoverBg: "#EAF2FB",
-    statusBg: "#F4F4F4",
-  },
-  dark: {
-    bg: "#1E1E1E",
-    headerBg: "#2B2B2B",
-    headerText: "#E8E8E8",
-    text: "#E8E8E8",
-    grid: "#3A3A3A",
-    activeBorder: "#2EA3F2",
-    hoverBg: "#2E3238",
-    statusBg: "#252525",
-  },
-};
+import "@/index.css";
 
 export const StyledExcelTable = ({
   title,
@@ -43,14 +19,43 @@ export const StyledExcelTable = ({
   editableColumns = [],
   columnTypes = {},
   columnWidths = {},
+  columnTextColors = {}, // New prop for column text colors
+  columnFontWeights = {}, // New prop for column font weights
+  rowStyles = {}, // New prop for row styles
+  headerStructure = [], // New prop for multi-row headers
   status = "draft",
 }) => {
   const filteredColumns = columns.filter((c) => !excludeColumns.includes(c));
   const [activeCell, setActiveCell] = useState(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Excel Themes
+  const excelThemes = {
+    light: {
+      bg: "#FFFFFF",
+      headerBg: "#F3F3F3",
+      headerText: "#000",
+      text: "#000",
+      grid: "#D4D4D4",
+      activeBorder: "#217346",
+      hoverBg: "#EAF2FB",
+      statusBg: "#F4F4F4",
+    },
+    dark: {
+      bg: "#1E1E1E",
+      headerBg: "#2B2B2B",
+      headerText: "#E8E8E8",
+      text: "#E8E8E8",
+      grid: "#3A3A3A",
+      activeBorder: "#2EA3F2",
+      hoverBg: "#2E3238",
+      statusBg: "#252525",
+    },
+  };
+
   // Detect system/UI theme
   const [themeMode, setThemeMode] = useState("light");
+  const T = themeMode === "dark" ? excelThemes.dark : excelThemes.light;
 
   useEffect(() => {
     const updateTheme = () => {
@@ -69,7 +74,10 @@ export const StyledExcelTable = ({
     return () => observer.disconnect();
   }, []);
 
-  const T = excelThemes[themeMode];
+  // Populate filter options with unique values from each column
+  useEffect(() => {
+    // Filter functionality removed as per user request
+  }, [data, filteredColumns, columns]);
 
   const handleCellChange = (row, col, value) => {
     const cName = columns[col];
@@ -89,47 +97,87 @@ export const StyledExcelTable = ({
 
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
+  // Helper function to clean header labels by removing tags like (p6), (edit), (user), etc.
+  const cleanHeaderLabel = (label) => {
+    if (typeof label !== 'string') return label;
+    return label.replace(/\s*\(p6\)|\s*\(edit\)|\s*\(user\)|\s*\(auto\)/gi, '').trim();
+  };
+
   // ==========================================
   // EXCEL HEADER STYLE
   // ==========================================
-  const excelHeaderStyle = (col) => ({
-    backgroundColor: T.headerBg,
-    color: T.headerText,
-    border: `1px solid ${T.grid}`,
-    fontSize: "14px",
-    fontWeight: "500" as const,
-    padding: "3px",
-    textAlign: "center" as const,
-    whiteSpace: "nowrap" as const,
-    overflow: "hidden" as const,
-    textOverflow: "ellipsis" as const,
-    height: "42px",
-    minWidth: columnWidths[col] ? `${columnWidths[col]}px` : "90px",
-  });
+  const excelHeaderStyle = (col, rowIndex = 0) => {
+    // Determine header background color based on row index
+    let backgroundColor = "#8C9AAF"; // Steel grey for first header row
+    if (rowIndex === 1) {
+      backgroundColor = "#F6E5D5"; // Peach/off-white for sub-header row
+    } else if (rowIndex > 1) {
+      backgroundColor = "#8C9AAF"; // Steel grey for additional header rows
+    }
+    
+    return {
+      backgroundColor,
+      color: columnTextColors[col] || T.headerText,
+      border: `1px solid ${T.grid}`,
+      fontSize: "12px",
+      fontWeight: columnFontWeights[col] || "bold",
+      padding: "6px 4px",
+      textAlign: "center" as const,
+      whiteSpace: "nowrap" as const,
+      overflow: "hidden" as const,
+      textOverflow: "ellipsis" as const,
+      height: rowIndex === 1 ? "30px" : "34px", // Sub-header row height: 30px, others: 34px
+      minWidth: columnWidths[col] ? `${columnWidths[col]}px` : "100px",
+      textTransform: "uppercase" as const,
+    };
+  };
 
   // ==========================================
   // EXCEL CELL STYLE
   // ==========================================
-  const excelCellStyle = (row, col) => {
+  const excelCellStyle = (row, col, colName, type) => {
     const isActive = activeCell?.row === row && activeCell?.col === col;
+    const isEvenRow = row % 2 === 0;
+    
+    // Get row style if available
+    const rowStyle = rowStyles[row] || {};
+    
+    // Determine text alignment based on data type and row style
+    let textAlign: React.CSSProperties['textAlign'] = "left";
+    if (rowStyle.isCategoryRow) {
+      textAlign = "left"; // Categories are left-aligned
+    } else if (type === "number" || colName.includes("Qty") || colName.includes("Number") || colName.includes("Percentage") || colName.includes("%")) {
+      textAlign = "right"; // Numbers and quantity-related columns are right-aligned
+    } else if (colName.includes("Status") || colName.includes("Date")) {
+      textAlign = "center"; // Status and date columns are center-aligned
+    }
 
     return {
-      border: `1px solid ${T.grid}`,
-      backgroundColor: T.bg,
-      height: "24px",
-      padding: 0,
+      border: `1px dashed #999999`, // Thin dashed grey inner borders
+      backgroundColor: rowStyle.backgroundColor || (isEvenRow ? T.bg : themeMode === "dark" ? "#242424" : "#F8FBFF"),
+      height: "28px",
+      padding: "4px", // Add more padding
+      fontSize: "11px",
+      justifyContent: "center",
       position: "relative" as const,
       transition: "background 0.1s",
+      color: columnTextColors[colName] || rowStyle.color || T.text, // Apply column text color if specified
+      textAlign, // Apply text alignment
+      fontWeight: rowStyle.isCategoryRow ? "bold" : "normal", // Bold text for category rows
       ...(isActive && {
         outline: `2px solid ${T.activeBorder}`,
         outlineOffset: "-2px",
+      }),
+      ...(rowStyle.isCategoryRow && {
+        backgroundColor: "#808080", // Grey background for category rows
+        color: "#FFFFFF", // White text for category rows
       }),
     };
   };
 
   return (
     <div
-      className={`border ${isFullscreen ? "fixed inset-0 z-50" : ""}`}
+      className={`rounded-lg border ${isFullscreen ? "fixed inset-0 z-50" : ""}`}
       style={{
         borderColor: T.grid,
         backgroundColor: T.bg,
@@ -138,7 +186,7 @@ export const StyledExcelTable = ({
       {/* ======================= HEADER ======================= */}
       {!isFullscreen && (
         <div
-          className="flex items-center justify-between p-3 border-b"
+          className="flex items-center justify-between p-3 border-b rounded-t-lg"
           style={{ backgroundColor: T.headerBg, borderColor: T.grid }}
         >
           <div className="flex items-center space-x-2">
@@ -148,7 +196,7 @@ export const StyledExcelTable = ({
             >
               {title}
             </h3>
-            <span style={{ color: T.headerText }}>({data.length} rows)</span>
+            <span style={{ color: T.headerText, fontSize: "8px" }}>({data.length} rows)</span>
 
             {status !== "draft" && <StatusChip status={status} />}
           </div>
@@ -199,7 +247,7 @@ export const StyledExcelTable = ({
             <h2 className="text-xl font-bold" style={{ color: T.headerText }}>
               {title}
             </h2>
-            <p style={{ color: T.headerText }}>
+            <p style={{ color: T.headerText, fontSize: "8px" }}>
               {data.length} rows × {columns.length} columns
             </p>
           </div>
@@ -231,22 +279,134 @@ export const StyledExcelTable = ({
 
       {/* ======================= TABLE ======================= */}
       <div
-        className={`overflow-auto ${
-          isFullscreen ? "h-[calc(100vh-120px)]" : "max-h-[600px]"
-        }`}
+        className={`overflow-auto ${isFullscreen ? "h-[calc(100vh-120px)]" : "max-h-[600px]"}`}
+        style={{
+          position: "relative",
+        }}
       >
         <table
-          className="w-full border-collapse"
-          style={{ tableLayout: "fixed" }}
+          className="w-full border-collapse excel-grid"
+          style={{ 
+            tableLayout: "fixed",
+            border: "2px solid #999999", // Thick solid grey outer borders
+            fontSize: "11px",
+          }}
         >
-          <thead>
-            <tr>
-              {filteredColumns.map((col, i) => (
-                <th key={i} style={excelHeaderStyle(col)}>
-                  {col}
-                </th>
-              ))}
-            </tr>
+          <thead style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
+          }}>
+            {headerStructure && headerStructure.length > 0 ? (
+              // Render multi-row headers if headerStructure is provided
+              headerStructure.map((headerRow, rowIndex) => (
+                <tr key={rowIndex}>
+                  {headerRow.map((headerCell, cellIndex) => {
+                    // Apply special text colors based on header content
+                    let textColor = T.headerText;
+                    const headerLabel = typeof headerCell === 'string' ? headerCell : headerCell.label;
+                    if (headerLabel.includes("Catch Up Plan")) {
+                      textColor = "#0000FF"; // Blue for "Catch Up Plan"
+                    } else if (headerLabel.includes("% Status")) {
+                      textColor = "#008000"; // Green for "% Status"
+                    } else if (headerLabel.includes("Deviation Plan vs Actual")) {
+                      textColor = "#FF0000"; // Red for "Deviation Plan vs Actual"
+                    }
+                    
+                    return (
+                      <th 
+                        key={cellIndex}
+                        style={{
+                          ...excelHeaderStyle(headerCell, rowIndex),
+                          color: textColor,
+                          position: "sticky",
+                          top: 0,
+                          zIndex: 11,
+                          ...(rowIndex === 0 && cellIndex === 0 && {
+                            borderLeft: "2px solid #999999", // Thick left border for top-left cell
+                            borderTop: "2px solid #999999", // Thick top border for top-left cell
+                          }),
+                          ...(rowIndex === 0 && cellIndex === headerRow.length - 1 && {
+                            borderRight: "2px solid #999999", // Thick right border for top-right cell
+                            borderTop: "2px solid #999999", // Thick top border for top-right cell
+                          }),
+                          ...(rowIndex === headerStructure.length - 1 && cellIndex === 0 && {
+                            borderLeft: "2px solid #999999", // Thick left border for bottom-left cell
+                            borderBottom: "1px dashed #999999", // Dashed bottom border for bottom-left cell
+                          }),
+                          ...(rowIndex === headerStructure.length - 1 && cellIndex === headerRow.length - 1 && {
+                            borderRight: "2px solid #999999", // Thick right border for bottom-right cell
+                            borderBottom: "1px dashed #999999", // Dashed bottom border for bottom-right cell
+                          }),
+                          ...(rowIndex === 0 && cellIndex > 0 && cellIndex < headerRow.length - 1 && {
+                            borderTop: "2px solid #999999", // Thick top border for top middle cells
+                          }),
+                          ...(rowIndex === headerStructure.length - 1 && cellIndex > 0 && cellIndex < headerRow.length - 1 && {
+                            borderBottom: "1px dashed #999999", // Dashed bottom border for bottom middle cells
+                          }),
+                          ...(cellIndex === 0 && rowIndex > 0 && rowIndex < headerStructure.length - 1 && {
+                            borderLeft: "2px solid #999999", // Thick left border for left middle cells
+                          }),
+                          ...(cellIndex === headerRow.length - 1 && rowIndex > 0 && rowIndex < headerStructure.length - 1 && {
+                            borderRight: "2px solid #999999", // Thick right border for right middle cells
+                          }),
+                          ...(cellIndex > 0 && cellIndex < headerRow.length - 1 && rowIndex > 0 && rowIndex < headerStructure.length - 1 && {
+                            border: "1px dashed #999999", // Dashed borders for inner cells
+                          }),
+                        }}
+                        colSpan={headerCell.colSpan || 1}
+                      >
+                        <span>{cleanHeaderLabel(typeof headerCell === 'string' ? headerCell : headerCell.label)}</span>
+                      </th>
+                    );
+                  })}
+                </tr>
+              ))
+            ) : (
+              // Render single-row headers if no headerStructure is provided
+              <tr>
+                {filteredColumns.map((col, i) => {
+                  // Apply special text colors based on column name
+                  let textColor = T.headerText;
+                  if (col.includes("Catch Up Plan")) {
+                    textColor = "#0000FF"; // Blue for "Catch Up Plan"
+                  } else if (col.includes("% Status")) {
+                    textColor = "#008000"; // Green for "% Status"
+                  } else if (col.includes("Deviation Plan vs Actual")) {
+                    textColor = "#FF0000"; // Red for "Deviation Plan vs Actual"
+                  }
+                  
+                  return (
+                    <th 
+                      key={i} 
+                      style={{
+                        ...excelHeaderStyle(col),
+                        color: textColor,
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 11,
+                        ...(i === 0 && {
+                          borderLeft: "2px solid #999999", // Thick left border for first cell
+                          borderTop: "2px solid #999999", // Thick top border for first cell
+                          borderBottom: "1px dashed #999999", // Dashed bottom border for first cell
+                        }),
+                        ...(i === filteredColumns.length - 1 && {
+                          borderRight: "2px solid #999999", // Thick right border for last cell
+                          borderTop: "2px solid #999999", // Thick top border for last cell
+                          borderBottom: "1px dashed #999999", // Dashed bottom border for last cell
+                        }),
+                        ...(i > 0 && i < filteredColumns.length - 1 && {
+                          borderTop: "2px solid #999999", // Thick top border for middle cells
+                          borderBottom: "1px dashed #999999", // Dashed bottom border for middle cells
+                        }),
+                      }}
+                    >
+                        <span>{cleanHeaderLabel(col)}</span>
+                    </th>
+                  );
+                })}
+              </tr>
+            )}
           </thead>
 
           <tbody>
@@ -256,24 +416,80 @@ export const StyledExcelTable = ({
                   const col = columns.indexOf(colName);
                   const value = row[col];
                   const type = columnTypes[colName] || "text";
+                  
+                  // Get row style if available
+                  const rowStyle = rowStyles[r] || {};
+                  
+                  // Determine text alignment based on data type and row style
+                  let textAlign: React.CSSProperties['textAlign'] = "left";
+                  if (rowStyle.isCategoryRow) {
+                    textAlign = "left"; // Categories are left-aligned
+                  } else if (type === "number" || colName.includes("Qty") || colName.includes("Number") || colName.includes("Percentage") || colName.includes("%")) {
+                    textAlign = "right"; // Numbers and quantity-related columns are right-aligned
+                  } else if (colName.includes("Status") || colName.includes("Date")) {
+                    textAlign = "center"; // Status and date columns are center-aligned
+                  }
 
                   return (
                     <td
                       key={i}
-                      style={excelCellStyle(r, col)}
+                      style={{
+                        ...excelCellStyle(r, col, colName, type),
+                        // Apply Excel-style borders for data cells
+                        ...(r === 0 && i === 0 && {
+                          borderLeft: "2px solid #999999", // Thick left border for top-left cell
+                          borderTop: "1px dashed #999999", // Dashed top border for top-left cell
+                        }),
+                        ...(r === 0 && i === filteredColumns.length - 1 && {
+                          borderRight: "2px solid #999999", // Thick right border for top-right cell
+                          borderTop: "1px dashed #999999", // Dashed top border for top-right cell
+                        }),
+                        ...(r === data.length - 1 && i === 0 && {
+                          borderLeft: "2px solid #999999", // Thick left border for bottom-left cell
+                          borderBottom: "2px solid #999999", // Thick bottom border for bottom-left cell
+                        }),
+                        ...(r === data.length - 1 && i === filteredColumns.length - 1 && {
+                          borderRight: "2px solid #999999", // Thick right border for bottom-right cell
+                          borderBottom: "2px solid #999999", // Thick bottom border for bottom-right cell
+                        }),
+                        ...(r === 0 && i > 0 && i < filteredColumns.length - 1 && {
+                          borderTop: "1px dashed #999999", // Dashed top border for top middle cells
+                        }),
+                        ...(r === data.length - 1 && i > 0 && i < filteredColumns.length - 1 && {
+                          borderBottom: "2px solid #999999", // Thick bottom border for bottom middle cells
+                        }),
+                        ...(i === 0 && r > 0 && r < data.length - 1 && {
+                          borderLeft: "2px solid #999999", // Thick left border for left middle cells
+                        }),
+                        ...(i === filteredColumns.length - 1 && r > 0 && r < data.length - 1 && {
+                          borderRight: "2px solid #999999", // Thick right border for right middle cells
+                        }),
+                      }}
                       onClick={() => setActiveCell({ row: r, col })}
                     >
                       <Input
                         type={type}
                         value={value || ""}
                         readOnly={isReadOnly && !editableColumns.includes(colName)}
-                        onChange={(e) =>
-                          handleCellChange(r, col, e.target.value)
-                        }
-                        className="w-full h-full px-2 text-[8px] border-none focus-visible:ring-0"
+                        onChange={(e) => {
+                          // Prevent negative values for number inputs
+                          if (type === "number") {
+                            const inputValue = e.target.value;
+                            // Allow empty value or positive numbers only
+                            if (inputValue === "" || (/^\d*\.?\d*$/.test(inputValue) && parseFloat(inputValue) >= 0)) {
+                              handleCellChange(r, col, inputValue);
+                            }
+                            return;
+                          }
+                          handleCellChange(r, col, e.target.value);
+                        }}
+                        className="w-full h-full px-1 border-none focus-visible:ring-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                         style={{
                           background: "transparent",
-                          color: T.text,
+                          fontSize: "11px",
+                          color: columnTextColors[colName] || T.text,
+                          fontWeight: columnFontWeights[colName] || "normal",
+                          textAlign: textAlign, // Align text in input to match cell
                         }}
                       />
                     </td>
@@ -295,10 +511,10 @@ export const StyledExcelTable = ({
             color: T.headerText,
           }}
         >
-          <div>
+          <div style={{ fontSize: "8px" }}>
             Ready | {data.length} rows × {columns.length} columns
           </div>
-          <div>Excel Style Sheet</div>
+          <div style={{ fontSize: "10px" }}>Excel Style Sheet</div>
         </div>
       )}
     </div>
