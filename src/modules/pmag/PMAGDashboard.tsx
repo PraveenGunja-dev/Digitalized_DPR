@@ -674,6 +674,29 @@ const PMAGDashboard = () => {
     { name: 'Jun', progress: 80 },
   ];
 
+  // Approval statistics data
+  const approvalData = [
+    { name: 'Pending', value: approvedEntries.filter(e => e.status === 'submitted_to_pm').length },
+    { name: 'Approved', value: approvedEntries.filter(e => e.status === 'approved_by_pm').length },
+    { name: 'Rejected', value: approvedEntries.filter(e => e.status === 'rejected_by_pm').length },
+    { name: 'Final Approved', value: approvedEntries.filter(e => e.status === 'final_approved').length },
+  ];
+
+  // Sheet type distribution data
+  const sheetTypeData = sheetTypes.map(sheetType => ({
+    name: sheetType.label,
+    value: getEntriesBySheetType(sheetType.value).length
+  })).filter(item => item.value > 0);
+
+  // Monthly submission trend
+  const monthlySubmissionData = [
+    { month: 'Jan', submissions: 24 },
+    { month: 'Feb', submissions: 32 },
+    { month: 'Mar', submissions: 28 },
+    { month: 'Apr', submissions: 45 },
+    { month: 'May', submissions: 38 },
+    { month: 'Jun', submissions: 52 },
+  ];
   return (
     <motion.div 
       className="min-h-screen bg-background"
@@ -884,7 +907,7 @@ const PMAGDashboard = () => {
                   <BarChart data={projectChartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis />
+                    <YAxis domain={[0, 100]} />
                     <Tooltip />
                     <Bar dataKey="progress" fill="hsl(var(--primary))" />
                   </BarChart>
@@ -916,8 +939,65 @@ const PMAGDashboard = () => {
               </div>
             </Card>
           </motion.div>
-        </div>
 
+          {/* Approval Statistics */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+            whileHover={{ y: -5 }}
+            className="transition-all duration-300"
+          >
+            <Card className="p-6 h-full shadow-md hover:shadow-lg transition-shadow duration-300 rounded-xl">
+              <h3 className="text-xl font-bold mb-4">Approval Statistics</h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={approvalData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={true}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {approvalData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Sheet Type Distribution */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            whileHover={{ y: -5 }}
+            className="transition-all duration-300"
+          >
+            <Card className="p-6 h-full shadow-md hover:shadow-lg transition-shadow duration-300 rounded-xl">
+              <h3 className="text-xl font-bold mb-4">Sheet Type Distribution</h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sheetTypeData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="value" fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </motion.div>
+        </div>
         {/* Projects Table */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

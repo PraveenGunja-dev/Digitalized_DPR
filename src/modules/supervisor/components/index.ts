@@ -4,6 +4,8 @@ export * from './ManpowerDetailsTable';
 export * from './DPBlockTable';
 export * from './DPVendorIdtTable';
 export * from './MmsModuleRfiTable';
+export * from './MmsModuleRfiTableWithDynamicColumns';
 export * from './IssueFormModal';
 export * from './IssuesTable';
 export * from './DPRSummarySection';
+export * from './CustomSheetsManager';

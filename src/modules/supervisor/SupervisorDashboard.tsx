@@ -18,6 +18,7 @@ import {
   DPBlockTable,
   DPVendorIdtTable,
   MmsModuleRfiTable,
+  MmsModuleRfiTableWithDynamicColumns,
   IssueFormModal,
   IssuesTable,
   DPRSummarySection // Import from supervisor components instead of main components
@@ -509,6 +510,20 @@ const SupervisorDashboard = () => {
           />
         );
       case 'mms_module_rfi':
+        // Use the new dynamic columns component if we have a project ID and user ID
+        if (currentProjectId && user?.ObjectId) {
+          return (
+            <MmsModuleRfiTableWithDynamicColumns 
+              projectId={currentProjectId}
+              userId={user.ObjectId}
+              yesterday={yesterday}
+              today={today}
+              isLocked={isEntryReadOnly}
+              status={entryStatus}
+            />
+          );
+        }
+        // Fallback to the original component
         return (
           <MmsModuleRfiTable 
             data={mmsModuleRfiData} 

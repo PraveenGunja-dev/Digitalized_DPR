@@ -22,7 +22,7 @@ import {
   ChevronDown,
   ChevronRight
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, AreaChart, Area } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/modules/auth/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
@@ -841,6 +841,25 @@ const PMDashboard = () => {
     { name: "Others", value: 15 },
   ];
 
+  // Project progress data
+  const projectProgressData = [
+    { name: "Project A", progress: 75 },
+    { name: "Project B", progress: 45 },
+    { name: "Project C", progress: 90 },
+    { name: "Project D", progress: 30 },
+    { name: "Project E", progress: 65 },
+  ];
+
+  // Submission trend data
+  const submissionTrendData = [
+    { date: "2024-01", submissions: 12 },
+    { date: "2024-02", submissions: 19 },
+    { date: "2024-03", submissions: 15 },
+    { date: "2024-04", submissions: 22 },
+    { date: "2024-05", submissions: 18 },
+    { date: "2024-06", submissions: 25 },
+  ];
+
   const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
 
   const handleCreateSupervisor = () => {
@@ -1323,8 +1342,55 @@ const PMDashboard = () => {
               </div>
             </Card>
           </motion.div>
-        </div>
-      </div>
+
+          {/* Project Progress Overview */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.6, duration: 0.5 }}
+            whileHover={{ y: -5 }}
+            className="transition-all duration-300"
+          >
+            <Card className="p-6 h-full">
+              <h3 className="text-xl font-bold mb-4">Project Progress Overview</h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={projectProgressData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip />
+                    <Bar dataKey="progress" fill="hsl(var(--primary))" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Submission Trend */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.7, duration: 0.5 }}
+            whileHover={{ y: -5 }}
+            className="transition-all duration-300"
+          >
+            <Card className="p-6 h-full">
+              <h3 className="text-xl font-bold mb-4">Submission Trend</h3>
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={submissionTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="submissions" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </motion.div>
+        </div>      </div>
 
       {/* Fullscreen Overlay */}
       {renderFullscreenOverlay()}

@@ -20,11 +20,17 @@ async function initDatabase() {
   try {
     console.log('Initializing database...');
     
-    // Read the schema file
-    const schema = fs.readFileSync(path.resolve(__dirname, 'database/schema.sql'), 'utf8');
+    // Read the main schema file
+    const mainSchema = fs.readFileSync(path.resolve(__dirname, 'database/schema.sql'), 'utf8');
+    
+    // Read the MMS & RFI dynamic columns schema file
+    const mmsRfiSchema = fs.readFileSync(path.resolve(__dirname, 'database/mms_rfi_dynamic_columns_schema.sql'), 'utf8');
+    
+    // Combine schemas
+    const combinedSchema = mainSchema + '\n' + mmsRfiSchema;
     
     // Split the schema into individual statements
-    const statements = schema.split(';').filter(stmt => stmt.trim() !== '');
+    const statements = combinedSchema.split(';').filter(stmt => stmt.trim() !== '');
     
     // Execute each statement
     for (const statement of statements) {

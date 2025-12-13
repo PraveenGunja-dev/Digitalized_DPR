@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { User, AuthResponse, loginUser, getUserProfile, refreshAccessToken, logoutUser } from '../services/authService';
 import { setAuthToken as setProjectAuthToken } from '../services/projectService';
 import { setAuthToken as setAuthAuthToken } from '../services/authService';
+import { setCustomSheetsAuthToken } from '../services/customSheetsService';
+import { setMmsRfiAuthToken } from '../services/mmsRfiService';
 
 interface AuthContextType {
   user: User | null;
@@ -35,6 +37,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Set the auth token for API calls
       setProjectAuthToken(storedToken);
       setAuthAuthToken(storedToken);
+      setCustomSheetsAuthToken(storedToken);
+      setMmsRfiAuthToken(storedToken);
     }
   }, []);
 
@@ -57,6 +61,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Update API clients
           setProjectAuthToken(response.accessToken);
           setAuthAuthToken(response.accessToken);
+          setCustomSheetsAuthToken(response.accessToken);
+          setMmsRfiAuthToken(response.accessToken);
         } catch (error) {
           console.error('Token refresh failed:', error);
           logout();
@@ -88,6 +94,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Set the auth token for API calls
       setProjectAuthToken(response.accessToken);
       setAuthAuthToken(response.accessToken);
+      setCustomSheetsAuthToken(response.accessToken);
+      setMmsRfiAuthToken(response.accessToken);
     } catch (error) {
       throw error;
     }
@@ -127,6 +135,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Clear the auth token for API calls
       setProjectAuthToken(null);
       setAuthAuthToken(null);
+      setCustomSheetsAuthToken(null);
+      setMmsRfiAuthToken(null);
     }
   };
 

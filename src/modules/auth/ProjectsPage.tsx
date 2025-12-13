@@ -137,6 +137,12 @@ const ProjectsPage = () => {
   }, [user?.Role]);
 
   useEffect(() => {
+    // Redirect Super Admin to their dashboard
+    if (user?.Role === "Super Admin") {
+      navigate("/superadmin");
+      return;
+    }
+    
     const fetchProjects = async () => {
       try {
         setLoading(true);
@@ -170,7 +176,7 @@ const ProjectsPage = () => {
     if (token && user) {
       fetchProjects();
     }
-  }, [token, user]);
+  }, [token, user, navigate]);
 
   // Fetch all projects for assignment when create user modal opens (for PMAG and Site PM)
   useEffect(() => {

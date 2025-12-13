@@ -33,41 +33,181 @@ export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
   
   // Sample data for the main activity table
   const mainActivityData = [
-    // Category row - we'll handle this specially
+    // PILING Category
     [
-      "PILING / MMS", "", "", "", "", "", "", "", "", "", "", "", "", ""
+      "PILING", "", "", "", "", "", "", "", "", "", "", "", "", ""
     ],
     [
-      "Activity 1",
-      "Meters",
-      "1000",
-      "500",
-      "50",
-      "20",
-      "70",
-      "450",
+      "Piling / Concreting of Stubs",
+      "Nos",
+      "33968",
+      "33968",
+      "0",
+      "0",
+      "0",
+      "33968",
+      "33968",
+      "33968",
+      "0",
+      "0",
       "100",
-      "520",
-      "+20",
-      "480",
-      "52%",
-      "On track"
+      "Completed"
     ],
     [
-      "Activity 2",
-      "Units",
-      "2000",
-      "800",
-      "80",
-      "30",
-      "110",
-      "720",
-      "150",
-      "880",
-      "-30",
-      "1120",
-      "44%",
-      "Behind schedule"
+      "Inverter Piling",
+      "Nos",
+      "958",
+      "958",
+      "0",
+      "0",
+      "0",
+      "958",
+      "958",
+      "958",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    [
+      "Cable Hanger Support Piling",
+      "Nos",
+      "1678",
+      "1678",
+      "0",
+      "0",
+      "0",
+      "1678",
+      "1678",
+      "1678",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    [
+      "Robot Docking Station Piling",
+      "Nos",
+      "420",
+      "420",
+      "0",
+      "0",
+      "0",
+      "420",
+      "420",
+      "420",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    [
+      "Piling Cap",
+      "Nos",
+      "33968",
+      "33968",
+      "0",
+      "0",
+      "0",
+      "33968",
+      "31994",
+      "31994",
+      "-1974",
+      "1974",
+      "94.19",
+      "WIP"
+    ],
+    // MMS Category
+    [
+      "MMS", "", "", "", "", "", "", "", "", "", "", "", "", ""
+    ],
+    [
+      "Tracker Torque Tube (In Tables)",
+      "Nos",
+      "2875",
+      "2875",
+      "0",
+      "0",
+      "0",
+      "2875",
+      "2875",
+      "2875",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    [
+      "Modules Erection (MWac)",
+      "MWac",
+      "135",
+      "135",
+      "0",
+      "0",
+      "0",
+      "135",
+      "135",
+      "135",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    // IDT Category
+    [
+      "IDT", "", "", "", "", "", "", "", "", "", "", "", "", ""
+    ],
+    [
+      "IDT Foundation",
+      "Nos",
+      "11",
+      "11",
+      "0",
+      "0",
+      "0",
+      "11",
+      "11",
+      "11",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    // AC_DC Category
+    [
+      "AC_DC", "", "", "", "", "", "", "", "", "", "", "", "", ""
+    ],
+    [
+      "Earthing (Earthing Strip Laying)",
+      "Mts",
+      "63120",
+      "63120",
+      "0",
+      "0",
+      "0",
+      "63120",
+      "63120",
+      "63120",
+      "0",
+      "0",
+      "100",
+      "Completed"
+    ],
+    [
+      "DC Cable Laying",
+      "Kms",
+      "1286",
+      "1286",
+      "0",
+      "0",
+      "0",
+      "1286",
+      "1286",
+      "1286.4",
+      "0",
+      "0",
+      "100",
+      "Completed"
     ]
   ];
 
@@ -184,6 +324,16 @@ export const DPRSummarySection: React.FC<DPRSummarySectionProps> = () => {
               "Total Scope Balance Qty": 70,
               "% Status as on date": 70,
               "Remarks": 100
+            }}
+            rowStyles={{
+              // PILING Category row
+              0: { isCategoryRow: true },
+              // MMS Category row
+              6: { isCategoryRow: true },
+              // IDT Category row
+              9: { isCategoryRow: true },
+              // AC_DC Category row
+              11: { isCategoryRow: true }
             }}
             isReadOnly={true}
             hideAddRow={true}

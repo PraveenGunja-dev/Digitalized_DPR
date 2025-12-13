@@ -18,7 +18,7 @@ export const ViewUserModal = ({
       <div className="w-full max-w-5xl rounded-xl bg-white shadow-2xl overflow-hidden">
 
         {/* ================= COVER HEADER ================= */}
-        <div className="relative h-40 bg-cover bg-center bg-gray-200 dark:bg-gray-700" style={{ backgroundImage: 'url(/coverPhoto.webp)' }}>
+        <div className="relative h-40 bg-cover bg-center bg-gray-200 dark:bg-gray-700" style={{ backgroundImage: "url('/coverPhoto.png')" }}>
 
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-black/30 dark:bg-black/50"></div>

@@ -29,8 +29,22 @@ const LoginForm = () => {
     
     try {
       await login(email, password);
-      // Navigate directly to projects page instead of dashboard selection
-      navigate("/projects");
+      
+      // Check user role and redirect accordingly
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const user = JSON.parse(storedUser);
+        if (user.Role === 'Super Admin') {
+          // Redirect Super Admin directly to their dashboard
+          navigate("/superadmin");
+        } else {
+          // Navigate to projects page for other roles
+          navigate("/projects");
+        }
+      } else {
+        // Fallback to projects page if user data is not available
+        navigate("/projects");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed');
     } finally {

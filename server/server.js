@@ -169,6 +169,14 @@ console.log('Loading super admin route...');
 const superAdminRouteModule = require('./routes/superAdmin');
 console.log('Super Admin route loaded:', superAdminRouteModule);
 
+console.log('Loading custom sheets route...');
+const customSheetsRouteModule = require('./routes/customSheets');
+console.log('Custom sheets route loaded:', customSheetsRouteModule);
+
+console.log('Loading MMS & RFI route...');
+const mmsRfiRouteModule = require('./routes/mmsRfi');
+console.log('MMS & RFI route loaded:', mmsRfiRouteModule);
+
 // Set the pool for each router that supports it
 if (setAuthPool) {
   console.log('Setting pool for auth route...');
@@ -207,6 +215,16 @@ if (superAdminRouteModule.setPool) {
   superAdminRouteModule.setPool(pool, authenticateToken);
 }
 
+if (customSheetsRouteModule.setPool) {
+  console.log('Setting pool for custom sheets route...');
+  customSheetsRouteModule.setPool(pool, authenticateToken);
+}
+
+if (mmsRfiRouteModule.setPool) {
+  console.log('Setting pool for MMS & RFI route...');
+  mmsRfiRouteModule.setPool(pool, authenticateToken);
+}
+
 // Initialize system logger
 const { setPool: setLoggerPool } = require('./utils/systemLogger');
 setLoggerPool(pool);
@@ -223,6 +241,8 @@ app.use('/api/project-assignment', projectAssignmentRouteModule.router || projec
 app.use('/api/sso', ssoRouter);
 app.use('/api/oracle-p6', oracleP6RouteModule.router || oracleP6RouteModule);
 app.use('/api/super-admin', superAdminRouteModule.router || superAdminRouteModule);
+app.use('/api/custom-sheets', customSheetsRouteModule.router || customSheetsRouteModule);
+app.use('/api/mms-rfi', mmsRfiRouteModule.router || mmsRfiRouteModule);
 console.log('Routes registered.');
 
 // Refresh token endpoint
