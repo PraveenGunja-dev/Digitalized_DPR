@@ -353,7 +353,7 @@ const ChartComponent: React.FC<ChartProps> = ({ data, title, type, dataKey, colo
 
 // Main ChartsSection component
 interface ChartsSectionProps {
-  context?: 'SUPERVISOR_DASHBOARD' | 'PM_DASHBOARD' | 'PMRG_DASHBOARD' | 'SUPER_ADMIN_DASHBOARD';
+  context?: 'SUPERVISOR_DASHBOARD' | 'PM_DASHBOARD' | 'PMAG_DASHBOARD' | 'PMRG_DASHBOARD' | 'SUPER_ADMIN_DASHBOARD';
 }
 
 export const ChartsSection: React.FC<ChartsSectionProps> = ({ context }) => {
@@ -441,7 +441,7 @@ export const ChartsSection: React.FC<ChartsSectionProps> = ({ context }) => {
         ];
       
       case 'PMAG':
-        if (context === 'PMRG_DASHBOARD') {
+        if (context === 'PMRG_DASHBOARD' || context === 'PMAG_DASHBOARD') {
           return [
             { id: 'planned-vs-actual', title: 'Planned vs Actual Progress', data: chartData.plannedVsActual, type: 'bar' as const, dataKey: 'actual' },
             { id: 'completion-delay', title: 'Activity Completion & Delay', data: chartData.completionDelay, type: 'bar' as const, dataKey: 'delay' },

@@ -21,9 +21,8 @@ import {
   MmsModuleRfiTableWithDynamicColumns,
   IssueFormModal,
   IssuesTable,
-  DPRSummarySection
+  DPRSummarySection // Import from supervisor components instead of main components
 } from "./components";
-import { DashboardLayout } from "@/components/shared/DashboardLayout";
 
 // Define the Issue interface
 interface Issue {
@@ -569,11 +568,18 @@ const SupervisorDashboard = () => {
   };
 
   return (
-    <DashboardLayout
-      userName={user?.Name || "User"}
-      userRole={user?.Role || "supervisor"}
-      projectName={projectName}
+    <motion.div 
+      className="min-h-screen bg-background"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
     >
+      <Navbar 
+        userName={user?.Name || "User"} 
+        userRole={user?.Role || "supervisor"} 
+        projectName={projectName}
+      />
+
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -669,7 +675,7 @@ const SupervisorDashboard = () => {
           </Card>
         </motion.div>
       </div>
-    </DashboardLayout>
+    </motion.div>
   );
 };
 

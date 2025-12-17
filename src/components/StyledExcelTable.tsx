@@ -98,9 +98,41 @@ export const StyledExcelTable = ({
   const toggleFullscreen = () => setIsFullscreen(!isFullscreen);
 
   // Helper function to clean header labels by removing tags like (p6), (edit), (user), etc.
+  // and applying abbreviations for common terms
   const cleanHeaderLabel = (label) => {
     if (typeof label !== 'string') return label;
-    return label.replace(/\s*\(p6\)|\s*\(edit\)|\s*\(user\)|\s*\(auto\)/gi, '').trim();
+    
+    // Remove tags first
+    let cleanedLabel = label.replace(/\s*\(p6\)|\s*\(edit\)|\s*\(user\)|\s*\(auto\)/gi, '').trim();
+    
+    // Apply abbreviations for common terms
+    const abbreviations = {
+      'Actual Start': 'A.S',
+      'Actual Finish': 'A.F',
+      'Base Plan Start': 'B.P.S',
+      'Base Plan Finish': 'B.P.F',
+      'Forecast Start': 'F.S',
+      'Forecast Finish': 'F.F',
+      'Planned Start': 'P.S',
+      'Planned Finish': 'P.F',
+      'Baseline Start': 'B.S',
+      'Baseline Finish': 'B.F',
+      'Total Quantity': 'T.Qty',
+      'Completion Percentage': '% Comp',
+      'Deviation Plan vs Actual': 'Dev P vs A',
+      'Catch Up Plan': 'C.U.Plan',
+      'Hold Due to WTG': 'Hold WTG',
+      'New Block Nom': 'New Blk',
+      'Baseline Priority': 'B.Priority'
+    };
+    
+    // Apply abbreviations
+    Object.keys(abbreviations).forEach(fullTerm => {
+      const abbreviation = abbreviations[fullTerm];
+      cleanedLabel = cleanedLabel.replace(new RegExp(fullTerm, 'gi'), abbreviation);
+    });
+    
+    return cleanedLabel;
   };
 
   // ==========================================
@@ -115,11 +147,22 @@ export const StyledExcelTable = ({
       backgroundColor = "#8C9AAF"; // Steel grey for additional header rows
     }
     
+    // Apply custom background colors based on column names for DP Qty table
+    const colName = typeof col === 'string' ? col : (col.label || '');
+    const lowerColName = colName.toLowerCase();
+    if (lowerColName.includes("total quantity") || lowerColName.includes("uom") || 
+        lowerColName.includes("actual start") || lowerColName.includes("actual finish")) {
+      backgroundColor = "#00B050"; // Green for specified columns
+    } else if (lowerColName.includes("remarks") || lowerColName.includes("today")) {
+      backgroundColor = "#0070C0"; // Blue for Remarks and Today
+    } else if (lowerColName.includes("auto") || lowerColName.includes("cumulative") || lowerColName.includes("balance")) {
+      backgroundColor = "#FA6868"; // Red for Auto, Cumulative, and Balance
+    }
+    
     return {
       backgroundColor,
       color: columnTextColors[col] || T.headerText,
-      border: `1px solid ${T.grid}`,
-      fontSize: "12px",
+      fontSize: "9px",
       fontWeight: columnFontWeights[col] || "bold",
       padding: "6px 4px",
       textAlign: "center" as const,
@@ -153,7 +196,6 @@ export const StyledExcelTable = ({
     }
 
     return {
-      border: `1px dashed #999999`, // Thin dashed grey inner borders
       backgroundColor: rowStyle.backgroundColor || (isEvenRow ? T.bg : themeMode === "dark" ? "#242424" : "#F8FBFF"),
       height: "28px",
       padding: "4px", // Add more padding
@@ -351,7 +393,10 @@ export const StyledExcelTable = ({
                             borderRight: "2px solid #999999", // Thick right border for right middle cells
                           }),
                           ...(cellIndex > 0 && cellIndex < headerRow.length - 1 && rowIndex > 0 && rowIndex < headerStructure.length - 1 && {
-                            border: "1px dashed #999999", // Dashed borders for inner cells
+                            borderTop: "1px dashed #999999",
+                            borderRight: "1px dashed #999999",
+                            borderBottom: "1px dashed #999999",
+                            borderLeft: "1px dashed #999999",
                           }),
                         }}
                         colSpan={headerCell.colSpan || 1}
@@ -433,38 +478,74 @@ export const StyledExcelTable = ({
                   return (
                     <td
                       key={i}
-                      style={{
-                        ...excelCellStyle(r, col, colName, type),
-                        // Apply Excel-style borders for data cells
-                        ...(r === 0 && i === 0 && {
-                          borderLeft: "2px solid #999999", // Thick left border for top-left cell
-                          borderTop: "1px dashed #999999", // Dashed top border for top-left cell
-                        }),
-                        ...(r === 0 && i === filteredColumns.length - 1 && {
-                          borderRight: "2px solid #999999", // Thick right border for top-right cell
-                          borderTop: "1px dashed #999999", // Dashed top border for top-right cell
-                        }),
-                        ...(r === data.length - 1 && i === 0 && {
-                          borderLeft: "2px solid #999999", // Thick left border for bottom-left cell
-                          borderBottom: "2px solid #999999", // Thick bottom border for bottom-left cell
-                        }),
-                        ...(r === data.length - 1 && i === filteredColumns.length - 1 && {
-                          borderRight: "2px solid #999999", // Thick right border for bottom-right cell
-                          borderBottom: "2px solid #999999", // Thick bottom border for bottom-right cell
-                        }),
-                        ...(r === 0 && i > 0 && i < filteredColumns.length - 1 && {
-                          borderTop: "1px dashed #999999", // Dashed top border for top middle cells
-                        }),
-                        ...(r === data.length - 1 && i > 0 && i < filteredColumns.length - 1 && {
-                          borderBottom: "2px solid #999999", // Thick bottom border for bottom middle cells
-                        }),
-                        ...(i === 0 && r > 0 && r < data.length - 1 && {
-                          borderLeft: "2px solid #999999", // Thick left border for left middle cells
-                        }),
-                        ...(i === filteredColumns.length - 1 && r > 0 && r < data.length - 1 && {
-                          borderRight: "2px solid #999999", // Thick right border for right middle cells
-                        }),
-                      }}
+                      style={
+                        type === "date" ? 
+                          {
+                            ...excelCellStyle(r, col, colName, type),
+                            position: "relative",
+                            // Apply Excel-style borders for data cells
+                            ...(r === 0 && i === 0 && {
+                              borderLeft: "2px solid #999999", // Thick left border for top-left cell
+                              borderTop: "1px dashed #999999", // Dashed top border for top-left cell
+                            }),
+                            ...(r === 0 && i === filteredColumns.length - 1 && {
+                              borderRight: "2px solid #999999", // Thick right border for top-right cell
+                              borderTop: "1px dashed #999999", // Dashed top border for top-right cell
+                            }),
+                            ...(r === data.length - 1 && i === 0 && {
+                              borderLeft: "2px solid #999999", // Thick left border for bottom-left cell
+                              borderBottom: "2px solid #999999", // Thick bottom border for bottom-left cell
+                            }),
+                            ...(r === data.length - 1 && i === filteredColumns.length - 1 && {
+                              borderRight: "2px solid #999999", // Thick right border for bottom-right cell
+                              borderBottom: "2px solid #999999", // Thick bottom border for bottom-right cell
+                            }),
+                            ...(r === 0 && i > 0 && i < filteredColumns.length - 1 && {
+                              borderTop: "1px dashed #999999", // Dashed top border for top middle cells
+                            }),
+                            ...(r === data.length - 1 && i > 0 && i < filteredColumns.length - 1 && {
+                              borderBottom: "2px solid #999999", // Thick bottom border for bottom middle cells
+                            }),
+                            ...(i === 0 && r > 0 && r < data.length - 1 && {
+                              borderLeft: "2px solid #999999", // Thick left border for left middle cells
+                            }),
+                            ...(i === filteredColumns.length - 1 && r > 0 && r < data.length - 1 && {
+                              borderRight: "2px solid #999999", // Thick right border for right middle cells
+                            }),
+                          } : 
+                          {
+                            ...excelCellStyle(r, col, colName, type),
+                            // Apply Excel-style borders for data cells
+                            ...(r === 0 && i === 0 && {
+                              borderLeft: "2px solid #999999", // Thick left border for top-left cell
+                              borderTop: "1px dashed #999999", // Dashed top border for top-left cell
+                            }),
+                            ...(r === 0 && i === filteredColumns.length - 1 && {
+                              borderRight: "2px solid #999999", // Thick right border for top-right cell
+                              borderTop: "1px dashed #999999", // Dashed top border for top-right cell
+                            }),
+                            ...(r === data.length - 1 && i === 0 && {
+                              borderLeft: "2px solid #999999", // Thick left border for bottom-left cell
+                              borderBottom: "2px solid #999999", // Thick bottom border for bottom-left cell
+                            }),
+                            ...(r === data.length - 1 && i === filteredColumns.length - 1 && {
+                              borderRight: "2px solid #999999", // Thick right border for bottom-right cell
+                              borderBottom: "2px solid #999999", // Thick bottom border for bottom-right cell
+                            }),
+                            ...(r === 0 && i > 0 && i < filteredColumns.length - 1 && {
+                              borderTop: "1px dashed #999999", // Dashed top border for top middle cells
+                            }),
+                            ...(r === data.length - 1 && i > 0 && i < filteredColumns.length - 1 && {
+                              borderBottom: "2px solid #999999", // Thick bottom border for bottom middle cells
+                            }),
+                            ...(i === 0 && r > 0 && r < data.length - 1 && {
+                              borderLeft: "2px solid #999999", // Thick left border for left middle cells
+                            }),
+                            ...(i === filteredColumns.length - 1 && r > 0 && r < data.length - 1 && {
+                              borderRight: "2px solid #999999", // Thick right border for right middle cells
+                            }),
+                          }
+                      }
                       onClick={() => setActiveCell({ row: r, col })}
                     >
                       <Input
@@ -484,13 +565,32 @@ export const StyledExcelTable = ({
                           handleCellChange(r, col, e.target.value);
                         }}
                         className="w-full h-full px-1 border-none focus-visible:ring-0 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        style={{
-                          background: "transparent",
-                          fontSize: "11px",
-                          color: columnTextColors[colName] || T.text,
-                          fontWeight: columnFontWeights[colName] || "normal",
-                          textAlign: textAlign, // Align text in input to match cell
-                        }}
+                        style={
+                          type === "date" ? 
+                            {
+                              background: "transparent",
+                              fontSize: "8px",
+                              color: columnTextColors[colName] || T.text,
+                              fontWeight: columnFontWeights[colName] || "normal",
+                              textAlign: "center",
+                              padding: "0",
+                              margin: "0",
+                              border: "none",
+                              width: "100%",
+                              height: "100%",
+                              boxSizing: "border-box",
+                              position: "relative",
+                              zIndex: "1",
+                              cursor: "pointer",
+                            } : 
+                            {
+                              background: "transparent",
+                              fontSize: "8px",
+                              color: columnTextColors[colName] || T.text,
+                              fontWeight: columnFontWeights[colName] || "normal",
+                              textAlign: "center", // Align text in input to match cell
+                            }
+                        }
                       />
                     </td>
                   );

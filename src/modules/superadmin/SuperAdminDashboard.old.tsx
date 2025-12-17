@@ -46,17 +46,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/modules/auth/contexts/AuthContext';
 import axios from 'axios';
 import {
-  SuperAdminHeader,
-  SuperAdminTabs,
-  SuperAdminAnalytics,
-  SuperAdminLogs,
   ViewUserModal,
   EditUserModal,
   AssignProjectModal,
   ViewProjectModal,
   EditProjectModal
 } from './components';
-import { DashboardLayout } from '@/components/shared/DashboardLayout';
+
+// Define color palette for charts
+const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
 // Type definitions
 interface User {
   ObjectId: number;
@@ -103,9 +101,6 @@ interface SystemLog {
   timestamp: string;
 }
 
-// Define color palette for charts
-const COLORS = ["hsl(var(--primary))", "hsl(var(--secondary))", "hsl(var(--accent))", "hsl(var(--muted))"];
-
 // Create axios instance with base URL
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002',
@@ -113,6 +108,7 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
 const SuperAdminDashboard = () => {
   const { user, token } = useAuth();
   const location = useLocation();
@@ -546,12 +542,6 @@ const SuperAdminDashboard = () => {
     }
   }, [roleFilter, statusFilter, activeTab]);
 
-  // Fetch projects when filters change
-  useEffect(() => {
-    if (activeTab === 'projects') {
-      fetchProjects();
-    }
-  }, [projectStatusFilter, activeTab]);
   // Fetch logs when filters change
   useEffect(() => {
     if (activeTab === 'logs') {
@@ -565,6 +555,7 @@ const SuperAdminDashboard = () => {
       generateAnalyticsData();
     }
   }, [usersData, projectsData]);
+
   const handleCreateUser = () => {
     setShowCreateUserForm(true);
   };
@@ -810,10 +801,9 @@ const SuperAdminDashboard = () => {
   }, [activeTab]);
   
   return (
-    <DashboardLayout
-      userName={user?.Name || "Super Admin"}
-      userRole="Super Admin"
-    >
+    <div className="min-h-screen bg-background">
+      <Navbar userName={user?.Name || "Super Admin"} userRole="Super Admin" />
+      
       {/* Create User Modal */}
       {showCreateUserForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -822,32 +812,29 @@ const SuperAdminDashboard = () => {
             <form onSubmit={handleCreateUserSubmit}>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Name</label>
-                <input
+                <Input
                   type="text"
                   value={newUser.name}
                   onChange={(e) => setNewUser({...newUser, name: e.target.value})}
                   required
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Email</label>
-                <input
+                <Input
                   type="email"
                   value={newUser.email}
                   onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                   required
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Password</label>
-                <input
+                <Input
                   type="password"
                   value={newUser.password}
                   onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                   required
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="mb-4">
@@ -864,12 +851,12 @@ const SuperAdminDashboard = () => {
                 </select>
               </div>
               <div className="flex justify-end gap-2">
-                <button type="button" className="px-4 py-2 border rounded" onClick={() => setShowCreateUserForm(false)}>
+                <Button type="button" variant="outline" onClick={() => setShowCreateUserForm(false)}>
                   Cancel
-                </button>
-                <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-500 text-white rounded">
+                </Button>
+                <Button type="submit" disabled={loading}>
                   {loading ? 'Creating...' : 'Create User'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -884,21 +871,19 @@ const SuperAdminDashboard = () => {
             <form onSubmit={handleCreateProjectSubmit}>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Project Name</label>
-                <input
+                <Input
                   type="text"
                   value={newProject.name}
                   onChange={(e) => setNewProject({...newProject, name: e.target.value})}
                   required
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Location</label>
-                <input
+                <Input
                   type="text"
                   value={newProject.location}
                   onChange={(e) => setNewProject({...newProject, location: e.target.value})}
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="mb-4">
@@ -916,22 +901,21 @@ const SuperAdminDashboard = () => {
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Progress (%)</label>
-                <input
+                <Input
                   type="number"
                   min="0"
                   max="100"
                   value={newProject.progress}
                   onChange={(e) => setNewProject({...newProject, progress: parseInt(e.target.value) || 0})}
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <button type="button" className="px-4 py-2 border rounded" onClick={() => setShowCreateProjectForm(false)}>
+                <Button type="button" variant="outline" onClick={() => setShowCreateProjectForm(false)}>
                   Cancel
-                </button>
-                <button type="submit" disabled={loading} className="px-4 py-2 bg-blue-500 text-white rounded">
+                </Button>
+                <Button type="submit" disabled={loading}>
                   {loading ? 'Creating...' : 'Create Project'}
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -987,13 +971,12 @@ const SuperAdminDashboard = () => {
             }}>
               <div className="mb-4">
                 <label className="block text-sm font-medium mb-1">Role Name</label>
-                <input
+                <Input
                   type="text"
                   value={editRoleForm.name}
                   onChange={(e) => handleEditRoleFormChange('name', e.target.value)}
                   required
                   disabled
-                  className="w-full p-2 border rounded"
                 />
               </div>
               <div className="mb-4">
@@ -1007,12 +990,12 @@ const SuperAdminDashboard = () => {
                 />
               </div>
               <div className="flex justify-end gap-2">
-                <button type="button" className="px-4 py-2 border rounded" onClick={handleEditRoleCancel}>
+                <Button type="button" variant="outline" onClick={handleEditRoleCancel}>
                   Cancel
-                </button>
-                <button type="submit" className="px-4 py-2 bg-blue-500 text-white rounded">
+                </Button>
+                <Button type="submit">
                   Save Changes
-                </button>
+                </Button>
               </div>
             </form>
           </div>
@@ -1020,13 +1003,71 @@ const SuperAdminDashboard = () => {
       )}
       
       <div className="container mx-auto px-4 py-8">
-        <SuperAdminHeader 
-          onCreateUser={handleCreateUser}
-          onCreateProject={handleCreateProject}
-        />
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+            <div>
+              <motion.h1 
+                className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                Super Admin Dashboard
+              </motion.h1>
+              <motion.p 
+                className="text-muted-foreground"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                Full system administration and oversight
+              </motion.p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={handleCreateUser} className="flex items-center gap-2">
+                <Plus className="w-4 h-4" />
+                Create User
+              </Button>
+              <Button onClick={handleCreateProject} variant="outline" className="flex items-center gap-2">
+                <FolderPlus className="w-4 h-4" />
+                New Project
+              </Button>
+            </div>
+          </div>
+        </motion.div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <SuperAdminTabs activeTab={activeTab} onTabChange={setActiveTab} />
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="flex items-center gap-2">
+              <FolderPlus className="w-4 h-4" />
+              Projects
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Role Management
+            </TabsTrigger>
+            <TabsTrigger value="workflow" className="flex items-center gap-2">
+              <FileText className="w-4 h-4" />
+              Workflow Overrides
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger value="logs" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              System Logs
+            </TabsTrigger>
+          </TabsList>
 
           {/* Users Tab */}
           <TabsContent value="users" className="mt-6">
@@ -1353,6 +1394,7 @@ const SuperAdminDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
           {/* Roles Tab */}
           <TabsContent value="roles" className="mt-6">
             <Card>
@@ -1372,7 +1414,7 @@ const SuperAdminDashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {rolesData.map((role: any) => (
+                      {rolesData.map((role) => (
                         <TableRow key={role.id}>
                           <TableCell className="font-medium">{role.name}</TableCell>
                           <TableCell>{role.permissions}</TableCell>
@@ -1395,7 +1437,9 @@ const SuperAdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>          {/* Workflow Overrides Tab */}
+          </TabsContent>
+
+          {/* Workflow Overrides Tab */}
           <TabsContent value="workflow" className="mt-6">
             <Card>
               <CardHeader>
@@ -1416,7 +1460,7 @@ const SuperAdminDashboard = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {workflowOverrides.map((override: any) => (
+                      {workflowOverrides.map((override) => (
                         <TableRow key={override.id}>
                           <TableCell className="font-medium">{override.sheetId}</TableCell>
                           <TableCell>{override.projectName}</TableCell>
@@ -1447,27 +1491,339 @@ const SuperAdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>          {/* Analytics Tab */}
+          </TabsContent>
+
+          {/* Analytics Tab */}
           <TabsContent value="analytics" className="mt-6">
-            <SuperAdminAnalytics analyticsData={analyticsData} />
+            <div className="space-y-6">
+              {/* Analytics Summary Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analyticsData.totalUsers}</div>
+                    <p className="text-xs text-muted-foreground">+12% from last month</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                    <Activity className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analyticsData.activeUsers}</div>
+                    <p className="text-xs text-muted-foreground">+8% from last month</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Projects</CardTitle>
+                    <FolderPlus className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analyticsData.totalProjects}</div>
+                    <p className="text-xs text-muted-foreground">+5% from last month</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Sheets</CardTitle>
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{analyticsData.totalSheets}</div>
+                    <p className="text-xs text-muted-foreground">+18% from last month</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Charts Section */}
+              <div className="mb-8">
+                <ChartsSection context="SUPER_ADMIN_DASHBOARD" />
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* User Growth Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>User Growth</CardTitle>
+                    <CardDescription>Monthly user registration trend</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={userGrowthData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="users" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4 }} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Project Status Distribution */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Project Status Distribution</CardTitle>
+                    <CardDescription>Distribution of projects by status</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={projectStatusData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={true}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          >
+                            {projectStatusData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Sheet Submission Trend */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Sheet Submission Trend</CardTitle>
+                    <CardDescription>Monthly sheet submissions</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={sheetSubmissionData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="submissions" fill="hsl(var(--primary))" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Role Distribution */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>User Role Distribution</CardTitle>
+                    <CardDescription>Distribution of users by role</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={roleDistributionData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip />
+                          <Bar dataKey="value" fill="hsl(var(--primary))" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Additional Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Monthly Activity */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Monthly Activity</CardTitle>
+                    <CardDescription>Overall system activity trend</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={monthlyActivityData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip />
+                          <Area type="monotone" dataKey="activity" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Placeholder for Future Chart */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Performance</CardTitle>
+                    <CardDescription>Average response times and uptime</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80 flex items-center justify-center">
+                      <div className="text-center">
+                        <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto" />
+                        <p className="mt-2 text-muted-foreground">Performance metrics coming soon</p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
           </TabsContent>
 
           {/* System Logs Tab */}
           <TabsContent value="logs" className="mt-6">
-            <SuperAdminLogs 
-              systemLogs={systemLogs}
-              logsLoading={logsLoading}
-              logsError={logsError}
-              searchTerm={searchTerm}
-              timeFilter={timeFilter}
-              actionFilter={actionFilter}
-              onSearchChange={setSearchTerm}
-              onTimeFilterChange={setTimeFilter}
-              onActionFilterChange={setActionFilter}
-              onExportExcel={exportLogsToExcel}
-              onExportPDF={exportLogsToPDF}
-              onRefresh={fetchSystemLogs}
-            />
+            <Card>
+              <CardHeader>
+                <CardTitle>System Logs</CardTitle>
+                <CardDescription>View system activity and audit trails</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                  <div className="flex flex-col sm:flex-row gap-2 w-full">
+                    <div className="relative w-full sm:w-64">
+                      <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search logs..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8"
+                      />
+                    </div>
+                    
+                    <Select value={timeFilter} onValueChange={setTimeFilter}>
+                      <SelectTrigger className="w-full sm:w-40">
+                        <SelectValue placeholder="Time Range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Time</SelectItem>
+                        <SelectItem value="10min">Last 10 Minutes</SelectItem>
+                        <SelectItem value="1hr">Last 1 Hour</SelectItem>
+                        <SelectItem value="24hr">Last 24 Hours</SelectItem>
+                        <SelectItem value="7days">Last 7 Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    <Select value={actionFilter} onValueChange={setActionFilter}>
+                      <SelectTrigger className="w-full sm:w-40">
+                        <SelectValue placeholder="Action Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Actions</SelectItem>
+                        <SelectItem value="submission">Submissions</SelectItem>
+                        <SelectItem value="approval">Approvals</SelectItem>
+                        <SelectItem value="rejection">Rejections</SelectItem>
+                        <SelectItem value="pushed">Pushed/Forwarded</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-2"
+                      onClick={exportLogsToExcel}
+                    >
+                      <Download className="w-4 h-4" />
+                      Excel
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-2"
+                      onClick={exportLogsToPDF}
+                    >
+                      <Download className="w-4 h-4" />
+                      PDF
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex items-center gap-2"
+                      onClick={fetchSystemLogs}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      Refresh
+                    </Button>
+                  </div>
+                </div>
+                
+                {logsLoading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <RefreshCw className="w-6 h-6 animate-spin" />
+                    <span className="ml-2">Loading logs...</span>
+                  </div>
+                ) : logsError ? (
+                  <div className="flex justify-center items-center h-32 text-red-500">
+                    <span>Error: {logsError}</span>
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Timestamp</TableHead>
+                          <TableHead>Performed By</TableHead>
+                          <TableHead>Action Type</TableHead>
+                          <TableHead>Target Entity</TableHead>
+                          <TableHead>Details</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {systemLogs.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                              No logs found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          systemLogs
+                            .filter((log: SystemLog) => {
+                              if (!searchTerm) return true;
+                              const search = searchTerm.toLowerCase();
+                              return (
+                                log.performed_by_name?.toLowerCase().includes(search) ||
+                                log.action_type?.toLowerCase().includes(search) ||
+                                log.target_entity?.toLowerCase().includes(search) ||
+                                log.remarks?.toLowerCase().includes(search)
+                              );
+                            })
+                            .map((log: SystemLog) => (
+                              <TableRow key={log.id}>
+                                <TableCell className="font-mono text-sm">
+                                  {new Date(log.timestamp).toLocaleString()}
+                                </TableCell>
+                                <TableCell>{log.performed_by_name || 'System'}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">
+                                    {log.action_type || 'Unknown'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>{log.target_entity || 'N/A'}</TableCell>
+                                <TableCell>{log.remarks || 'N/A'}</TableCell>
+                              </TableRow>
+                            ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
@@ -1518,7 +1874,7 @@ const SuperAdminDashboard = () => {
         }}
         loading={loading}
       />
-    </DashboardLayout>
+    </div>
   );
 };
 
