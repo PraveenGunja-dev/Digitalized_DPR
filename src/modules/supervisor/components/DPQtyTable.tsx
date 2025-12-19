@@ -41,10 +41,17 @@ interface DPQtyTableProps {
 
 export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, isLocked = false, status = 'draft', projectId, useMockData = false }: DPQtyTableProps) {
   const { today: currentDate, yesterday: previousDate } = getTodayAndYesterday();
-  
-  // Fetch data from Oracle P6 when component mounts and projectId is provided
+
+  // Fetch data from Oracle P6 ONLY if data is empty and useMockData is true
+  // When useMockData is false, data comes from parent component (DPRDashboard)
   useEffect(() => {
     const fetchData = async () => {
+      // Skip if data is already provided by parent
+      if (!useMockData && data.length > 0) {
+        console.log('DPQtyTable: Using data from parent', data.length, 'rows');
+        return;
+      }
+
       if (useMockData) {
         // Fetch from mock API
         try {
@@ -53,33 +60,13 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
         } catch (error) {
           console.error('Error fetching mock data:', error);
         }
-      } else if (projectId) {
-        // Fetch from Oracle P6
-        try {
-          const response = await fetch(`/api/oracle-p6/dp-qty-data?projectId=${projectId}`, {
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('token')}`,
-              'Content-Type': 'application/json'
-            }
-          });
-          
-          if (response.ok) {
-            const result = await response.json();
-            if (result.data && result.data.length > 0) {
-              setData(result.data);
-            }
-          } else {
-            console.error('Failed to fetch P6 data:', await response.text());
-          }
-        } catch (error) {
-          console.error('Error fetching P6 data:', error);
-        }
       }
+      // When useMockData is false, data is provided by parent (DPRDashboard) via P6 activities
     };
 
     fetchData();
-  }, [projectId, setData, useMockData]);
-  
+  }, [projectId, useMockData]); // Removed setData and data from deps to prevent loops
+
   // Convert data to the format expected by ExcelTable
   const columns = [
     "Sl.No (p6)",
@@ -98,7 +85,7 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
     yesterday,
     today
   ];
-  
+
   // Define column widths for better alignment
   const columnWidths = {
     "Sl.No (p6)": 40,
@@ -117,7 +104,7 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
     [yesterday]: 70,
     [today]: 70
   };
-  
+
   // Define which columns are editable by the user
   const editableColumns = [
     "Total Quantity (p6 edit)",
@@ -127,7 +114,7 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
     "Remarks (user)",
     today // Today value is editable
   ];
-  
+
   // Convert array of objects to array of arrays
   const tableData = data.map(row => [
     row.slNo,
@@ -146,7 +133,7 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
     row.yesterday || "", // Number value for yesterday
     row.today || "" // Number value for today (editable)
   ]);
-  
+
   // Handle data changes from ExcelTable
   const handleDataChange = (newData: any[][]) => {
     // Convert array of arrays back to array of objects
@@ -176,7 +163,7 @@ export function DPQtyTable({ data, setData, onSave, onSubmit, yesterday, today, 
         <h3 className="font-bold text-base mb-1">Project Information</h3>
         <p className="font-medium text-sm">PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)</p>
       </div>
-      
+
       <StyledExcelTable
         title="DP Qty Table"
         columns={columns}

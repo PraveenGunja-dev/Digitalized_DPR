@@ -3,6 +3,10 @@
 
 const express = require('express');
 const router = express.Router();
+// Note: oracleP6ProjectService and oracleP6ActivityService now export functions, not classes
+const { testConnection } = require('../services/oracleP6AuthService');
+const { restClient } = require('../services/oracleP6RestClient');
+const { syncProjectsFromP6, getProjectsFromDb, getProjectByObjectId } = require('../services/oracleP6SyncService');
 
 // We'll pass the authenticateToken middleware from server.js when registering the routes
 let authenticateToken;
@@ -43,9 +47,9 @@ const ensureAuthAndPool = [ensureAuth, ensurePool];
 router.get('/dp-qty-data', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -77,7 +81,7 @@ router.get('/dp-qty-data', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to DP Qty table format
     const dpQtyData = result.rows.map((row, index) => ({
       slNo: (index + 1).toString(),
@@ -109,7 +113,7 @@ router.get('/dp-qty-data', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching DP Qty data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -126,9 +130,9 @@ router.get('/dp-qty-data', ensureAuthAndPool, async (req, res) => {
 router.get('/dp-block-data', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -156,7 +160,7 @@ router.get('/dp-block-data', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to DP Block table format
     const dpBlockData = result.rows.map((row, index) => ({
       activityId: row.activity_id ? row.activity_id.toString() : '',
@@ -179,7 +183,7 @@ router.get('/dp-block-data', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching DP Block data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -196,9 +200,9 @@ router.get('/dp-block-data', ensureAuthAndPool, async (req, res) => {
 router.get('/dp-vendor-idt-data', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -223,7 +227,7 @@ router.get('/dp-vendor-idt-data', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to DP Vendor IDT table format
     const dpVendorIdtData = result.rows.map((row, index) => ({
       activityId: row.activity_id ? row.activity_id.toString() : '',
@@ -246,7 +250,7 @@ router.get('/dp-vendor-idt-data', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching DP Vendor IDT data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -263,9 +267,9 @@ router.get('/dp-vendor-idt-data', ensureAuthAndPool, async (req, res) => {
 router.get('/mms-module-rfi-data', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -291,7 +295,7 @@ router.get('/mms-module-rfi-data', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to MMS & Module RFI table format
     const mmsModuleRfiData = result.rows.map((row, index) => ({
       rfiNo: row.rfi_number || '',
@@ -314,7 +318,7 @@ router.get('/mms-module-rfi-data', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching MMS & Module RFI data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -331,9 +335,9 @@ router.get('/mms-module-rfi-data', ensureAuthAndPool, async (req, res) => {
 router.get('/dp-vendor-block-data', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -360,7 +364,7 @@ router.get('/dp-vendor-block-data', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to DP Vendor Block table format
     const dpVendorBlockData = result.rows.map((row, index) => ({
       activityId: row.activity_id ? row.activity_id.toString() : '',
@@ -389,7 +393,7 @@ router.get('/dp-vendor-block-data', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching DP Vendor Block data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -406,9 +410,9 @@ router.get('/dp-vendor-block-data', ensureAuthAndPool, async (req, res) => {
 router.get('/manpower-details-data', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -436,7 +440,7 @@ router.get('/manpower-details-data', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to Manpower Details table format
     const manpowerDetailsData = result.rows.map((row, index) => ({
       activityId: row.resource_id ? row.resource_id.toString() : '',
@@ -462,7 +466,7 @@ router.get('/manpower-details-data', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching Manpower Details data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -473,25 +477,172 @@ router.get('/manpower-details-data', ensureAuthAndPool, async (req, res) => {
 });
 
 /**
+ * GET /api/oracle-p6/activities
+ * Fetch activities from Oracle P6 REST API for a specific project
+ * @query projectId - The P6 ProjectObjectId to filter activities
+ */
+router.get('/activities', ensureAuth, async (req, res) => {
+  try {
+    const { projectId } = req.query;
+
+    if (!projectId) {
+      return res.status(400).json({
+        message: 'Project ID is required',
+        error: {
+          code: 'MISSING_PROJECT_ID',
+          description: 'projectId query parameter is required'
+        }
+      });
+    }
+
+    console.log(`Fetching P6 activities for project ObjectId: ${projectId}`);
+
+    // Fetch activities from P6 REST API - using only VALID fields
+    const activities = await restClient.readActivities(
+      ['ObjectId', 'Id', 'Name', 'Status', 'StartDate', 'FinishDate', 'PercentComplete'],
+      parseInt(projectId)
+    );
+
+    // Also fetch WBS data for block names
+    let wbsMap = {};
+    try {
+      const wbsData = await restClient.get('/wbs', {
+        Fields: 'ObjectId,Name,Code',
+        Filter: `ProjectObjectId = ${projectId}`
+      });
+      const wbsItems = Array.isArray(wbsData) ? wbsData : (wbsData.data || []);
+      wbsItems.forEach(w => {
+        wbsMap[w.ObjectId] = w.Name || w.Code;
+      });
+      console.log(`Loaded ${Object.keys(wbsMap).length} WBS items for project ${projectId}`);
+    } catch (wbsError) {
+      console.log('Could not fetch WBS data:', wbsError.message);
+    }
+
+    console.log(`Found ${activities.length} activities for project ${projectId}`);
+
+    // Map to a consistent format for frontend tables
+    const mappedActivities = activities.map((activity, index) => ({
+      // Core identifiers
+      activityId: activity.Id || activity.ObjectId,
+      objectId: activity.ObjectId,
+      slNo: index + 1,
+
+      // Description fields
+      description: activity.Name || '',
+      activities: activity.Name || '',
+
+      // Status fields
+      status: activity.Status || '',
+      percentComplete: parseFloat(activity.PercentComplete) || 0,
+      actual: String(parseFloat(activity.PercentComplete) || 0),
+      completionPercentage: String(parseFloat(activity.PercentComplete) || 0),
+
+      // Date fields
+      basePlanStart: activity.StartDate ? activity.StartDate.split('T')[0] : '',
+      basePlanFinish: activity.FinishDate ? activity.FinishDate.split('T')[0] : '',
+      forecastStart: '',
+      forecastFinish: '',
+      actualStart: '',
+      actualFinish: '',
+
+      // WBS/Block fields
+      block: wbsMap[activity.WBSObjectId] || '',
+      newBlockNom: '',
+      plot: '',
+
+      // User-editable fields (empty - filled by supervisor)
+      totalQuantity: '',
+      uom: '',
+      remarks: '',
+      priority: '',
+      baselinePriority: '',
+      contractorName: '',
+      scope: '',
+      holdDueToWtg: '',
+      front: '',
+      balance: '',
+      cumulative: '',
+      section: '',
+      yesterdayValue: '',
+      todayValue: '',
+      yesterday: '',
+      today: ''
+    }));
+
+    res.status(200).json({
+      message: 'Activities fetched from Oracle P6',
+      projectId: projectId,
+      count: mappedActivities.length,
+      activities: mappedActivities,
+      source: 'p6_live_api'
+    });
+  } catch (error) {
+    console.error('Error fetching activities from Oracle P6:', error);
+    res.status(500).json({
+      message: 'Failed to fetch activities from Oracle P6',
+      error: {
+        code: 'P6_ACTIVITIES_FETCH_ERROR',
+        description: error.message
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/wbs
+ * Fetch WBS (Work Breakdown Structure) from Oracle P6 for a project
+ */
+router.get('/wbs-data', ensureAuth, async (req, res) => {
+  try {
+    const { projectId } = req.query;
+
+    if (!projectId) {
+      return res.status(400).json({ message: 'projectId is required' });
+    }
+
+    const wbsData = await restClient.get('/wbs', {
+      Fields: 'ObjectId,Name,Code,ProjectObjectId',
+      Filter: `ProjectObjectId = ${projectId}`
+    });
+
+    const wbsItems = Array.isArray(wbsData) ? wbsData : (wbsData.data || []);
+
+    res.status(200).json({
+      message: 'WBS fetched from Oracle P6',
+      projectId: projectId,
+      count: wbsItems.length,
+      wbs: wbsItems,
+      source: 'p6_live_api'
+    });
+  } catch (error) {
+    console.error('Error fetching WBS:', error);
+    res.status(500).json({ message: 'Failed to fetch WBS', error: error.message });
+  }
+});
+
+/**
  * GET /api/oracle-p6/projects
- * Fetch all projects from Oracle P6
+ * Fetch all projects from local database (synced from Oracle P6)
  */
 router.get('/projects', ensureAuthAndPool, async (req, res) => {
   try {
-    const result = await req.pool.query('SELECT id, name, location FROM projects ORDER BY name');
-    
+    const result = await req.pool.query(
+      'SELECT id, name, location, status, progress, p6_object_id, p6_last_sync FROM projects ORDER BY name'
+    );
+
     res.status(200).json({
-      message: 'Projects fetched successfully from Oracle P6',
+      message: 'Projects fetched successfully',
       projects: result.rows,
-      source: 'p6' // Indicates data source as per P6 Data Provenance Labeling Convention
+      source: 'local-db' // Data synced from P6
     });
   } catch (error) {
-    console.error('Error fetching projects from Oracle P6:', error);
-    res.status(500).json({ 
-      message: 'Internal server error while fetching projects from Oracle P6',
+    console.error('Error fetching projects:', error);
+    res.status(500).json({
+      message: 'Internal server error while fetching projects',
       error: {
-        code: 'P6_PROJECTS_FETCH_ERROR',
-        description: 'Failed to fetch projects from Oracle P6 database'
+        code: 'PROJECTS_FETCH_ERROR',
+        description: 'Failed to fetch projects from database'
       }
     });
   }
@@ -534,39 +685,128 @@ router.get('/activity-fields', ensureAuth, (req, res) => {
 });
 
 /**
- * POST /api/oracle-p6/sync-project
- * Sync project data from Oracle P6 to local database
+ * POST /api/oracle-p6/sync-all-projects
+ * Sync all projects from Oracle P6 to local database
  */
-router.post('/sync-project', ensureAuthAndPool, async (req, res) => {
+router.post('/sync-all-projects', ensureAuthAndPool, async (req, res) => {
   try {
-    const { projectId } = req.body;
-    
-    if (!projectId) {
-      return res.status(400).json({ 
-        message: 'Project ID is required for sync',
-        error: {
-          code: 'MISSING_PROJECT_ID',
-          description: 'Project ID is required to sync data from Oracle P6'
-        }
+    if (!projectService) {
+      return res.status(500).json({
+        message: 'Project service not initialized',
+        error: { code: 'SERVICE_NOT_INITIALIZED' }
       });
     }
 
-    // This would implement the actual sync logic
-    // For now, we'll return a placeholder response
+    const result = await projectService.syncAllProjects();
+
     res.status(200).json({
-      message: 'Project sync initiated with Oracle P6',
-      projectId: projectId,
-      status: 'pending',
-      details: 'Sync process started. This may take a few minutes depending on the project size.',
-      source: 'p6' // Indicates data source as per P6 Data Provenance Labeling Convention
+      message: 'Projects synced successfully from Oracle P6',
+      ...result
     });
   } catch (error) {
-    console.error('Error syncing project from Oracle P6:', error);
-    res.status(500).json({ 
-      message: 'Internal server error while syncing project from Oracle P6',
+    console.error('Error syncing projects from Oracle P6:', error);
+    res.status(500).json({
+      message: 'Internal server error while syncing projects from Oracle P6',
       error: {
         code: 'P6_SYNC_ERROR',
-        description: 'Failed to sync project data from Oracle P6 database'
+        description: error.message
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/oracle-p6/sync-activities
+ * Sync activities for a specific project from Oracle P6
+ */
+router.post('/sync-activities', ensureAuthAndPool, async (req, res) => {
+  try {
+    const { p6ProjectId, localProjectId } = req.body;
+
+    if (!p6ProjectId || !localProjectId) {
+      return res.status(400).json({
+        message: 'Both p6ProjectId and localProjectId are required',
+        error: { code: 'MISSING_PARAMETERS' }
+      });
+    }
+
+    if (!activityService) {
+      return res.status(500).json({
+        message: 'Activity service not initialized',
+        error: { code: 'SERVICE_NOT_INITIALIZED' }
+      });
+    }
+
+    const result = await activityService.syncActivitiesForProject(p6ProjectId, localProjectId);
+
+    res.status(200).json({
+      message: 'Activities synced successfully from Oracle P6',
+      ...result
+    });
+  } catch (error) {
+    console.error('Error syncing activities from Oracle P6:', error);
+    res.status(500).json({
+      message: 'Internal server error while syncing activities from Oracle P6',
+      error: {
+        code: 'P6_SYNC_ERROR',
+        description: error.message
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/sync-status/:projectId
+ * Get sync status for a project
+ */
+router.get('/sync-status/:projectId', ensureAuthAndPool, async (req, res) => {
+  try {
+    const { projectId } = req.params;
+
+    if (!projectService) {
+      return res.status(500).json({
+        message: 'Project service not initialized',
+        error: { code: 'SERVICE_NOT_INITIALIZED' }
+      });
+    }
+
+    const status = await projectService.getSyncStatus(projectId);
+
+    res.status(200).json({
+      message: 'Sync status retrieved successfully',
+      ...status
+    });
+  } catch (error) {
+    console.error('Error getting sync status:', error);
+    res.status(500).json({
+      message: 'Internal server error while getting sync status',
+      error: {
+        code: 'SYNC_STATUS_ERROR',
+        description: error.message
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/test-connection
+ * Test Oracle P6 API connection
+ */
+router.get('/test-connection', ensureAuth, async (req, res) => {
+  try {
+    const isConnected = await testConnection();
+
+    res.status(200).json({
+      message: isConnected ? 'Oracle P6 API connection successful' : 'Oracle P6 API connection failed',
+      connected: isConnected
+    });
+  } catch (error) {
+    console.error('Error testing Oracle P6 connection:', error);
+    res.status(500).json({
+      message: 'Error testing Oracle P6 connection',
+      error: {
+        code: 'CONNECTION_TEST_ERROR',
+        description: error.message
       }
     });
   }
@@ -579,7 +819,7 @@ router.post('/sync-project', ensureAuthAndPool, async (req, res) => {
 router.get('/wbs/:projectId', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     const query = `
       SELECT 
         object_id,
@@ -592,7 +832,7 @@ router.get('/wbs/:projectId', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     res.status(200).json({
       message: 'WBS structure fetched successfully from Oracle P6',
       projectId: projectId,
@@ -601,7 +841,7 @@ router.get('/wbs/:projectId', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching WBS from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching WBS from Oracle P6',
       error: {
         code: 'P6_WBS_FETCH_ERROR',
@@ -618,7 +858,7 @@ router.get('/wbs/:projectId', ensureAuthAndPool, async (req, res) => {
 router.get('/resources/:projectId', ensureAuthAndPool, async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     const query = `
       SELECT DISTINCT
         pr.object_id,
@@ -633,7 +873,7 @@ router.get('/resources/:projectId', ensureAuthAndPool, async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     res.status(200).json({
       message: 'Resources fetched successfully from Oracle P6',
       projectId: projectId,
@@ -642,12 +882,572 @@ router.get('/resources/:projectId', ensureAuthAndPool, async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching resources from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching resources from Oracle P6',
       error: {
         code: 'P6_RESOURCES_FETCH_ERROR',
         description: 'Failed to fetch resources from Oracle P6 database'
       }
+    });
+  }
+});
+
+// ============================================================================
+// Oracle P6 REST API Endpoints
+// These endpoints fetch data directly from Oracle P6 using REST API
+// ============================================================================
+
+/**
+ * GET /api/oracle-p6/p6-projects
+ * Fetch all projects from Oracle P6 via REST API
+ * Query params:
+ *   - status: Filter by status (e.g., 'Active')
+ *   - search: Search by name/ID
+ *   - token: OAuth token (optional, uses env if not provided)
+ */
+router.get('/p6-projects', async (req, res) => {
+  try {
+    const { status, search, token } = req.query;
+
+    // Use provided token or fall back to env variable
+    const authToken = token || process.env.ORACLE_P6_AUTH_TOKEN;
+
+    if (!authToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'OAuth token required. Provide via query param or ORACLE_P6_AUTH_TOKEN env variable.',
+        error: { code: 'MISSING_TOKEN' }
+      });
+    }
+
+    // Set token in REST client
+    restClient.setToken(authToken);
+
+    // Fetch projects from P6 REST API
+    let projects = await restClient.readProjects([
+      'ObjectId', 'Id', 'Name', 'Status', 'StartDate', 'FinishDate',
+      'Description', 'PlannedStartDate', 'ParentEPSName'
+    ]);
+
+    // Apply client-side filtering if needed
+    if (search) {
+      const term = search.toLowerCase();
+      projects = projects.filter(p =>
+        (p.Name && p.Name.toLowerCase().includes(term)) ||
+        (p.Id && p.Id.toLowerCase().includes(term))
+      );
+    } else if (status) {
+      projects = projects.filter(p =>
+        p.Status && p.Status.toLowerCase() === status.toLowerCase()
+      );
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Retrieved ${projects.length} projects from Oracle P6`,
+      count: projects.length,
+      projects: projects,
+      source: 'p6-rest'
+    });
+
+  } catch (error) {
+    console.error('Error fetching P6 projects via REST:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch projects from Oracle P6',
+      error: {
+        code: 'P6_REST_ERROR',
+        description: error.message
+      }
+    });
+  }
+});
+
+/**
+ * POST /api/oracle-p6/set-token
+ * Set the OAuth token for P6 REST client
+ */
+router.post('/set-token', (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Token is required in request body'
+      });
+    }
+
+    restClient.setToken(token);
+
+    res.status(200).json({
+      success: true,
+      message: 'OAuth token set successfully'
+    });
+
+  } catch (error) {
+    console.error('Error setting P6 token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to set token',
+      error: { description: error.message }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/test-rest
+ * Test REST connection to Oracle P6
+ */
+router.get('/test-rest', async (req, res) => {
+  try {
+    const { token } = req.query;
+
+    const authToken = token || process.env.ORACLE_P6_AUTH_TOKEN;
+
+    if (!authToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'OAuth token required'
+      });
+    }
+
+    restClient.setToken(authToken);
+
+    // Try to fetch just a few projects
+    const projects = await restClient.readProjects(['ObjectId', 'Id', 'Name', 'Status']);
+
+    res.status(200).json({
+      success: true,
+      message: 'REST API connection successful',
+      projectCount: projects.length,
+      sampleProjects: projects.slice(0, 5)
+    });
+
+  } catch (error) {
+    console.error('REST API test failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'REST API connection failed',
+      error: { description: error.message }
+    });
+  }
+});
+
+// ============================================================================
+// Oracle P6 Sync Endpoints
+// These endpoints sync P6 data to local database
+// ============================================================================
+
+/**
+ * POST /api/oracle-p6/sync-projects
+ * Sync all projects from Oracle P6 to local database
+ */
+router.post('/sync-projects', ensurePool, async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    const authToken = token || process.env.ORACLE_P6_AUTH_TOKEN;
+
+    if (!authToken) {
+      return res.status(401).json({
+        success: false,
+        message: 'OAuth token required. Provide in body or set ORACLE_P6_AUTH_TOKEN env variable.'
+      });
+    }
+
+    const result = await syncProjectsFromP6(req.pool, authToken);
+
+    res.status(200).json({
+      success: true,
+      message: `Synced ${result.totalFromP6} projects from Oracle P6`,
+      ...result
+    });
+
+  } catch (error) {
+    console.error('Project sync failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to sync projects from Oracle P6',
+      error: { description: error.message }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/synced-projects
+ * Get all projects from local database (synced from P6)
+ */
+router.get('/synced-projects', ensurePool, async (req, res) => {
+  try {
+    const { status, search } = req.query;
+
+    const projects = await getProjectsFromDb(req.pool, { status, search });
+
+    res.status(200).json({
+      success: true,
+      message: `Retrieved ${projects.length} synced projects`,
+      count: projects.length,
+      projects: projects,
+      source: 'local-db-synced-from-p6'
+    });
+
+  } catch (error) {
+    console.error('Error fetching synced projects:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch synced projects',
+      error: { description: error.message }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/synced-projects/:objectId
+ * Get a single project by ObjectId from local database
+ */
+router.get('/synced-projects/:objectId', ensurePool, async (req, res) => {
+  try {
+    const { objectId } = req.params;
+
+    const project = await getProjectByObjectId(req.pool, parseInt(objectId));
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: `Project with ObjectId ${objectId} not found`
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      project: project
+    });
+
+  } catch (error) {
+    console.error('Error fetching project:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch project',
+      error: { description: error.message }
+    });
+  }
+});
+
+// ============================================================================
+// NEW ENDPOINTS FOR UI TABLE DATA
+// ============================================================================
+
+/**
+ * GET /api/oracle-p6/wbs-full
+ * Fetch complete WBS data from Oracle P6 for a project (for plots/blocks)
+ */
+router.get('/wbs-full', ensureAuth, async (req, res) => {
+  try {
+    const { projectId } = req.query;
+
+    if (!projectId) {
+      return res.status(400).json({
+        message: 'Project ID is required',
+        error: { code: 'MISSING_PROJECT_ID' }
+      });
+    }
+
+    console.log(`Fetching WBS data for project ${projectId}`);
+
+    const wbsData = await restClient.get('/wbs', {
+      Fields: 'ObjectId,Name,Code,ProjectObjectId,ParentObjectId,SequenceNumber,Status',
+      Filter: `ProjectObjectId = ${projectId}`
+    });
+
+    const wbsItems = Array.isArray(wbsData) ? wbsData : (wbsData.data || []);
+    console.log(`Found ${wbsItems.length} WBS items for project ${projectId}`);
+
+    // Create a lookup map for parent names
+    const wbsMap = {};
+    wbsItems.forEach(w => {
+      wbsMap[w.ObjectId] = w;
+    });
+
+    // Map to UI-friendly format
+    const mappedWbs = wbsItems.map(wbs => ({
+      objectId: wbs.ObjectId,
+      name: wbs.Name || '',
+      code: wbs.Code || '',
+      parentObjectId: wbs.ParentObjectId,
+      parentName: wbs.ParentObjectId ? (wbsMap[wbs.ParentObjectId]?.Name || '') : '',
+      sequenceNumber: wbs.SequenceNumber,
+      status: wbs.Status || 'Active'
+    }));
+
+    res.status(200).json({
+      message: 'WBS data fetched from Oracle P6',
+      projectId: projectId,
+      count: mappedWbs.length,
+      wbs: mappedWbs,
+      source: 'p6_live_api'
+    });
+
+  } catch (error) {
+    console.error('Error fetching WBS from P6:', error);
+    res.status(500).json({
+      message: 'Failed to fetch WBS from Oracle P6',
+      error: { code: 'P6_WBS_FETCH_ERROR', description: error.message }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/resource-assignments
+ * Fetch resource assignments from Oracle P6 (for contractor/vendor names)
+ */
+router.get('/resource-assignments', ensureAuth, async (req, res) => {
+  try {
+    const { projectId } = req.query;
+
+    if (!projectId) {
+      return res.status(400).json({
+        message: 'Project ID is required',
+        error: { code: 'MISSING_PROJECT_ID' }
+      });
+    }
+
+    console.log(`Fetching resource assignments for project ${projectId}`);
+
+    const assignments = await restClient.get('/resourceassignment', {
+      Fields: 'ObjectId,ActivityObjectId,ResourceObjectId,ResourceName,PlannedUnits,ActualUnits,RemainingUnits,StartDate,FinishDate,IsPrimaryResource',
+      Filter: `ProjectObjectId = ${projectId}`
+    });
+
+    const assignmentItems = Array.isArray(assignments) ? assignments : (assignments.data || []);
+    console.log(`Found ${assignmentItems.length} resource assignments for project ${projectId}`);
+
+    // Map to UI-friendly format
+    const mappedAssignments = assignmentItems.map(ra => ({
+      objectId: ra.ObjectId,
+      activityObjectId: ra.ActivityObjectId,
+      resourceObjectId: ra.ResourceObjectId,
+      resourceName: ra.ResourceName || '',
+      plannedUnits: ra.PlannedUnits || 0,
+      actualUnits: ra.ActualUnits || 0,
+      remainingUnits: ra.RemainingUnits || 0,
+      startDate: ra.StartDate ? ra.StartDate.split('T')[0] : '',
+      finishDate: ra.FinishDate ? ra.FinishDate.split('T')[0] : '',
+      isPrimary: ra.IsPrimaryResource || false
+    }));
+
+    res.status(200).json({
+      message: 'Resource assignments fetched from Oracle P6',
+      projectId: projectId,
+      count: mappedAssignments.length,
+      assignments: mappedAssignments,
+      source: 'p6_live_api'
+    });
+
+  } catch (error) {
+    console.error('Error fetching resource assignments from P6:', error);
+    res.status(500).json({
+      message: 'Failed to fetch resource assignments from Oracle P6',
+      error: { code: 'P6_RA_FETCH_ERROR', description: error.message }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/project-issues
+ * Fetch project issues from Oracle P6 (for RFI tracking)
+ */
+router.get('/project-issues', ensureAuth, async (req, res) => {
+  try {
+    const { projectId } = req.query;
+
+    if (!projectId) {
+      return res.status(400).json({
+        message: 'Project ID is required',
+        error: { code: 'MISSING_PROJECT_ID' }
+      });
+    }
+
+    console.log(`Fetching project issues for project ${projectId}`);
+
+    const issues = await restClient.get('/projectissue', {
+      Fields: 'ObjectId,Name,Status,Priority,CreateDate,DueDate,Description,ResponsibleManagerName,WBSObjectId',
+      Filter: `ProjectObjectId = ${projectId}`
+    });
+
+    const issueItems = Array.isArray(issues) ? issues : (issues.data || []);
+    console.log(`Found ${issueItems.length} project issues for project ${projectId}`);
+
+    // Map to UI-friendly format for MMS & RFI table
+    const mappedIssues = issueItems.map((issue, index) => ({
+      objectId: issue.ObjectId,
+      rfiNo: `RFI-${String(index + 1).padStart(3, '0')}`,
+      name: issue.Name || '',
+      status: issue.Status || '',
+      priority: issue.Priority || '',
+      createDate: issue.CreateDate ? issue.CreateDate.split('T')[0] : '',
+      dueDate: issue.DueDate ? issue.DueDate.split('T')[0] : '',
+      description: issue.Description || '',
+      responsibleManager: issue.ResponsibleManagerName || '',
+      wbsObjectId: issue.WBSObjectId
+    }));
+
+    res.status(200).json({
+      message: 'Project issues fetched from Oracle P6',
+      projectId: projectId,
+      count: mappedIssues.length,
+      issues: mappedIssues,
+      source: 'p6_live_api'
+    });
+
+  } catch (error) {
+    console.error('Error fetching project issues from P6:', error);
+    res.status(500).json({
+      message: 'Failed to fetch project issues from Oracle P6',
+      error: { code: 'P6_ISSUES_FETCH_ERROR', description: error.message }
+    });
+  }
+});
+
+/**
+ * GET /api/oracle-p6/activities-full
+ * Fetch complete activity data including WBS names and resource names
+ * This is the main endpoint for populating all supervisor dashboard tables
+ */
+router.get('/activities-full', ensureAuth, async (req, res) => {
+  try {
+    const { projectId } = req.query;
+
+    if (!projectId) {
+      return res.status(400).json({
+        message: 'Project ID is required',
+        error: { code: 'MISSING_PROJECT_ID' }
+      });
+    }
+
+    console.log(`Fetching full activity data for project ${projectId}`);
+
+    // Fetch activities
+    const activities = await restClient.readActivities(
+      ['ObjectId', 'Id', 'Name', 'Status', 'StartDate', 'FinishDate', 'PercentComplete',
+        'PlannedStartDate', 'PlannedFinishDate', 'ActualStartDate', 'ActualFinishDate',
+        'RemainingEarlyStartDate', 'RemainingEarlyFinishDate', 'WBSObjectId',
+        'RemainingDuration', 'ActualDuration'],
+      parseInt(projectId)
+    );
+
+    // Fetch WBS data for block/plot names
+    let wbsMap = {};
+    try {
+      const wbsData = await restClient.get('/wbs', {
+        Fields: 'ObjectId,Name,Code',
+        Filter: `ProjectObjectId = ${projectId}`
+      });
+      const wbsItems = Array.isArray(wbsData) ? wbsData : (wbsData.data || []);
+      wbsItems.forEach(w => {
+        wbsMap[w.ObjectId] = { name: w.Name, code: w.Code };
+      });
+      console.log(`Loaded ${Object.keys(wbsMap).length} WBS items`);
+    } catch (wbsError) {
+      console.log('Could not fetch WBS data:', wbsError.message);
+    }
+
+    // Fetch resource assignments for contractor names
+    let resourceMap = {};
+    try {
+      const raData = await restClient.get('/resourceassignment', {
+        Fields: 'ActivityObjectId,ResourceName,IsPrimaryResource',
+        Filter: `ProjectObjectId = ${projectId}`
+      });
+      const raItems = Array.isArray(raData) ? raData : (raData.data || []);
+      raItems.forEach(ra => {
+        if (!resourceMap[ra.ActivityObjectId] || ra.IsPrimaryResource) {
+          resourceMap[ra.ActivityObjectId] = ra.ResourceName;
+        }
+      });
+      console.log(`Loaded ${Object.keys(resourceMap).length} resource mappings`);
+    } catch (raError) {
+      console.log('Could not fetch resource assignments:', raError.message);
+    }
+
+    console.log(`Found ${activities.length} activities for project ${projectId}`);
+
+    // Map to complete format for all UI tables
+    const mappedActivities = activities.map((activity, index) => {
+      const wbs = wbsMap[activity.WBSObjectId] || {};
+      return {
+        // Core identifiers
+        activityId: activity.Id || activity.ObjectId,
+        objectId: activity.ObjectId,
+        slNo: index + 1,
+
+        // Description fields
+        description: activity.Name || '',
+        activities: activity.Name || '',
+
+        // WBS/Block fields (for DP Block, DP Vendor Block tables)
+        wbsObjectId: activity.WBSObjectId,
+        block: wbs.name || '',
+        wbsCode: wbs.code || '',
+        plot: wbs.code || wbs.name || '',
+        newBlockNom: '',
+
+        // Resource/Contractor (for DP Vendor Block, DP Vendor IDT tables)
+        contractorName: resourceMap[activity.ObjectId] || '',
+
+        // Status fields
+        status: activity.Status || '',
+        percentComplete: parseFloat(activity.PercentComplete) || 0,
+        actual: String(parseFloat(activity.PercentComplete) || 0),
+        completionPercentage: String(parseFloat(activity.PercentComplete) || 0),
+
+        // Date fields
+        basePlanStart: activity.PlannedStartDate ? activity.PlannedStartDate.split('T')[0] : '',
+        basePlanFinish: activity.PlannedFinishDate ? activity.PlannedFinishDate.split('T')[0] : '',
+        actualStart: activity.ActualStartDate ? activity.ActualStartDate.split('T')[0] : '',
+        actualFinish: activity.ActualFinishDate ? activity.ActualFinishDate.split('T')[0] : '',
+        forecastStart: activity.RemainingEarlyStartDate ? activity.RemainingEarlyStartDate.split('T')[0] : '',
+        forecastFinish: activity.RemainingEarlyFinishDate ? activity.RemainingEarlyFinishDate.split('T')[0] : '',
+
+        // Duration fields
+        duration: activity.Duration || 0,
+        remainingDuration: activity.RemainingDuration || 0,
+        actualDuration: activity.ActualDuration || 0,
+
+        // User-editable fields (empty - filled by supervisor)
+        totalQuantity: '',
+        uom: '',
+        remarks: '',
+        priority: '',
+        baselinePriority: '',
+        scope: '',
+        holdDueToWtg: '',
+        front: '',
+        balance: '',
+        cumulative: '',
+        section: wbs.code || '',
+        yesterdayValue: '',
+        todayValue: '',
+        yesterday: '',
+        today: ''
+      };
+    });
+
+    res.status(200).json({
+      message: 'Full activity data fetched from Oracle P6',
+      projectId: projectId,
+      count: mappedActivities.length,
+      activities: mappedActivities,
+      wbsCount: Object.keys(wbsMap).length,
+      resourceMappings: Object.keys(resourceMap).length,
+      source: 'p6_live_api'
+    });
+
+  } catch (error) {
+    console.error('Error fetching full activity data from P6:', error);
+    res.status(500).json({
+      message: 'Failed to fetch activity data from Oracle P6',
+      error: { code: 'P6_ACTIVITIES_FULL_ERROR', description: error.message }
     });
   }
 });

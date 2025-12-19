@@ -17,12 +17,12 @@ const ProjectsPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const projectsPerPage = 4;
-  
+
   // Filter projects based on search term
   const filteredProjects = useMemo(() => {
     if (!searchTerm) return projects;
-    
-    return projects.filter(project => 
+
+    return projects.filter(project =>
       project.Name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.Location?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -39,30 +39,18 @@ const ProjectsPage = () => {
   }, [searchTerm]);
 
   useEffect(() => {
-    // Redirect non-Super Admin users to their respective dashboards if they shouldn't be on this page
-    if (user?.Role === "Super Admin") {
-      // Don't redirect Super Admins, but they should use the Super Admin dashboard instead
-      // We'll show a notice instead
-      console.log("Super Admin accessing projects page directly");
-    } else if (user?.Role === "PMAG" || user?.Role === "Site PM") {
-      // These roles have their own dashboards
-      const dashboardPaths: Record<string, string> = {
-        "PMAG": "/pmag",
-        "Site PM": "/sitepm"
-      };
-      navigate(dashboardPaths[user.Role]);
-      return;
-    }
-    
+    // All roles can now access the projects page to view Oracle P6 projects
+    console.log("User accessing projects page:", user?.Role);
+
     const fetchProjects = async () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         // Log user data for debugging
         console.log("User data in ProjectsPage:", user);
         console.log("User role:", user?.Role);
-        
+
         // Fetch projects based on user role
         let projectsData: any[] = [];
         if (user?.Role === "supervisor") {
@@ -72,7 +60,7 @@ const ProjectsPage = () => {
           console.log("Fetching all projects for", user?.Role);
           projectsData = await getUserProjects();
         }
-        
+
         console.log("Projects fetched:", projectsData);
         setProjects(projectsData);
       } catch (err) {
@@ -91,47 +79,47 @@ const ProjectsPage = () => {
 
   const handleProjectSelect = (project: any) => {
     if (!user) return;
-    
+
     // Log the navigation for debugging
     console.log("Navigating to dashboard for role:", user.Role);
     console.log("Project data:", project);
-    
+
     // Navigate based on user role
     switch (user.Role) {
       case "supervisor":
-        navigate("/supervisor", { 
-          state: { 
+        navigate("/supervisor", {
+          state: {
             user,
-            projectId: project.ObjectId, 
+            projectId: project.ObjectId,
             projectName: project.Name,
             projectDetails: project
-          } 
+          }
         });
         break;
-        
+
       case "Site PM":
         // For Site PM, we want to go to their dashboard but with project context
-        navigate("/sitepm", { 
-          state: { 
+        navigate("/sitepm", {
+          state: {
             user,
-            projectId: project.ObjectId, 
+            projectId: project.ObjectId,
             projectName: project.Name,
             projectDetails: project
-          } 
+          }
         });
         break;
-        
+
       case "PMAG":
-        navigate("/pmag", { 
-          state: { 
+        navigate("/pmag", {
+          state: {
             user,
-            projectId: project.ObjectId, 
+            projectId: project.ObjectId,
             projectName: project.Name,
             projectDetails: project
-          } 
+          }
         });
         break;
-        
+
       default:
         // For any other role, show an error with the actual role
         console.error("Unsupported user role:", user.Role);
@@ -146,8 +134,8 @@ const ProjectsPage = () => {
         userName={user?.Name || "User"}
         userRole={user?.Role}
       >
-        <ProjectsEmptyState 
-          userRole={user?.Role} 
+        <ProjectsEmptyState
+          userRole={user?.Role}
           isLoading={loading}
           error={error}
           onRetry={() => window.location.reload()}
@@ -161,20 +149,20 @@ const ProjectsPage = () => {
       userName={user?.Name || "User"}
       userRole={user?.Role}
     >
-      <ProjectsHeader 
-        userRole={user?.Role} 
+      <ProjectsHeader
+        userRole={user?.Role}
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
       />
 
       {filteredProjects.length === 0 ? (
-        <ProjectsEmptyState 
-          userRole={user?.Role} 
+        <ProjectsEmptyState
+          userRole={user?.Role}
           searchTerm={searchTerm}
         />
       ) : (
         <div className="w-full">
-          <ProjectListing 
+          <ProjectListing
             projects={paginatedProjects.map(project => ({
               name: project.Name,
               planStart: project.PlannedStartDate ? new Date(project.PlannedStartDate).toISOString().split('T')[0] : "N/A",
@@ -202,11 +190,11 @@ const ProjectsPage = () => {
               >
                 Previous
               </button>
-              
+
               <span className="text-sm text-muted-foreground">
                 Page {currentPage} of {totalPages}
               </span>
-              
+
               <button
                 className="px-4 py-2 border rounded-md"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}

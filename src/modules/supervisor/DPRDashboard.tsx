@@ -4,13 +4,13 @@ import { AnimatePresence } from "framer-motion";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
-import { 
-  FileText, 
-  CheckCircle, 
-  Clock, 
-  AlertCircle, 
-  Eye, 
-  Edit, 
+import {
+  FileText,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Eye,
+  Edit,
   Check,
   X,
   BarChart3,
@@ -27,13 +27,13 @@ import {
   Plus,
   Send
 } from "lucide-react";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   Pie,
   Cell
@@ -46,7 +46,8 @@ import { useAuth } from "@/modules/auth/contexts/AuthContext";
 import { getAssignedProjects } from "@/modules/auth/services/projectService";
 import { getDraftEntry, saveDraftEntry, submitEntry, getTodayAndYesterday } from "@/modules/auth/services/dprSupervisorService";
 import { toast } from "sonner";
-import { StyledExcelTable } from "@/components/StyledExcelTable"; // Changed from ExcelTable to StyledExcelTable
+import { StyledExcelTable } from "@/components/StyledExcelTable";
+import { getP6ActivitiesForProject, mapActivitiesToDPQty, mapActivitiesToDPBlock, mapActivitiesToDPVendorBlock, mapActivitiesToManpowerDetails, mapActivitiesToDPVendorIdt, P6Activity } from "@/services/p6ActivityService";
 
 // Import the new table components
 import { DPQtyTable } from "./components/DPQtyTable";
@@ -67,7 +68,7 @@ const DPRDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  
+
   // Extract project data from location state
   const locationState = location.state || {};
   const projectName = locationState.projectName || "Project";
@@ -77,77 +78,79 @@ const DPRDashboard = () => {
 
   const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [assignedProjects, setAssignedProjects] = useState<any[]>([]);
-  
+  const [p6Activities, setP6Activities] = useState<P6Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
   // DPR Entry state
   const [currentDraftEntry, setCurrentDraftEntry] = useState<any>(null);
   const [entryData, setEntryData] = useState<any>({});
   const { today, yesterday } = getTodayAndYesterday();
-  
+
   // Manpower details state
   const [totalManpower, setTotalManpower] = useState<number>(0);
-  
+
   // DP Qty state
   const [dpQtyData, setDpQtyData] = useState<any[]>([
-    { 
-      slNo: '', 
-      description: '', 
-      totalQuantity: '', 
-      uom: '', 
-      basePlanStart: '', 
-      basePlanFinish: '', 
-      forecastStart: '', 
-      forecastFinish: '', 
-      blockCapacity: '', 
-      phase: '', 
-      block: '', 
-      spvNumber: '', 
-      actualStart: '', 
-      actualFinish: '', 
-      remarks: '', 
-      priority: '', 
-      balance: '', 
-      cumulative: '' 
+    {
+      slNo: '',
+      description: '',
+      totalQuantity: '',
+      uom: '',
+      basePlanStart: '',
+      basePlanFinish: '',
+      forecastStart: '',
+      forecastFinish: '',
+      blockCapacity: '',
+      phase: '',
+      block: '',
+      spvNumber: '',
+      actualStart: '',
+      actualFinish: '',
+      remarks: '',
+      priority: '',
+      balance: '',
+      cumulative: ''
     }
   ]);
-  
+
   // DP Vendor Block state
   const [dpVendorBlockData, setDpVendorBlockData] = useState<any[]>([
     { activityId: '', activities: '', plot: '', newBlockNom: '', priority: '', baselinePriority: '', contractorName: '', scope: '', holdDueToWtg: '', front: '', actual: '', completionPercentage: '', remarks: '', yesterdayValue: '', todayValue: '' }
   ]);
-  
+
   // Manpower Details state
   const [manpowerDetailsData, setManpowerDetailsData] = useState<any[]>([
     { activityId: '', slNo: '', block: '', contractorName: '', activity: '', section: '', yesterdayValue: '', todayValue: '' }
   ]);
-  
+
   // DP Block state
   const [dpBlockData, setDpBlockData] = useState<any[]>([
     { slNo: '', description: '', totalQuantity: '', uom: '', basePlanStart: '', basePlanFinish: '', forecastStart: '', forecastFinish: '', blockCapacity: '', phase: '', block: '', spvNumber: '', actualStart: '', actualFinish: '', remarks: '', priority: '', balance: '', cumulative: '' }
   ]);
-  
+
   // DP Vendor IDT state
   const [dpVendorIdtData, setDpVendorIdtData] = useState<any[]>([
     { /* Add appropriate fields for DP Vendor IDT */ }
   ]);
-  
+
   // MMS & Module RFI state
   const [mmsModuleRfiData, setMmsModuleRfiData] = useState<any[]>([
     { /* Add appropriate fields for MMS & Module RFI */ }
   ]);
-  
+
   // DP Block state (duplicate, will rename)
   // const [dpBlockData, setDpBlockData] = useState<any[]>([
   //   { /* Add appropriate fields for DP Block */ }
   // ]);
-  
+
   // Initialize data based on sheet type
   useEffect(() => {
     if (currentDraftEntry && currentDraftEntry.data_json) {
-      const data = typeof currentDraftEntry.data_json === 'string' 
-        ? JSON.parse(currentDraftEntry.data_json) 
+      const data = typeof currentDraftEntry.data_json === 'string'
+        ? JSON.parse(currentDraftEntry.data_json)
         : currentDraftEntry.data_json;
-      
-      switch(activeTab) {
+
+      switch (activeTab) {
         case 'dp-qty':
           if (data.rows) setDpQtyData(data.rows);
           break;
@@ -178,22 +181,27 @@ const DPRDashboard = () => {
       try {
         const projects = await getAssignedProjects();
         setAssignedProjects(projects);
-        
-        // Load draft entry for the current project and active tab
-        if (projectId && activeTab !== 'issues') {
+      } catch (error) {
+        console.error('Error fetching assigned projects:', error);
+        // P6 activities will still load via the other useEffect
+      }
+
+      // Load draft entry for the current project - non-blocking
+      if (projectId && activeTab !== 'issues') {
+        try {
           const draft = await getDraftEntry(projectId, activeTab);
           setCurrentDraftEntry(draft);
-          
+
           // Parse entry data if exists
           if (draft.data_json && typeof draft.data_json === 'string') {
             setEntryData(JSON.parse(draft.data_json));
           } else if (draft.data_json) {
             setEntryData(draft.data_json);
           }
+        } catch (draftError) {
+          console.log('Draft entry not available - using P6 data:', draftError);
+          // Don't show error toast - P6 data will be used instead
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error("Failed to load entry data");
       }
     };
 
@@ -202,22 +210,56 @@ const DPRDashboard = () => {
     }
   }, [token, projectId, activeTab]);
 
+  // Fetch P6 activities when project changes
+  useEffect(() => {
+    const fetchP6Activities = async () => {
+      if (!projectId) return;
+
+      try {
+        setLoadingActivities(true);
+        console.log(`Fetching P6 activities for project: ${projectId}`);
+
+        const activities = await getP6ActivitiesForProject(projectId);
+        setP6Activities(activities);
+
+        // Pre-populate table data with P6 activities
+        if (activities.length > 0) {
+          setDpQtyData(mapActivitiesToDPQty(activities));
+          setDpBlockData(mapActivitiesToDPBlock(activities));
+          setDpVendorBlockData(mapActivitiesToDPVendorBlock(activities));
+          setDpVendorIdtData(mapActivitiesToDPVendorIdt(activities));
+          setManpowerDetailsData(mapActivitiesToManpowerDetails(activities));
+          toast.success(`Loaded ${activities.length} P6 activities`);
+        }
+      } catch (error) {
+        console.error('Error fetching P6 activities:', error);
+        // Don't show error toast - tables will use existing data or empty
+      } finally {
+        setLoadingActivities(false);
+      }
+    };
+
+    if (token && projectId) {
+      fetchP6Activities();
+    }
+  }, [token, projectId]);
+
   // Handle entry save
   const handleSaveEntry = async () => {
     if (!currentDraftEntry) return;
-    
+
     try {
       let dataToSave: any = {};
-      
-      switch(activeTab) {
+
+      switch (activeTab) {
         case 'dp-qty':
-          dataToSave = { 
+          dataToSave = {
             staticHeader: {
               projectInfo: 'PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)',
               reportingDate: today,
               progressDate: yesterday
             },
-            rows: dpQtyData 
+            rows: dpQtyData
           };
           break;
         case 'dp-vendor-block':
@@ -238,7 +280,7 @@ const DPRDashboard = () => {
         default:
           dataToSave = { rows: [] };
       }
-      
+
       await saveDraftEntry(currentDraftEntry.id, dataToSave);
       toast.success("Entry saved successfully!");
     } catch (error) {
@@ -252,10 +294,10 @@ const DPRDashboard = () => {
       toast.error("No entry to submit");
       return;
     }
-    
+
     // Save current data before submitting
     await handleSaveEntry();
-    
+
     try {
       await submitEntry(currentDraftEntry.id);
       toast.success("Entry submitted to PM successfully!");
@@ -277,7 +319,7 @@ const DPRDashboard = () => {
         isLocked={currentDraftEntry?.status !== 'draft'}
         status={currentDraftEntry?.status}
         projectId={projectId ? parseInt(projectId) : undefined}
-        useMockData={true} // Enable mock data
+        useMockData={false} // Use P6 data
       />
     );
   };
@@ -292,7 +334,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
-        useMockData={true} // Enable mock data
+        useMockData={false} // Use P6 data
       />
     );
   };
@@ -309,7 +351,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
-        useMockData={true} // Enable mock data
+        useMockData={false} // Use P6 data
       />
     );
   };
@@ -324,7 +366,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
-        useMockData={true} // Enable mock data
+        useMockData={false} // Use P6 data
       />
     );
   };
@@ -339,7 +381,7 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
-        useMockData={true} // Enable mock data
+        useMockData={false} // Use P6 data
       />
     );
   };
@@ -354,24 +396,24 @@ const DPRDashboard = () => {
         yesterday={yesterday}
         today={today}
         isLocked={currentDraftEntry?.status !== 'draft'}
-        useMockData={true} // Enable mock data
+        useMockData={false} // Use P6 data
       />
     );
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      <Navbar 
-        userName={user?.Name || "User"} 
-        userRole={user?.Role || "supervisor"} 
+      <Navbar
+        userName={user?.Name || "User"}
+        userRole={user?.Role || "supervisor"}
         projectName={projectName}
       />
-      
+
       {/* Add custom CSS for responsive tabs */}
       <style>{`
         .responsive-tabs-container {
@@ -401,22 +443,22 @@ const DPRDashboard = () => {
           font-size: 0.625rem; /* text-xs */
         }
       `}</style>
-      
+
       <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <motion.div
           className="mb-6 sm:mb-8"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 100, 
+          transition={{
+            type: "spring",
+            stiffness: 100,
             damping: 15,
-            duration: 0.5 
+            duration: 0.5
           }}
         >
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-6">
             <div className="flex-1">
-              <motion.h1 
+              <motion.h1
                 className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -424,7 +466,7 @@ const DPRDashboard = () => {
               >
                 DPR Dashboard - {user?.Name || "Supervisor"}
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="text-muted-foreground text-xs sm:text-sm"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -432,7 +474,7 @@ const DPRDashboard = () => {
               >
                 {projectName ? `Project: ${projectName}` : "Project dashboard for supervisor activities"}
               </motion.p>              {projectDetails && (
-                <motion.div 
+                <motion.div
                   className="mt-2 text-xs sm:text-sm text-muted-foreground"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -443,7 +485,7 @@ const DPRDashboard = () => {
                 </motion.div>
               )}
             </div>
-            <motion.div 
+            <motion.div
               className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -454,7 +496,7 @@ const DPRDashboard = () => {
                 <span className="hidden xs:inline">Submit to PM</span>
                 <span className="xs:hidden">Submit</span>
               </Button>
-              
+
               <div className="bg-primary/10 px-3 py-2 sm:px-4 sm:py-2 rounded-lg flex items-center justify-center">
                 <FileSpreadsheet className="w-4 h-4 sm:w-5 sm:h-5 text-primary mr-2" />
                 <span className="font-medium text-xs sm:text-sm whitespace-nowrap">DPR Submission</span>
@@ -512,11 +554,11 @@ const DPRDashboard = () => {
                   initial={{ opacity: 0, x: 30 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -30 }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 300, 
+                  transition={{
+                    type: "spring",
+                    stiffness: 300,
                     damping: 30,
-                    duration: 0.3 
+                    duration: 0.3
                   }}
                   className="w-full"
                 >
@@ -525,37 +567,37 @@ const DPRDashboard = () => {
                       {renderDPQtyTable()}
                     </Card>
                   )}
-                  
+
                   {activeTab === "dp-vendor-block" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       {renderDPVendorBlockTable()}
                     </Card>
                   )}
-                  
+
                   {activeTab === "manpower-details" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       {renderManpowerDetailsTable()}
                     </Card>
                   )}
-                  
+
                   {activeTab === "dp-block" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       {renderDPBlockTable()}
                     </Card>
                   )}
-                  
+
                   {activeTab === "dp-vendor-idt" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       {renderDPVendorIdtTable()}
                     </Card>
                   )}
-                  
+
                   {activeTab === "mms-module-rfi" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       {renderMmsModuleRfiTable()}
                     </Card>
                   )}
-                  
+
                   {activeTab === "supervisor-table" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       <div className="text-center py-8 text-muted-foreground">
@@ -565,7 +607,7 @@ const DPRDashboard = () => {
                       </div>
                     </Card>
                   )}
-                  
+
                   {activeTab === "issues" && (
                     <Card className="p-4 sm:p-6 shadow-sm border border-gray-200 dark:border-gray-700 rounded-lg">
                       <div className="flex justify-between items-center mb-6">
@@ -579,7 +621,7 @@ const DPRDashboard = () => {
                           <span className="xs:hidden">Add</span>
                         </Button>
                       </div>
-                      
+
                       <div className="text-center py-8 text-muted-foreground">
                         <AlertCircle className="mx-auto h-12 w-12 opacity-50" />
                         <h3 className="mt-2 text-lg font-medium">No issues reported</h3>

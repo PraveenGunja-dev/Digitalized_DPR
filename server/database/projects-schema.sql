@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS projects (
     plan_end DATE,
     actual_start DATE,
     actual_end DATE,
+    p6_object_id INTEGER UNIQUE,
+    p6_last_sync TIMESTAMP,
+    p6_sync_status VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

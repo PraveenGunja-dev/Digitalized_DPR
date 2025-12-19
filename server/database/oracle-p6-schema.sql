@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS p6_activities (
     duration DECIMAL(10,2),
     activity_type VARCHAR(50),  -- Task Dependent, Resource Dependent, Level of Effort, Start Milestone, Finish Milestone
     critical BOOLEAN DEFAULT false,
+    p6_last_sync TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE

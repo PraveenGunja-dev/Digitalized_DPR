@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, FileSpreadsheet, Package, User, Save, Send, Plus, Grid3X3, Building, Wrench } from "lucide-react";
 import { getAssignedProjects, getUserProjects } from "@/modules/auth/services/projectService";
 import { getDraftEntry, saveDraftEntry, submitEntry, getTodayAndYesterday } from "@/modules/auth/services/dprSupervisorService";
+import { getP6ActivitiesForProject, mapActivitiesToDPQty, mapActivitiesToDPBlock, mapActivitiesToDPVendorBlock, mapActivitiesToManpowerDetails, mapActivitiesToDPVendorIdt, P6Activity } from "@/services/p6ActivityService";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
+import {
   DPQtyTable,
   DPVendorBlockTable,
   ManpowerDetailsTable,
@@ -43,7 +44,7 @@ const SupervisorDashboard = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  
+
   // Extract project data from location state
   const locationState = location.state || {};
   const projectName = locationState.projectName || "Project";
@@ -52,53 +53,57 @@ const SupervisorDashboard = () => {
   const projectDetails = locationState.projectDetails || null;
   const openAddIssueModal = locationState.openAddIssueModal || false;
   const initialActiveTab = locationState.activeTab || "summary";
-  
+
   const [activeTab, setActiveTab] = useState(initialActiveTab);
   const [assignedProjects, setAssignedProjects] = useState<any[]>([]);
   const [currentDraftEntry, setCurrentDraftEntry] = useState<any>(null);
   const [isAddIssueModalOpen, setIsAddIssueModalOpen] = useState(false);
   const [issues, setIssues] = useState<Issue[]>([]);
   const { today, yesterday } = getTodayAndYesterday();
-  
+
   // State for reactive project ID
   const [currentProjectId, setCurrentProjectId] = useState(projectIdFromLocation);
-  
+
+  // P6 Activities state
+  const [p6Activities, setP6Activities] = useState<P6Activity[]>([]);
+  const [loadingActivities, setLoadingActivities] = useState(false);
+
   // Flag to use mock data (for development/testing)
-  const useMockData = true; // Set to false to use real API
-  
+  const useMockData = false; // Set to false to use P6 API data
+
   // Effect to update state when location changes
   useEffect(() => {
     const locationState = location.state || {};
     const newActiveTab = locationState.activeTab || "summary";
     const newProjectId = locationState.projectId || null;
-    
+
     // Always update the state when location changes, regardless of current values
     // This ensures that even if the values are the same, we still process the new location state
     setActiveTab(newActiveTab);
     setCurrentProjectId(newProjectId);
   }, [location]);
-  
+
   // DP Qty state
   const [dpQtyData, setDpQtyData] = useState([
-    { 
-      slNo: '', 
-      description: '', 
-      totalQuantity: '', 
-      uom: '', 
-      basePlanStart: '', 
-      basePlanFinish: '', 
-      forecastStart: '', 
-      forecastFinish: '', 
-      actualStart: '', 
-      actualFinish: '', 
-      remarks: '', 
-      balance: '', 
+    {
+      slNo: '',
+      description: '',
+      totalQuantity: '',
+      uom: '',
+      basePlanStart: '',
+      basePlanFinish: '',
+      forecastStart: '',
+      forecastFinish: '',
+      actualStart: '',
+      actualFinish: '',
+      remarks: '',
+      balance: '',
       cumulative: '',
       yesterday: '', // Number value, not editable
       today: '' // Number value, editable
     }
   ]);
-  
+
   // DP Vendor Block state
   interface DPVendorBlockData {
     activityId: string;
@@ -119,17 +124,17 @@ const SupervisorDashboard = () => {
     category?: string;
     isCategoryRow?: boolean;
   }
-  
+
   const [dpVendorBlockData, setDpVendorBlockData] = useState<DPVendorBlockData[]>([
     { activityId: '', activities: '', plot: '', newBlockNom: '', priority: '', baselinePriority: '', contractorName: '', scope: '', holdDueToWtg: '', front: '', actual: '', completionPercentage: '', remarks: '', yesterdayValue: '', todayValue: '' }
   ]);
-  
+
   // Manpower Details state
   const [manpowerDetailsData, setManpowerDetailsData] = useState([
     { activityId: '', slNo: '', block: '', contractorName: '', activity: '', section: '', yesterdayValue: '', todayValue: '' }
   ]);
   const [totalManpower, setTotalManpower] = useState(0);
-  
+
   // DP Block state
   interface DPBlockData {
     activityId: string;
@@ -152,12 +157,12 @@ const SupervisorDashboard = () => {
     yesterdayValue?: string; // Optional
     todayValue?: string; // Optional
   }
-  
+
   const [dpBlockData, setDpBlockData] = useState<DPBlockData[]>([
-    { 
-      activityId: '', 
-      activities: '', 
-      plot: '', 
+    {
+      activityId: '',
+      activities: '',
+      plot: '',
       newBlockNom: '',
       baselinePriority: '',
       scope: '',
@@ -176,7 +181,7 @@ const SupervisorDashboard = () => {
       todayValue: undefined // Number value, editable (optional)
     }
   ]);
-  
+
   // DP Vendor IDT state
   interface DPVendorIdtData {
     activityId: string;
@@ -196,12 +201,12 @@ const SupervisorDashboard = () => {
     category?: string;
     isCategoryRow?: boolean;
   }
-  
+
   const [dpVendorIdtData, setDpVendorIdtData] = useState<DPVendorIdtData[]>([
-    { 
-      activityId: '', 
-      activities: '', 
-      plot: '', 
+    {
+      activityId: '',
+      activities: '',
+      plot: '',
       newBlockNom: '',
       baselinePriority: '',
       scope: '',
@@ -215,7 +220,7 @@ const SupervisorDashboard = () => {
       todayValue: undefined // Number value, editable (optional)
     }
   ]);
-  
+
   // MMS & Module RFI state
   const [mmsModuleRfiData, setMmsModuleRfiData] = useState([
     { rfiNo: '', subject: '', module: '', submittedDate: '', responseDate: '', status: '', remarks: '', yesterdayValue: '', todayValue: '' }
@@ -227,18 +232,18 @@ const SupervisorDashboard = () => {
   // Initialize data based on sheet type
   useEffect(() => {
     if (currentDraftEntry && currentDraftEntry.data_json) {
-      const data = typeof currentDraftEntry.data_json === 'string' 
-        ? JSON.parse(currentDraftEntry.data_json) 
+      const data = typeof currentDraftEntry.data_json === 'string'
+        ? JSON.parse(currentDraftEntry.data_json)
         : currentDraftEntry.data_json;
-      
+
       // Check if entry is read-only (submitted or approved)
       // Rejected entries should be editable
-      const isReadOnly = currentDraftEntry.isReadOnly || 
-                        currentDraftEntry.status === 'submitted_to_pm' || 
-                        currentDraftEntry.status === 'approved_by_pm';
+      const isReadOnly = currentDraftEntry.isReadOnly ||
+        currentDraftEntry.status === 'submitted_to_pm' ||
+        currentDraftEntry.status === 'approved_by_pm';
       setIsEntryReadOnly(isReadOnly);
-      
-      switch(activeTab) {
+
+      switch (activeTab) {
         case 'dp_qty':
           if (data.rows) setDpQtyData(data.rows);
           break;
@@ -266,59 +271,104 @@ const SupervisorDashboard = () => {
   }, [currentDraftEntry, activeTab]);
 
   // Fetch data when token, projectId, or activeTab changes
+  // Skip draft entry loading when using P6 data (useMockData=false)
   useEffect(() => {
     const fetchData = async () => {
       try {
         const projects = await getAssignedProjects();
         setAssignedProjects(projects);
-        
-        // Load draft entry for the current project and active tab
-        // Skip loading for 'issues', 'supervisor_table', and 'summary' tabs
-        if (currentProjectId && activeTab !== 'issues' && activeTab !== 'supervisor_table' && activeTab !== 'summary') {
+      } catch (error) {
+        console.log('Projects will be fetched from P6 API');
+      }
+
+      // Only load draft entries when using mock data (local DB)
+      // When using P6 data, tables are populated from P6 activities
+      if (useMockData && currentProjectId && activeTab !== 'issues' && activeTab !== 'supervisor_table' && activeTab !== 'summary') {
+        try {
           console.log('Loading draft entry for projectId:', currentProjectId, 'activeTab:', activeTab);
           const draft = await getDraftEntry(currentProjectId, activeTab);
           console.log('Draft entry loaded:', draft);
           setCurrentDraftEntry(draft);
-        } else {
-          console.log('Not loading draft - projectId:', currentProjectId, 'activeTab:', activeTab);
-          if (activeTab === 'issues' || activeTab === 'supervisor_table' || activeTab === 'summary') {
-            setCurrentDraftEntry(null);
-          }
+        } catch (draftError) {
+          console.log('Draft entry not available - tables will show empty state:', draftError);
+          setCurrentDraftEntry(null);
         }
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error("Failed to load data");
+      } else {
+        // Using P6 data - no draft entries needed
+        console.log('Using P6 data - skipping draft entry load. activeTab:', activeTab);
+        setCurrentDraftEntry(null);
       }
     };
 
     if (token) {
       fetchData();
     }
-  }, [token, currentProjectId, activeTab]);
+  }, [token, currentProjectId, activeTab, useMockData]);
+
+  // Fetch P6 activities when project changes (only when not using mock data)
+  useEffect(() => {
+    console.log('SupervisorDashboard P6 fetch check - currentProjectId:', currentProjectId, 'useMockData:', useMockData, 'token:', !!token);
+
+    const fetchP6Activities = async () => {
+      if (useMockData || !currentProjectId) {
+        console.log('Skipping P6 fetch - useMockData:', useMockData, 'projectId:', currentProjectId);
+        return;
+      }
+
+      try {
+        setLoadingActivities(true);
+        console.log(`SupervisorDashboard: Fetching P6 activities for project ${currentProjectId}`);
+
+        const activities = await getP6ActivitiesForProject(currentProjectId);
+        setP6Activities(activities);
+
+        // Pre-populate table data with P6 activities
+        if (activities.length > 0) {
+          setDpQtyData(mapActivitiesToDPQty(activities) as any);
+          setDpBlockData(mapActivitiesToDPBlock(activities) as any);
+          setDpVendorBlockData(mapActivitiesToDPVendorBlock(activities) as any);
+          setDpVendorIdtData(mapActivitiesToDPVendorIdt(activities) as any);
+          setManpowerDetailsData(mapActivitiesToManpowerDetails(activities) as any);
+          toast.success(`Loaded ${activities.length} P6 activities`);
+        } else {
+          console.log('No P6 activities found for project', currentProjectId);
+        }
+      } catch (error) {
+        console.error('Error fetching P6 activities:', error);
+        // Don't show error toast - tables will use existing data or empty
+      } finally {
+        setLoadingActivities(false);
+      }
+    };
+
+    if (token && !useMockData) {
+      fetchP6Activities();
+    }
+  }, [token, currentProjectId, useMockData]);
 
   // Handle entry save
   const handleSaveEntry = async () => {
     if (!currentDraftEntry) return;
-    
+
     // Don't allow saving if entry is read-only (submitted or approved)
     // Rejected entries should be allowed to be saved
     if (isEntryReadOnly || (currentDraftEntry.status !== 'draft' && currentDraftEntry.status !== 'rejected_by_pm')) {
       toast.error("Cannot save: This entry has been submitted and is read-only");
       return;
     }
-    
+
     try {
       let dataToSave: any = {};
-      
-      switch(activeTab) {
+
+      switch (activeTab) {
         case 'dp_qty':
-          dataToSave = { 
+          dataToSave = {
             staticHeader: {
               projectInfo: 'PLOT - A-06 135 MW - KHAVDA HYBRID SOLAR PHASE 3 (YEAR 2025-26)',
               reportingDate: today,
               progressDate: yesterday
             },
-            rows: dpQtyData 
+            rows: dpQtyData
           };
           break;
         case 'dp_vendor_block':
@@ -339,7 +389,7 @@ const SupervisorDashboard = () => {
         default:
           dataToSave = { rows: [] };
       }
-      
+
       await saveDraftEntry(currentDraftEntry.id, dataToSave);
       toast.success("Entry saved successfully!");
     } catch (error) {
@@ -353,28 +403,28 @@ const SupervisorDashboard = () => {
     console.log('currentDraftEntry:', currentDraftEntry);
     console.log('activeTab:', activeTab);
     console.log('currentProjectId:', currentProjectId);
-    
+
     if (!currentDraftEntry) {
       toast.error("No entry to submit. Please ensure you have selected a project and sheet type.");
       console.error('No currentDraftEntry found');
       return;
     }
-    
+
     // Don't allow submission if entry is read-only (submitted or approved)
     // Rejected entries should be allowed to be resubmitted
     if (isEntryReadOnly || (currentDraftEntry.status !== 'draft' && currentDraftEntry.status !== 'rejected_by_pm')) {
       toast.error("Cannot submit: This entry has already been submitted");
       return;
     }
-    
+
     // Save current data before submitting
     await handleSaveEntry();
-    
+
     try {
       console.log('Submitting entry:', currentDraftEntry.id);
       await submitEntry(currentDraftEntry.id);
       toast.success("Entry submitted to PM successfully!");
-      
+
       // Reload the draft entry to get a fresh one for this sheet type
       // This creates a new draft after submission
       try {
@@ -384,7 +434,7 @@ const SupervisorDashboard = () => {
       } catch (error) {
         console.error('Error loading new draft after submission:', error);
       }
-      
+
       toast.info("Entry submitted. A new draft has been created for this sheet.");
     } catch (error) {
       console.error('Submit error:', error);
@@ -412,9 +462,9 @@ const SupervisorDashboard = () => {
       const diffTime = Math.abs(finish.getTime() - start.getTime());
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     };
-    
+
     const delayedDays = calculateDelayedDays(formData.startDate, formData.finishedDate || null);
-    
+
     const issue: Issue = {
       id: Math.random().toString(36).substr(2, 9),
       description: formData.description,
@@ -427,7 +477,7 @@ const SupervisorDashboard = () => {
       attachment: formData.attachment,
       attachmentName: formData.attachment ? formData.attachment.name : null,
     };
-    
+
     setIssues([...issues, issue]);
     setIsAddIssueModalOpen(false);
     toast.success("Issue created successfully!");
@@ -437,12 +487,12 @@ const SupervisorDashboard = () => {
   const renderActiveTable = () => {
     // Determine the status based on currentDraftEntry
     const entryStatus = currentDraftEntry?.status || 'draft';
-    
+
     // Check if entry is rejected and has a rejection reason
     const isRejected = currentDraftEntry?.isRejected;
     const rejectionReason = currentDraftEntry?.rejectionReason;
-    
-    switch(activeTab) {
+
+    switch (activeTab) {
       case 'summary':
         return <DPRSummarySection />;
       case 'dp_qty':
@@ -460,9 +510,9 @@ const SupervisorDashboard = () => {
                 </div>
               </div>
             )}
-            <DPQtyTable 
-              data={dpQtyData} 
-              setData={setDpQtyData} 
+            <DPQtyTable
+              data={dpQtyData}
+              setData={setDpQtyData}
               onSave={isEntryReadOnly ? undefined : handleSaveEntry}
               onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
               yesterday={yesterday}
@@ -488,9 +538,9 @@ const SupervisorDashboard = () => {
                 </div>
               </div>
             )}
-            <DPVendorBlockTable 
-              data={dpVendorBlockData} 
-              setData={setDpVendorBlockData} 
+            <DPVendorBlockTable
+              data={dpVendorBlockData}
+              setData={setDpVendorBlockData}
               onSave={isEntryReadOnly ? undefined : handleSaveEntry}
               onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
               yesterday={yesterday}
@@ -516,9 +566,9 @@ const SupervisorDashboard = () => {
                 </div>
               </div>
             )}
-            <ManpowerDetailsTable 
-              data={manpowerDetailsData} 
-              setData={setManpowerDetailsData} 
+            <ManpowerDetailsTable
+              data={manpowerDetailsData}
+              setData={setManpowerDetailsData}
               totalManpower={totalManpower}
               setTotalManpower={setTotalManpower}
               onSave={isEntryReadOnly ? undefined : handleSaveEntry}
@@ -546,9 +596,9 @@ const SupervisorDashboard = () => {
                 </div>
               </div>
             )}
-            <DPBlockTable 
-              data={dpBlockData} 
-              setData={setDpBlockData} 
+            <DPBlockTable
+              data={dpBlockData}
+              setData={setDpBlockData}
               onSave={isEntryReadOnly ? undefined : handleSaveEntry}
               onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
               yesterday={yesterday}
@@ -574,9 +624,9 @@ const SupervisorDashboard = () => {
                 </div>
               </div>
             )}
-            <DPVendorIdtTable 
-              data={dpVendorIdtData} 
-              setData={setDpVendorIdtData} 
+            <DPVendorIdtTable
+              data={dpVendorIdtData}
+              setData={setDpVendorIdtData}
               onSave={isEntryReadOnly ? undefined : handleSaveEntry}
               onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
               yesterday={yesterday}
@@ -604,7 +654,7 @@ const SupervisorDashboard = () => {
             )}
             {/* Use the new dynamic columns component if we have a project ID and user ID */}
             {currentProjectId && user?.ObjectId ? (
-              <MmsModuleRfiTableWithDynamicColumns 
+              <MmsModuleRfiTableWithDynamicColumns
                 projectId={currentProjectId}
                 userId={user.ObjectId}
                 yesterday={yesterday}
@@ -614,9 +664,9 @@ const SupervisorDashboard = () => {
               />
             ) : (
               /* Fallback to the original component */
-              <MmsModuleRfiTable 
-                data={mmsModuleRfiData} 
-                setData={setMmsModuleRfiData} 
+              <MmsModuleRfiTable
+                data={mmsModuleRfiData}
+                setData={setMmsModuleRfiData}
                 onSave={isEntryReadOnly ? undefined : handleSaveEntry}
                 onSubmit={isEntryReadOnly ? undefined : handleSubmitEntry}
                 yesterday={yesterday}
@@ -639,9 +689,9 @@ const SupervisorDashboard = () => {
       case 'issues':
         return (
           <>
-            <IssueFormModal 
-              open={isAddIssueModalOpen} 
-              onOpenChange={setIsAddIssueModalOpen} 
+            <IssueFormModal
+              open={isAddIssueModalOpen}
+              onOpenChange={setIsAddIssueModalOpen}
               onSubmit={handleSubmitIssue}
             />
             <IssuesTable issues={issues} onAddIssue={() => setIsAddIssueModalOpen(true)} />
@@ -730,7 +780,7 @@ const SupervisorDashboard = () => {
                   <span className="xs:hidden">Issue</span>
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="summary" className="mt-0 border-0 p-0 pt-4">
                 {renderActiveTable()}
               </TabsContent>

@@ -1,20 +1,25 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FileCheck, TrendingUp, Users, Award } from "lucide-react";
+import { FileCheck, TrendingUp, Users, Award, History, Archive } from "lucide-react";
 import { StatsCards } from "@/components/shared/StatsCards";
+import { Button } from "@/components/ui/button";
 
 interface PMAGDashboardSummaryProps {
   projectName: string;
   approvedEntries: any[];
   historyEntries: any[];
   archivedEntries: any[];
+  onShowHistory?: () => void;
+  onShowArchived?: () => void;
 }
 
 export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
   projectName,
   approvedEntries,
   historyEntries,
-  archivedEntries
+  archivedEntries,
+  onShowHistory,
+  onShowArchived
 }) => {
   const statsData = [
     { title: "Approved Sheets", value: approvedEntries.length, icon: FileCheck },
@@ -27,7 +32,7 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
     <div className="mb-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <motion.h1 
+          <motion.h1
             className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -35,7 +40,7 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
           >
             PMAG Dashboard
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-muted-foreground"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -44,12 +49,32 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
             {projectName ? `Project: ${projectName}` : "Project management dashboard"}
           </motion.p>
         </div>
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-4"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
+          {onShowHistory && (
+            <Button
+              variant="outline"
+              onClick={onShowHistory}
+              className="flex items-center"
+            >
+              <History className="w-4 h-4 mr-2" />
+              History
+            </Button>
+          )}
+          {onShowArchived && (
+            <Button
+              variant="outline"
+              onClick={onShowArchived}
+              className="flex items-center"
+            >
+              <Archive className="w-4 h-4 mr-2" />
+              Archived
+            </Button>
+          )}
           <div className="bg-primary/10 px-4 py-2 rounded-lg">
             <div className="flex items-center">
               <FileCheck className="w-5 h-5 text-primary mr-2" />

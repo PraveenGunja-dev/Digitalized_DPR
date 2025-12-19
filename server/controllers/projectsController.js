@@ -1,5 +1,6 @@
 // server/controllers/projectsController.js
 const pool = require('../db');
+const { restClient } = require('../services/oracleP6RestClient');
 
 // Import cache with error handling
 let cache;
@@ -37,87 +38,92 @@ try {
   };
 }
 
-// Get all projects for a user based on their role with caching
+// Get all projects for a user - NOW FETCHES FROM ORACLE P6 API
 const getUserProjects = async (req, res) => {
   try {
     console.log('getUserProjects called with user:', req.user);
     const userId = req.user.userId;
     const userRole = req.user.role;
-    
+
     // Create cache key based on user ID and role
-    const cacheKey = `user_projects_${userId}_${userRole}`;
+    const cacheKey = `user_projects_${userId}_${userRole}_p6`;
     console.log('Cache key:', cacheKey);
-    
+
     // Try to get data from cache first
     let cachedProjects = await cache.get(cacheKey);
     if (cachedProjects) {
-      console.log(`Returning projects for user ${userId} from cache`);
+      console.log(`Returning P6 projects for user ${userId} from cache`);
       return res.status(200).json(cachedProjects);
     }
-    
-    let result;
-    
-    if (userRole === 'supervisor' || userRole === 'Site PM') {
-      console.log('Fetching assigned projects for supervisor/Site PM');
-      // For supervisors and Site PM, get only assigned projects
-      result = await pool.query(`
-        SELECT 
-          p.id AS "ObjectId", 
-          p.name AS "Name", 
-          p.location AS "Location", 
-          p.status AS "Status", 
-          p.progress AS "PercentComplete", 
-          p.plan_start as "PlannedStartDate", 
-          p.plan_end as "PlannedFinishDate", 
-          p.actual_start as "ActualStartDate", 
-          p.actual_end as "ActualFinishDate"
-        FROM projects p
-        INNER JOIN project_assignments pa ON p.id = pa.project_id
-        WHERE pa.user_id = $1
-        ORDER BY p.name
-      `, [userId]);
-    } else if (userRole === 'PMAG') {
-      console.log('Fetching all projects for PMAG');
-      // For PMAG, get all projects
-      result = await pool.query(`
-        SELECT 
-          id AS "ObjectId", 
-          name AS "Name", 
-          location AS "Location", 
-          status AS "Status", 
-          progress AS "PercentComplete", 
-          plan_start as "PlannedStartDate", 
-          plan_end as "PlannedFinishDate", 
-          actual_start as "ActualStartDate", 
-          actual_end as "ActualFinishDate"
-        FROM projects
-        ORDER BY name
-      `);
-    } else if (userRole === 'Super Admin') {
-      console.log('Fetching all projects for Super Admin');
-      // For Super Admin, get all projects
-      result = await pool.query(`
-        SELECT 
-          id AS "ObjectId", 
-          name AS "Name", 
-          location AS "Location", 
-          status AS "Status", 
-          progress AS "PercentComplete", 
-          plan_start as "PlannedStartDate", 
-          plan_end as "PlannedFinishDate", 
-          actual_start as "ActualStartDate", 
-          actual_end as "ActualFinishDate"
-        FROM projects
-        ORDER BY name
-      `);
+
+    // Try to fetch from Oracle P6 REST API first (restClient has fallback token)
+    try {
+      console.log('Fetching projects from Oracle P6 API...');
+
+      const p6Projects = await restClient.readProjects([
+        'ObjectId', 'Id', 'Name', 'Status', 'StartDate', 'FinishDate',
+        'Description', 'PlannedStartDate', 'ParentEPSName'
+      ]);
+
+      // Map P6 data to expected format
+      const projects = p6Projects.map(p => ({
+        ObjectId: parseInt(p.ObjectId) || null,
+        Name: p.Name || 'Unnamed Project',
+        Location: p.ParentEPSName || null,
+        Status: p.Status || 'Active',
+        PercentComplete: 0,
+        PlannedStartDate: p.StartDate || p.PlannedStartDate || null,
+        PlannedFinishDate: p.FinishDate || null,
+        Description: p.Description || null,
+        P6Id: p.Id || null
+      }));
+
+      console.log(`Retrieved ${projects.length} projects from P6`);
+
+      // Cache the result for 5 minutes
+      await cache.set(cacheKey, projects, 300);
+
+      return res.status(200).json(projects);
+
+    } catch (p6Error) {
+      console.error('P6 API Error, falling back to local database:', p6Error.message);
+
+      // Fallback to local database if P6 API fails
+      let result;
+
+      if (userRole === 'PMAG' || userRole === 'Super Admin') {
+        result = await pool.query(`
+          SELECT 
+            id AS "ObjectId", 
+            name AS "Name", 
+            location AS "Location", 
+            status AS "Status", 
+            progress AS "PercentComplete", 
+            plan_start as "PlannedStartDate", 
+            plan_end as "PlannedFinishDate"
+          FROM projects
+          ORDER BY name
+        `);
+      } else {
+        result = await pool.query(`
+          SELECT 
+            p.id AS "ObjectId", 
+            p.name AS "Name", 
+            p.location AS "Location", 
+            p.status AS "Status", 
+            p.progress AS "PercentComplete", 
+            p.plan_start as "PlannedStartDate", 
+            p.plan_end as "PlannedFinishDate"
+          FROM projects p
+          INNER JOIN project_assignments pa ON p.id = pa.project_id
+          WHERE pa.user_id = $1
+          ORDER BY p.name
+        `, [userId]);
+      }
+
+      await cache.set(cacheKey, result.rows, 300);
+      return res.status(200).json(result.rows);
     }
-    
-    console.log('Query result rows:', result.rows.length);
-    
-    // Cache the result for 5 minutes
-    await cache.set(cacheKey, result.rows, 300);
-    
-    res.status(200).json(result.rows);
   } catch (error) {
     console.error('Error fetching user projects:', error);
     console.error('Error stack:', error.stack);
@@ -131,19 +137,19 @@ const getProjectById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
     const userRole = req.user.role;
-    
+
     // Create cache key for specific project
     const cacheKey = `project_${id}_${userId}_${userRole}`;
-    
+
     // Try to get data from cache first
     let cachedProject = await cache.get(cacheKey);
     if (cachedProject) {
       console.log(`Returning project ${id} from cache`);
       return res.status(200).json(cachedProject);
     }
-    
+
     let result;
-    
+
     if (userRole === 'supervisor' || userRole === 'Site PM') {
       // For supervisors and Site PM, check if they're assigned to this project
       result = await pool.query(`
@@ -194,14 +200,14 @@ const getProjectById = async (req, res) => {
         WHERE id = $1
       `, [id]);
     }
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found or not assigned to you' });
     }
-    
+
     // Cache the result for 5 minutes
     await cache.set(cacheKey, result.rows[0], 300);
-    
+
     res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -216,9 +222,9 @@ const createProject = async (req, res) => {
     if (req.user.role !== 'PMAG') {
       return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
     }
-    
+
     const { name, location, status, progress, planStart, planEnd, actualStart, actualEnd } = req.body;
-    
+
     const result = await pool.query(`
       INSERT INTO projects 
       (name, location, status, progress, plan_start, plan_end, actual_start, actual_end)
@@ -234,10 +240,10 @@ const createProject = async (req, res) => {
         actual_start as "ActualStartDate", 
         actual_end as "ActualFinishDate"
     `, [name, location, status, progress, planStart, planEnd, actualStart, actualEnd]);
-    
+
     // Invalidate cache for all users since we've added a new project
     await cache.flushAll();
-    
+
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Error creating project:', error);
@@ -252,10 +258,10 @@ const updateProject = async (req, res) => {
     if (req.user.role !== 'PMAG') {
       return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
     }
-    
+
     const { id } = req.params;
     const { name, location, status, progress, planStart, planEnd, actualStart, actualEnd } = req.body;
-    
+
     const result = await pool.query(`
       UPDATE projects 
       SET 
@@ -279,14 +285,14 @@ const updateProject = async (req, res) => {
         actual_start as "ActualStartDate", 
         actual_end as "ActualFinishDate"
     `, [name, location, status, progress, planStart, planEnd, actualStart, actualEnd, id]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
+
     // Invalidate cache for all users since we've updated a project
     await cache.flushAll();
-    
+
     res.status(200).json(result.rows[0]);
   } catch (error) {
     console.error('Error updating project:', error);
@@ -301,25 +307,25 @@ const deleteProject = async (req, res) => {
     if (req.user.role !== 'PMAG') {
       return res.status(403).json({ message: 'Access denied. PMAG privileges required.' });
     }
-    
+
     const { id } = req.params;
-    
+
     // First delete any project assignments
     await pool.query('DELETE FROM project_assignments WHERE project_id = $1', [id]);
-    
+
     // Then delete the project
     const result = await pool.query(
       'DELETE FROM projects WHERE id = $1 RETURNING id AS "ObjectId"',
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
+
     // Invalidate cache for all users since we've deleted a project
     await cache.flushAll();
-    
+
     res.status(200).json({ message: 'Project deleted successfully', project: result.rows[0] });
   } catch (error) {
     console.error('Error deleting project:', error);
@@ -333,26 +339,26 @@ const getAllProjectsForAssignment = async (req, res) => {
   try {
     const userId = req.user.userId;
     const userRole = req.user.role;
-    
+
     // Only PMAG and Site PM can get projects for assignment
     if (userRole !== 'PMAG' && userRole !== 'Site PM') {
       return res.status(403).json({ message: 'Access denied. PMAG or Site PM privileges required.' });
     }
-    
+
     // Create cache key (user-specific for Site PM, global for PMAG)
-    const cacheKey = userRole === 'PMAG' 
-      ? 'all_projects_for_assignment_pmag' 
+    const cacheKey = userRole === 'PMAG'
+      ? 'all_projects_for_assignment_pmag'
       : `projects_for_assignment_sitepm_${userId}`;
-    
+
     // Try to get data from cache first
     let cachedProjects = await cache.get(cacheKey);
     if (cachedProjects) {
       console.log(`Returning projects for assignment from cache for ${userRole}`);
       return res.status(200).json(cachedProjects);
     }
-    
+
     let result;
-    
+
     if (userRole === 'PMAG') {
       // PMAG sees all projects
       result = await pool.query(`
@@ -388,10 +394,10 @@ const getAllProjectsForAssignment = async (req, res) => {
         ORDER BY p.name
       `, [userId]);
     }
-    
+
     // Cache the result for 5 minutes
     await cache.set(cacheKey, result.rows, 300);
-    
+
     res.status(200).json(result.rows);
   } catch (error) {
     console.error('Error fetching projects for assignment:', error);
