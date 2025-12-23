@@ -1,7 +1,7 @@
 // src/modules/auth/services/dprService.ts
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
 
 // Helper to get auth token
 const getAuthHeader = () => {
@@ -14,7 +14,7 @@ export const getTodayAndYesterday = () => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  
+
   return {
     today: today.toISOString().split('T')[0],
     yesterday: yesterday.toISOString().split('T')[0]
@@ -31,7 +31,7 @@ export const getDraftSheet = async (projectId: number, sheetType: string) => {
 };
 
 export const saveDraftSheet = async (sheetId: number, sheetData: any) => {
-  const response = await axios.post(`${API_URL}/api/dpr/save-draft`, 
+  const response = await axios.post(`${API_URL}/api/dpr/save-draft`,
     { sheetId, sheetData },
     { headers: getAuthHeader() }
   );
@@ -39,7 +39,7 @@ export const saveDraftSheet = async (sheetId: number, sheetData: any) => {
 };
 
 export const submitSheet = async (sheetId: number) => {
-  const response = await axios.post(`${API_URL}/api/dpr/submit`, 
+  const response = await axios.post(`${API_URL}/api/dpr/submit`,
     { sheetId },
     { headers: getAuthHeader() }
   );
@@ -57,7 +57,7 @@ export const getSheetsForPMReview = async (projectId?: number) => {
 };
 
 export const updateSheetByPM = async (sheetId: number, sheetData: any) => {
-  const response = await axios.put(`${API_URL}/api/dpr/pm/update`, 
+  const response = await axios.put(`${API_URL}/api/dpr/pm/update`,
     { sheetId, sheetData },
     { headers: getAuthHeader() }
   );
@@ -65,7 +65,7 @@ export const updateSheetByPM = async (sheetId: number, sheetData: any) => {
 };
 
 export const approveSheetByPM = async (sheetId: number, comment?: string) => {
-  const response = await axios.post(`${API_URL}/api/dpr/pm/approve`, 
+  const response = await axios.post(`${API_URL}/api/dpr/pm/approve`,
     { sheetId, comment },
     { headers: getAuthHeader() }
   );
@@ -73,7 +73,7 @@ export const approveSheetByPM = async (sheetId: number, comment?: string) => {
 };
 
 export const rejectSheetByPM = async (sheetId: number, comment: string) => {
-  const response = await axios.post(`${API_URL}/api/dpr/pm/reject`, 
+  const response = await axios.post(`${API_URL}/api/dpr/pm/reject`,
     { sheetId, comment },
     { headers: getAuthHeader() }
   );
@@ -91,7 +91,7 @@ export const getSheetsForPMAGReview = async (projectId?: number) => {
 };
 
 export const finalApprovalByPMAG = async (sheetId: number, comment?: string) => {
-  const response = await axios.post(`${API_URL}/api/dpr/pmag/approve`, 
+  const response = await axios.post(`${API_URL}/api/dpr/pmag/approve`,
     { sheetId, comment },
     { headers: getAuthHeader() }
   );
@@ -99,7 +99,7 @@ export const finalApprovalByPMAG = async (sheetId: number, comment?: string) => 
 };
 
 export const rejectByPMAG = async (sheetId: number, comment: string) => {
-  const response = await axios.post(`${API_URL}/api/dpr/pmag/reject`, 
+  const response = await axios.post(`${API_URL}/api/dpr/pmag/reject`,
     { sheetId, comment },
     { headers: getAuthHeader() }
   );

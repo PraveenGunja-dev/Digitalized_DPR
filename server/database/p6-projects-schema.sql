@@ -115,6 +115,16 @@ CREATE TABLE IF NOT EXISTS p6_activities (
     activity_type VARCHAR(50),                   -- Task Dependent, etc.
     critical BOOLEAN DEFAULT false,              -- Critical path flag
     
+    -- UDF Values (User Defined Fields from P6)
+    total_quantity DECIMAL(15,4),                -- Total Quantity UDF
+    uom VARCHAR(50),                             -- Unit of Measurement UDF
+    block_capacity DECIMAL(15,4),                -- Block Capacity UDF
+    phase VARCHAR(255),                          -- Phase UDF
+    spv_no VARCHAR(100),                         -- SPV Number UDF
+    scope TEXT,                                  -- Scope UDF
+    hold VARCHAR(100),                           -- Hold status UDF
+    front VARCHAR(255),                          -- Front UDF
+    
     -- Sync tracking
     last_sync_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     

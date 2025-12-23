@@ -8,7 +8,7 @@ const getTodayAndYesterday = () => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  
+
   return {
     today: today.toISOString().split('T')[0],
     yesterday: yesterday.toISOString().split('T')[0]
@@ -94,9 +94,9 @@ const getDraftEntry = async (req, res) => {
 
     // Create new draft with appropriate structure based on sheet type
     let emptyData = { rows: [] };
-    
+
     // Initialize with appropriate column structure based on sheet type
-    switch(sheetType) {
+    switch (sheetType) {
       case 'dp_qty':
         emptyData = {
           staticHeader: {
@@ -232,7 +232,7 @@ const getDraftEntry = async (req, res) => {
         // Default structure
         emptyData = { rows: [{}] };
     }
-    
+
     result = await pool.query(
       `INSERT INTO dpr_supervisor_entries 
        (supervisor_id, project_id, sheet_type, entry_date, previous_date, data_json, status)
@@ -243,8 +243,9 @@ const getDraftEntry = async (req, res) => {
 
     res.status(201).json(result.rows[0]);
   } catch (error) {
-    console.error('Error getting draft entry:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error getting draft entry:', error.message);
+    console.error('Error details:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 };
 
@@ -301,13 +302,13 @@ const submitEntry = async (req, res) => {
       return res.status(404).json({ message: 'Entry not found, access denied, or invalid status for submission' });
     }
 
-    // Update status to submitted_to_pm
+    // Update status to submitted_to_pm and record who submitted
     const result = await pool.query(
       `UPDATE dpr_supervisor_entries 
-       SET status = 'submitted_to_pm', submitted_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+       SET status = 'submitted_to_pm', submitted_at = CURRENT_TIMESTAMP, submitted_by = $2, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1
        RETURNING *`,
-      [entryId]
+      [entryId, userId]
     );
 
     console.log(`Entry ${entryId} submitted successfully. Status: ${result.rows[0].status}`);
@@ -330,7 +331,7 @@ const getEntriesForPMReview = async (req, res) => {
 
     // Create cache key based on user role and project ID
     const cacheKey = `pm_entries_${userRole}_${projectId || 'all'}`;
-    
+
     // Try to get data from cache first
     let cachedEntries = await cache.get(cacheKey);
     if (cachedEntries) {
@@ -341,7 +342,7 @@ const getEntriesForPMReview = async (req, res) => {
     // Include submitted, approved, and rejected entries for PM to see complete history
     // If projectId is provided and valid, filter by it; otherwise show all
     const isValidProjectId = projectId && projectId !== 'null' && projectId !== 'undefined' && !isNaN(parseInt(projectId));
-    
+
     const query = isValidProjectId
       ? `SELECT dse.*, u.name as supervisor_name, u.email as supervisor_email
          FROM dpr_supervisor_entries dse
@@ -362,10 +363,10 @@ const getEntriesForPMReview = async (req, res) => {
     if (result.rows.length > 0) {
       console.log('Sample entry:', result.rows[0]);
     }
-    
+
     // Cache the result for 2 minutes
     await cache.set(cacheKey, result.rows, 120);
-    
+
     res.status(200).json(result.rows);
   } catch (error) {
     console.error('Error getting entries for PM review:', error);
@@ -384,19 +385,19 @@ const approveEntryByPM = async (req, res) => {
       return res.status(403).json({ message: 'Only PM can approve entries' });
     }
 
-    // Update status to approved_by_pm
+    // Update status to approved_by_pm and record who approved
     const result = await pool.query(
       `UPDATE dpr_supervisor_entries 
-       SET status = 'approved_by_pm', updated_at = CURRENT_TIMESTAMP
+       SET status = 'approved_by_pm', pm_reviewed_at = CURRENT_TIMESTAMP, pm_reviewed_by = $2, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND status = 'submitted_to_pm'
        RETURNING *`,
-      [entryId]
+      [entryId, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Entry not found or invalid status' });
     }
-    
+
     // Invalidate cache for PM entries since we've made a change
     await cache.flushAll();
 
@@ -444,7 +445,7 @@ const updateEntryByPM = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Entry not found' });
     }
-    
+
     // Invalidate cache for PM entries since we've made a change
     await cache.flushAll();
 
@@ -466,19 +467,50 @@ const rejectEntryByPM = async (req, res) => {
       return res.status(403).json({ message: 'Only PM can reject entries' });
     }
 
-    // Update status to rejected_by_pm and store rejection reason
+    // Validate that at least one cell rejection comment exists
+    // First check if cell_comments table exists
+    let tableExists = true;
+    try {
+      const tableCheck = await pool.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_name = 'cell_comments'
+        ) as exists
+      `);
+      tableExists = tableCheck.rows[0].exists;
+    } catch (err) {
+      console.log('Could not check for cell_comments table:', err.message);
+      tableExists = false;
+    }
+
+    if (tableExists) {
+      const commentsCheck = await pool.query(
+        `SELECT COUNT(*) as count FROM cell_comments 
+         WHERE sheet_id = $1 AND comment_type = 'REJECTION' AND is_deleted = FALSE`,
+        [entryId]
+      );
+
+      if (parseInt(commentsCheck.rows[0].count) === 0) {
+        return res.status(400).json({
+          message: 'Please add rejection comments on specific cells before rejecting the sheet',
+          requiresComments: true
+        });
+      }
+    }
+
+    // Update status to rejected_by_pm and store rejection reason with audit trail
     const result = await pool.query(
       `UPDATE dpr_supervisor_entries 
-       SET status = 'rejected_by_pm', rejection_reason = $2, updated_at = CURRENT_TIMESTAMP
+       SET status = 'rejected_by_pm', rejection_reason = $2, pm_reviewed_at = CURRENT_TIMESTAMP, pm_reviewed_by = $3, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND status = 'submitted_to_pm'
        RETURNING *`,
-      [entryId, rejectionReason || null]
+      [entryId, rejectionReason || null, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Entry not found or invalid status' });
     }
-    
+
     // Invalidate cache for PM entries since we've made a change
     await cache.flushAll();
 
@@ -543,7 +575,7 @@ const getEntriesForPMAGReview = async (req, res) => {
 
     // Create cache key for PMAG entries
     const cacheKey = `pmag_entries_${userRole}_${projectId || 'all'}`;
-    
+
     // Try to get data from cache first
     let cachedEntries = await cache.get(cacheKey);
     if (cachedEntries) {
@@ -566,7 +598,7 @@ const getEntriesForPMAGReview = async (req, res) => {
     const result = projectId
       ? await pool.query(query, [projectId])
       : await pool.query(query);
-      
+
     // Cache the result for 2 minutes
     await cache.set(cacheKey, result.rows, 120);
 
@@ -676,19 +708,19 @@ const finalApproveByPMAG = async (req, res) => {
       return res.status(403).json({ message: 'Only PMAG can give final approval' });
     }
 
-    // Update status to final approved
+    // Update status to final approved (pushed) and record who pushed it
     const result = await pool.query(
       `UPDATE dpr_supervisor_entries 
-       SET status = 'final_approved', updated_at = CURRENT_TIMESTAMP
+       SET status = 'final_approved', pushed_at = CURRENT_TIMESTAMP, pushed_by = $2, updated_at = CURRENT_TIMESTAMP
        WHERE id = $1 AND status = 'approved_by_pm'
        RETURNING *`,
-      [entryId]
+      [entryId, userId]
     );
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Entry not found or invalid status' });
     }
-    
+
     // Invalidate cache for PMAG entries since we've made a change
     await cache.flushAll();
 
@@ -722,7 +754,7 @@ const rejectEntryByPMAG = async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Entry not found or invalid status' });
     }
-    
+
     // Invalidate cache for PMAG entries since we've made a change
     await cache.flushAll();
 

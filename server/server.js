@@ -59,6 +59,84 @@ const testDatabaseConnection = () => {
 // Test database connection
 testDatabaseConnection();
 
+// Run database migrations on startup
+const runMigrations = async () => {
+  console.log('Running database migrations...');
+  try {
+    // Drop the foreign key constraint on project_id to support P6 projects
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      DROP CONSTRAINT IF EXISTS dpr_supervisor_entries_project_id_fkey
+    `);
+
+    // Add audit tracking fields to dpr_supervisor_entries if they don't exist
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      ADD COLUMN IF NOT EXISTS submitted_by INTEGER REFERENCES users(user_id)
+    `);
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      ADD COLUMN IF NOT EXISTS pm_reviewed_at TIMESTAMP
+    `);
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      ADD COLUMN IF NOT EXISTS pm_reviewed_by INTEGER REFERENCES users(user_id)
+    `);
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      ADD COLUMN IF NOT EXISTS rejection_reason TEXT
+    `);
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      ADD COLUMN IF NOT EXISTS pushed_at TIMESTAMP
+    `);
+    await pool.query(`
+      ALTER TABLE dpr_supervisor_entries 
+      ADD COLUMN IF NOT EXISTS pushed_by INTEGER REFERENCES users(user_id)
+    `);
+
+    // Create cell_comments table for cell-level commenting
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cell_comments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        sheet_id INTEGER NOT NULL,
+        row_index INTEGER NOT NULL,
+        column_key VARCHAR(100) NOT NULL,
+        parent_comment_id UUID REFERENCES cell_comments(id) ON DELETE CASCADE,
+        comment_text TEXT NOT NULL,
+        comment_type VARCHAR(20) NOT NULL CHECK (comment_type IN ('REJECTION', 'GENERAL')),
+        created_by INTEGER NOT NULL REFERENCES users(user_id),
+        role VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_deleted BOOLEAN DEFAULT FALSE
+      )
+    `);
+
+    // Create indexes for cell_comments
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cell_comments_cell ON cell_comments(sheet_id, row_index, column_key)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cell_comments_sheet ON cell_comments(sheet_id)`);
+    await pool.query(`CREATE INDEX IF NOT EXISTS idx_cell_comments_parent ON cell_comments(parent_comment_id)`);
+
+    // Add P6 UDF columns to p6_activities table
+    console.log('Adding P6 UDF columns to p6_activities...');
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS total_quantity DECIMAL(15,4)`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS uom VARCHAR(50)`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS block_capacity DECIMAL(15,4)`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS phase VARCHAR(255)`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS spv_no VARCHAR(100)`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS scope TEXT`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS hold VARCHAR(100)`);
+    await pool.query(`ALTER TABLE p6_activities ADD COLUMN IF NOT EXISTS front VARCHAR(255)`);
+
+    console.log('✓ Migrations completed successfully');
+  } catch (error) {
+    console.error('Migration error (non-fatal):', error.message);
+  }
+};
+
+// Run migrations after a short delay to ensure DB connection is ready
+setTimeout(runMigrations, 2000);
+
 // Import Redis cache with error handling
 let cache;
 try {
@@ -79,16 +157,16 @@ try {
 // Supports both Bearer token (JWT) and session-based authentication
 const authenticateToken = (req, res, next) => {
   console.log('Authentication middleware called for:', req.path);
-  
+
   // Check for Authorization header with Bearer token (JWT)
   const authHeader = req.headers['authorization'];
   let token = authHeader && authHeader.split(' ')[1];
-  
+
   // If no Bearer token, check for custom token header (Oracle P6 style)
   if (!token) {
     token = req.headers['x-adani-token'] || req.headers['x-p6-token'];
   }
-  
+
   // If still no token, check for token in query parameters (less secure but Oracle P6 compatible)
   if (!token) {
     token = req.query.token;
@@ -96,7 +174,7 @@ const authenticateToken = (req, res, next) => {
 
   if (!token) {
     console.log('No token found in request');
-    return res.status(401).json({ 
+    return res.status(401).json({
       message: 'Access token required',
       // Oracle P6 compatible error format
       error: {
@@ -110,7 +188,7 @@ const authenticateToken = (req, res, next) => {
     if (err) {
       console.log('Token verification failed:', err);
       if (err.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
+        return res.status(401).json({
           message: 'Token expired',
           error: {
             code: 'AUTH_TOKEN_EXPIRED',
@@ -118,7 +196,7 @@ const authenticateToken = (req, res, next) => {
           }
         });
       }
-      return res.status(403).json({ 
+      return res.status(403).json({
         message: 'Invalid token',
         error: {
           code: 'AUTH_TOKEN_INVALID',
@@ -249,6 +327,13 @@ const chartsRouteModule = require('./routes/charts');
 chartsRouteModule.setPool(pool, authenticateToken);
 app.use('/api/charts', chartsRouteModule.router || chartsRouteModule);
 
+// Register cell comments route
+console.log('Loading cell comments route...');
+const cellCommentsRouteModule = require('./routes/cellComments');
+cellCommentsRouteModule.setPool(pool, authenticateToken);
+app.use('/api/cell-comments', cellCommentsRouteModule.router || cellCommentsRouteModule);
+console.log('Cell comments route registered.');
+
 console.log('Routes registered.');
 
 // Refresh token endpoint
@@ -262,10 +347,10 @@ app.post('/refresh-token', async (req, res) => {
   try {
     // Verify refresh token
     const decoded = jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET || 'adani_flow_refresh_secret_key');
-    
+
     // In production, check if refresh token exists in database/Redis
     // For now, we'll assume it's valid
-    
+
     // Generate new tokens
     const accessToken = jwt.sign(
       { userId: decoded.userId, email: decoded.email, role: decoded.role },
@@ -293,8 +378,8 @@ app.post('/logout', (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    message: 'Server is running', 
+  res.status(200).json({
+    message: 'Server is running',
     timestamp: new Date().toISOString(),
     uptime: process.uptime()
   });
@@ -302,8 +387,8 @@ app.get('/health', (req, res) => {
 
 // Root endpoint for basic server info
 app.get('/', (req, res) => {
-  res.status(200).json({ 
-    message: 'Adani Flow Backend API', 
+  res.status(200).json({
+    message: 'Adani Flow Backend API',
     version: '1.0.0',
     timestamp: new Date().toISOString()
   });
@@ -312,7 +397,7 @@ app.get('/', (req, res) => {
 // Global error handler
 app.use((err, req, res, next) => {
   console.error('Unhandled error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     message: 'Internal server error',
     ...(process.env.NODE_ENV !== 'production' && { error: err.message })
   });
@@ -320,7 +405,7 @@ app.use((err, req, res, next) => {
 
 // 404 handler for undefined routes
 app.use('*', (req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     message: 'Route not found',
     path: req.originalUrl
   });
@@ -328,7 +413,7 @@ app.use('*', (req, res) => {
 
 // Schedule the automatic approval job to run daily at midnight
 const { autoApprovePendingSheets } = require('./jobs/automaticApprovalJob');
-const job = schedule.scheduleJob('0 0 * * *', function(){
+const job = schedule.scheduleJob('0 0 * * *', function () {
   console.log('Scheduled automatic approval job triggered');
   autoApprovePendingSheets();
 });

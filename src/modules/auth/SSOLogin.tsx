@@ -13,7 +13,7 @@ const SSOLogin = () => {
   const [ssoToken, setSsoToken] = useState('');
 
   // Get API base URL from environment variables
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
 
   const handleInitiateSSO = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +22,7 @@ const SSOLogin = () => {
     try {
       const response = await axios.post(`${API_BASE_URL}/api/sso/initiate`, { email });
       toast.success(response.data.message);
-      
+
       // If we received an SSO token, we can use it directly
       if (response.data.ssoToken) {
         setSsoToken(response.data.ssoToken);
@@ -42,12 +42,12 @@ const SSOLogin = () => {
 
     try {
       const response = await axios.post(`${API_BASE_URL}/api/sso/callback`, { ssoToken });
-      
+
       // Store tokens in localStorage
       localStorage.setItem('token', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
       localStorage.setItem('user', JSON.stringify(response.data.user));
-      
+
       // Navigate to the appropriate dashboard based on role
       switch (response.data.user.Role) {
         case 'supervisor':
@@ -62,7 +62,7 @@ const SSOLogin = () => {
         default:
           navigate('/projects');
       }
-      
+
       toast.success('SSO login successful!');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'SSO login failed');
@@ -79,7 +79,7 @@ const SSOLogin = () => {
             </h2>
             <p className="text-muted-foreground">Login using Single Sign-On</p>
           </div>
-          
+
           <form className="space-y-6" onSubmit={handleInitiateSSO}>
             <div>
               <Label htmlFor="email" className="text-foreground">Email Address</Label>
@@ -92,7 +92,7 @@ const SSOLogin = () => {
                 required
               />
             </div>
-            
+
             <Button
               type="submit"
               disabled={loading}
@@ -101,7 +101,7 @@ const SSOLogin = () => {
               {loading ? 'Sending SSO Link...' : 'Send SSO Login Link'}
             </Button>
           </form>
-          
+
           {ssoToken && (
             <div className="mt-6 p-4 bg-blue-900/30 rounded-lg">
               <p className="text-sm text-blue-300 mb-2">SSO Token Received</p>
@@ -114,7 +114,7 @@ const SSOLogin = () => {
               </Button>
             </div>
           )}
-          
+
           <div className="mt-6 text-center">
             <button
               onClick={() => navigate('/login')}

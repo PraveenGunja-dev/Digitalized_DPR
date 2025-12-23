@@ -1,13 +1,13 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  FileText, 
-  Check, 
-  X, 
-  Edit, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  FileText,
+  Check,
+  X,
+  Edit,
+  Clock,
+  AlertCircle,
+  CheckCircle,
   FileCheck,
   Calendar,
   User,
@@ -20,12 +20,13 @@ import {
   Package,
   RefreshCw,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { 
+import {
   DPQtyTable,
   DPVendorBlockTable,
   ManpowerDetailsTable,
@@ -42,6 +43,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CommentPopover } from "@/components/cellComments";
+import { useCellComments } from "@/hooks/useCellComments";
+import { useAuth } from "@/modules/auth/contexts/AuthContext";
+import { toast } from "sonner";
+import { hasRejectionComments } from "@/services/cellCommentsService";
 
 interface PMSheetEntriesProps {
   submittedEntries: any[];
@@ -84,6 +90,18 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
   editData,
   setEditData
 }) => {
+  // Get current user info for comments
+  const { user } = useAuth();
+
+  // Comment popover state
+  const [commentPopover, setCommentPopover] = useState<{
+    isOpen: boolean;
+    sheetId: number;
+    rowIndex: number;
+    columnKey: string;
+    columnLabel: string;
+  } | null>(null);
+
   // Sheet types with counts
   const sheetTypes = [
     { value: 'dp_qty', label: 'DP Qty', icon: FileSpreadsheet },
@@ -94,10 +112,20 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
     { value: 'manpower_details', label: 'Manpower Details', icon: User },
   ];
 
+  // Open comment popover for a cell
+  const openCommentPopover = (sheetId: number, rowIndex: number, columnKey: string, columnLabel: string) => {
+    setCommentPopover({ isOpen: true, sheetId, rowIndex, columnKey, columnLabel });
+  };
+
+  // Close comment popover
+  const closeCommentPopover = () => {
+    setCommentPopover(null);
+  };
+
   // Filter entries by sheet type - ONLY SHOW SUBMITTED ENTRIES
   const getEntriesBySheetType = (sheetType: string) => {
-    return submittedEntries.filter(entry => 
-      entry.sheet_type === sheetType && 
+    return submittedEntries.filter(entry =>
+      entry.sheet_type === sheetType &&
       entry.status === 'submitted_to_pm'
     );
   };
@@ -123,10 +151,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
   // Render sheet entries for a specific sheet type
   const renderSheetEntries = (sheetType: string) => {
     const entries = getEntriesBySheetType(sheetType);
-    
+
     if (entries.length === 0) {
       return (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
@@ -143,23 +171,23 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
         {entries.map((entry, entryIndex) => {
           const entryData = typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json;
           const { today, yesterday } = getTodayAndYesterday();
-          
+
           // Determine if entry is locked (submitted or approved)
           const isLocked = entry.status !== 'submitted_to_pm';
-          
+
           // Check if entry is expanded
           const isExpanded = expandedEntries[entry.id] || false;
-          
+
           return (
-            <motion.div 
-              key={entry.id} 
+            <motion.div
+              key={entry.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: entryIndex * 0.1 }}
               className="border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800"
             >
               {/* Collapsible Entry Header */}
-              <motion.div 
+              <motion.div
                 className="flex flex-col md:flex-row md:items-center justify-between p-3 cursor-pointer"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -171,17 +199,17 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center space-x-2">
                         <span className="font-semibold">Entry #{entry.id}</span>
-                        <Badge 
+                        <Badge
                           variant={
-                            entry.status === "submitted_to_pm" ? "secondary" : 
-                            entry.status === "approved_by_pm" ? "default" : 
-                            "destructive"
+                            entry.status === "submitted_to_pm" ? "secondary" :
+                              entry.status === "approved_by_pm" ? "default" :
+                                "destructive"
                           }
                           className="px-2 py-0.5 text-xs font-medium"
                         >
-                          {entry.status === "submitted_to_pm" ? "Pending" : 
-                           entry.status === "approved_by_pm" ? "Approved" : 
-                           "Rejected"}
+                          {entry.status === "submitted_to_pm" ? "Pending" :
+                            entry.status === "approved_by_pm" ? "Approved" :
+                              "Rejected"}
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground mt-1 md:mt-0">
@@ -203,8 +231,8 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     {entry.status === "submitted_to_pm" && (
                       <>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -215,8 +243,21 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                           <Edit className="w-4 h-4" />
                           <span>Edit</span>
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // Open comment popover for first row, ask user to select a cell
+                            openCommentPopover(entry.id, 0, 'general', 'Add Rejection Comment');
+                          }}
+                          className="transition-colors duration-200 px-3 py-1 h-8 flex items-center gap-1 border-orange-300 text-orange-600 hover:bg-orange-50"
+                        >
+                          <MessageSquare className="w-4 h-4" />
+                          <span>Comment</span>
+                        </Button>
+                        <Button
+                          size="sm"
                           variant="default"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -227,12 +268,24 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                           <Check className="w-4 h-4" />
                           <span>Approve</span>
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="destructive"
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            onReject(entry.id, sheetType);
+                            // Check if there are rejection comments before allowing reject
+                            try {
+                              const result = await hasRejectionComments(entry.id);
+                              if (!result.hasRejectionComments) {
+                                toast.error('Please add rejection comments on cells before rejecting this sheet');
+                                openCommentPopover(entry.id, 0, 'general', 'Add Rejection Comment');
+                                return;
+                              }
+                              onReject(entry.id, sheetType);
+                            } catch (error) {
+                              // If API fails, proceed with reject (backend will validate)
+                              onReject(entry.id, sheetType);
+                            }
                           }}
                           className="transition-colors duration-200 px-3 py-1 h-8 flex items-center gap-1"
                         >
@@ -259,7 +312,7 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
               {/* Expanded Content */}
               <AnimatePresence>
                 {isExpanded && (
-                  <motion.div 
+                  <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -284,8 +337,8 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                           <div className={isFullscreen ? 'overflow-auto max-h-[calc(100vh-120px)]' : ''}>
                             {/* Render the appropriate table component based on sheet type */}
                             {sheetType === 'dp_qty' && (
-                              <DPQtyTable 
-                                data={entryData.rows} 
+                              <DPQtyTable
+                                data={entryData.rows}
                                 setData={(data) => onUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => onSaveEntry(entry.id, entryData)}
                                 onSubmit={() => onSaveEntry(entry.id, entryData)}
@@ -296,10 +349,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'dp_block' && (
-                              <DPBlockTable 
-                                data={entryData.rows} 
+                              <DPBlockTable
+                                data={entryData.rows}
                                 setData={(data) => onUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => onSaveEntry(entry.id, entryData)}
                                 onSubmit={() => onSaveEntry(entry.id, entryData)}
@@ -310,10 +363,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'dp_vendor_idt' && (
-                              <DPVendorIdtTable 
-                                data={entryData.rows} 
+                              <DPVendorIdtTable
+                                data={entryData.rows}
                                 setData={(data) => onUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => onSaveEntry(entry.id, entryData)}
                                 onSubmit={() => onSaveEntry(entry.id, entryData)}
@@ -324,10 +377,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'dp_vendor_block' && (
-                              <DPVendorBlockTable 
-                                data={entryData.rows} 
+                              <DPVendorBlockTable
+                                data={entryData.rows}
                                 setData={(data) => onUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => onSaveEntry(entry.id, entryData)}
                                 onSubmit={() => onSaveEntry(entry.id, entryData)}
@@ -338,10 +391,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'manpower_details' && (
-                              <ManpowerDetailsTable 
-                                data={entryData.rows} 
+                              <ManpowerDetailsTable
+                                data={entryData.rows}
                                 setData={(data) => onUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 totalManpower={entryData.totalManpower || 0}
                                 setTotalManpower={(total) => onUpdateEntry(entry.id, { ...entryData, totalManpower: total })}
@@ -354,10 +407,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'mms_module_rfi' && (
-                              <MmsModuleRfiTable 
-                                data={entryData.rows} 
+                              <MmsModuleRfiTable
+                                data={entryData.rows}
                                 setData={(data) => onUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => onSaveEntry(entry.id, entryData)}
                                 onSubmit={() => onSaveEntry(entry.id, entryData)}
@@ -368,7 +421,7 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {/* Fallback for unknown sheet types */}
                             {!['dp_qty', 'dp_block', 'dp_vendor_idt', 'dp_vendor_block', 'manpower_details', 'mms_module_rfi'].includes(sheetType) && (
                               <div className="overflow-x-auto">
@@ -384,8 +437,8 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                                   </thead>
                                   <tbody>
                                     {entryData.rows.map((row: any, rowIndex: number) => (
-                                      <motion.tr 
-                                        key={rowIndex} 
+                                      <motion.tr
+                                        key={rowIndex}
                                         className="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
                                         initial={{ opacity: 0, x: -5 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -404,10 +457,10 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                               </div>
                             )}
                           </div>
-                          
+
                           {entryData.rows.length > 50 && (
                             <div className="mt-2 text-right">
-                              <Button 
+                              <Button
                                 onClick={toggleFullscreen}
                                 variant="outline"
                                 size="sm"
@@ -459,8 +512,8 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.05 }}
             >
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 onClick={onRefresh}
                 disabled={loading}
@@ -474,15 +527,15 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
             <Badge variant="outline" className="text-xs py-1 px-2">{submittedEntries.length} Total</Badge>
           </div>
         </div>
-        
+
         {loading ? (
-          <motion.div 
+          <motion.div
             className="text-center py-8 text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <motion.div 
+            <motion.div
               className="flex justify-center"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -492,7 +545,7 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
             <p className="mt-2">Loading submitted sheets...</p>
           </motion.div>
         ) : submittedEntries.length === 0 ? (
-          <motion.div 
+          <motion.div
             className="text-center py-8 text-muted-foreground"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -506,8 +559,8 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
               >
-                <Button 
-                  onClick={onRefresh} 
+                <Button
+                  onClick={onRefresh}
                   size="sm"
                   variant="outline"
                   className="transition-all duration-200 px-3 py-1 h-8"
@@ -520,7 +573,7 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
           </motion.div>
         ) : (
           <div className="w-full">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3 }}
@@ -532,7 +585,7 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
                   Choose the type of sheet to review
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <Select value={activeTab} onValueChange={onTabChange}>
                   <SelectTrigger className="w-[200px] sm:w-[250px]">
@@ -586,7 +639,7 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ 
+                transition={{
                   duration: 0.3,
                   delay: 0.1
                 }}
@@ -600,6 +653,23 @@ export const PMSheetEntries: React.FC<PMSheetEntriesProps> = ({
           </div>
         )}
       </Card>
+
+      {/* Cell Comment Popover */}
+      {commentPopover && user && (
+        <CommentPopover
+          isOpen={commentPopover.isOpen}
+          onClose={closeCommentPopover}
+          sheetId={commentPopover.sheetId}
+          rowIndex={commentPopover.rowIndex}
+          columnKey={commentPopover.columnKey}
+          columnLabel={commentPopover.columnLabel}
+          currentUserRole={user.role || 'Site PM'}
+          currentUserId={user.userId || 0}
+          onCommentAdded={() => {
+            // Refresh will happen on close
+          }}
+        />
+      )}
     </motion.div>
   );
 };

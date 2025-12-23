@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Get API base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -95,9 +95,9 @@ export const createProject = async (projectData: Omit<Project, 'ObjectId'>): Pro
       actualStart: projectData.ActualStartDate,
       actualEnd: projectData.ActualFinishDate
     };
-    
+
     const response = await api.post<Project>('/api/projects', mappedData);
-    
+
     // Map the response back to Oracle P6 style
     const oracleP6Project: Project = {
       ObjectId: response.data.ObjectId,
@@ -110,7 +110,7 @@ export const createProject = async (projectData: Omit<Project, 'ObjectId'>): Pro
       ActualStartDate: response.data.ActualStartDate,
       ActualFinishDate: response.data.ActualFinishDate
     };
-    
+
     return oracleP6Project;
   } catch (error) {
     throw new Error(
@@ -134,9 +134,9 @@ export const updateProject = async (projectId: number, projectData: Partial<Proj
     if (projectData.PlannedFinishDate !== undefined) mappedData.planEnd = projectData.PlannedFinishDate;
     if (projectData.ActualStartDate !== undefined) mappedData.actualStart = projectData.ActualStartDate;
     if (projectData.ActualFinishDate !== undefined) mappedData.actualEnd = projectData.ActualFinishDate;
-    
+
     const response = await api.put<Project>(`/api/projects/${projectId}`, mappedData);
-    
+
     // Map the response back to Oracle P6 style
     const oracleP6Project: Project = {
       ObjectId: response.data.ObjectId,
@@ -149,7 +149,7 @@ export const updateProject = async (projectId: number, projectData: Partial<Proj
       ActualStartDate: response.data.ActualStartDate,
       ActualFinishDate: response.data.ActualFinishDate
     };
-    
+
     return oracleP6Project;
   } catch (error) {
     throw new Error(
@@ -191,9 +191,9 @@ export const getAllProjectsForAssignment = async (): Promise<Project[]> => {
 // Assign project to supervisor
 export const assignProjectToSupervisor = async (projectId: number, supervisorId: number): Promise<any> => {
   try {
-    const response = await api.post('/api/project-assignment/assign', { 
-      projectId: projectId, 
-      supervisorId: supervisorId 
+    const response = await api.post('/api/project-assignment/assign', {
+      projectId: projectId,
+      supervisorId: supervisorId
     });
     return response.data;
   } catch (error) {
@@ -222,9 +222,9 @@ export const getProjectSupervisors = async (projectId: number): Promise<Supervis
 // Unassign project from supervisor (PMAG only)
 export const unassignProjectFromSupervisor = async (projectId: number, supervisorId: number): Promise<any> => {
   try {
-    const response = await api.post('/api/project-assignment/unassign', { 
-      projectId: projectId, 
-      supervisorId: supervisorId 
+    const response = await api.post('/api/project-assignment/unassign', {
+      projectId: projectId,
+      supervisorId: supervisorId
     });
     return response.data;
   } catch (error) {
@@ -239,9 +239,9 @@ export const unassignProjectFromSupervisor = async (projectId: number, superviso
 // Assign project to multiple supervisors
 export const assignProjectToMultipleSupervisors = async (projectId: number, supervisorIds: number[]): Promise<any> => {
   try {
-    const response = await api.post('/api/project-assignment/assign-multiple', { 
-      projectId: projectId, 
-      supervisorIds: supervisorIds 
+    const response = await api.post('/api/project-assignment/assign-multiple', {
+      projectId: projectId,
+      supervisorIds: supervisorIds
     });
     return response.data;
   } catch (error) {
@@ -256,9 +256,9 @@ export const assignProjectToMultipleSupervisors = async (projectId: number, supe
 // Assign multiple projects to multiple supervisors
 export const assignProjectsToMultipleSupervisors = async (projectIds: number[], supervisorIds: number[]): Promise<any> => {
   try {
-    const response = await api.post('/api/project-assignment/assign-projects-multiple', { 
-      projectIds: projectIds, 
-      supervisorIds: supervisorIds 
+    const response = await api.post('/api/project-assignment/assign-projects-multiple', {
+      projectIds: projectIds,
+      supervisorIds: supervisorIds
     });
     return response.data;
   } catch (error) {

@@ -3,15 +3,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Save, Plus, Edit, Trash2 } from "lucide-react";
 import { StyledExcelTable } from "@/components/StyledExcelTable";
-import { 
-  getMmsRfiDynamicColumns,
-  addMmsRfiDynamicColumn,
-  updateMmsRfiDynamicColumn,
-  deleteMmsRfiDynamicColumn,
-  getMmsRfiDraftEntry,
-  saveMmsRfiDraftEntry,
-  submitMmsRfiEntry
-} from "@/modules/auth/services/mmsRfiService";
+import {
+  getDraftEntry,
+  saveDraftEntry,
+  submitEntry
+} from "@/modules/auth/services/dprSupervisorService";
 import {
   Dialog,
   DialogContent,
@@ -59,7 +55,7 @@ interface MmsModuleRfiTableWithDynamicColumnsProps {
   status?: string;
 }
 
-export function MmsModuleRfiTableWithDynamicColumns({ 
+export function MmsModuleRfiTableWithDynamicColumns({
   projectId,
   userId,
   yesterday,
@@ -80,20 +76,32 @@ export function MmsModuleRfiTableWithDynamicColumns({
     defaultValue: ''
   });
 
-  // Load dynamic columns and entry data
+  // Load entry data using the standard dprSupervisorService API
   useEffect(() => {
     const loadData = async () => {
       try {
         setIsLoading(true);
-        
-        // Load dynamic columns
-        const columns = await getMmsRfiDynamicColumns(projectId);
-        setDynamicColumns(columns);
-        
-        // Load entry data
-        const draftEntry = await getMmsRfiDraftEntry(projectId);
+
+        // Load entry data using standard API with sheet_type='mms_module_rfi'
+        const draftEntry = await getDraftEntry(projectId, 'mms_module_rfi');
+
+        // Parse data_json if it's a string
+        if (draftEntry && typeof draftEntry.data_json === 'string') {
+          try {
+            draftEntry.data_json = JSON.parse(draftEntry.data_json);
+          } catch (parseError) {
+            console.error('Error parsing data_json:', parseError);
+            draftEntry.data_json = { rows: [] };
+          }
+        }
+
+        // Ensure data_json has the expected structure
+        if (draftEntry && (!draftEntry.data_json || !draftEntry.data_json.rows)) {
+          draftEntry.data_json = { rows: [] };
+        }
+
         setEntry(draftEntry);
-        
+
         setError(null);
       } catch (err) {
         console.error('Error loading data:', err);
@@ -115,17 +123,10 @@ export function MmsModuleRfiTableWithDynamicColumns({
         return;
       }
 
-      const addedColumn = await addMmsRfiDynamicColumn(
-        projectId,
-        newColumn.columnName,
-        newColumn.displayName,
-        newColumn.dataType,
-        newColumn.isRequired,
-        newColumn.defaultValue
-      );
+      // Dynamic columns not yet implemented in standard API
+      console.warn('Dynamic columns feature coming soon');
+      setError('Dynamic columns feature coming soon');
 
-      setDynamicColumns([...dynamicColumns, addedColumn]);
-      
       // Reset form
       setNewColumn({
         columnName: '',
@@ -134,9 +135,8 @@ export function MmsModuleRfiTableWithDynamicColumns({
         isRequired: false,
         defaultValue: ''
       });
-      
+
       setIsManageColumnsOpen(false);
-      setError(null);
     } catch (err) {
       console.error('Error adding column:', err);
       setError('Failed to add column');
@@ -145,8 +145,8 @@ export function MmsModuleRfiTableWithDynamicColumns({
 
   const handleRemoveColumn = async (columnId: number) => {
     try {
-      await deleteMmsRfiDynamicColumn(columnId);
-      setDynamicColumns(dynamicColumns.filter(col => col.id !== columnId));
+      // Dynamic columns not yet implemented in standard API
+      console.warn('Dynamic columns feature coming soon');
       setError(null);
     } catch (err) {
       console.error('Error removing column:', err);
@@ -156,9 +156,11 @@ export function MmsModuleRfiTableWithDynamicColumns({
 
   const handleSaveEntry = async () => {
     if (!entry) return;
-    
+
     try {
-      const updatedEntry = await saveMmsRfiDraftEntry(entry.id, entry.data_json);
+      await saveDraftEntry(entry.id, entry.data_json);
+      // Reload entry to get updated data
+      const updatedEntry = await getDraftEntry(projectId, 'mms_module_rfi');
       setEntry(updatedEntry);
       setError(null);
     } catch (err) {
@@ -169,11 +171,11 @@ export function MmsModuleRfiTableWithDynamicColumns({
 
   const handleSubmitEntry = async () => {
     if (!entry) return;
-    
+
     try {
-      await submitMmsRfiEntry(entry.id);
+      await submitEntry(entry.id);
       // Reload the entry to get updated status
-      const updatedEntry = await getMmsRfiDraftEntry(projectId);
+      const updatedEntry = await getDraftEntry(projectId, 'mms_module_rfi');
       setEntry(updatedEntry);
       setError(null);
     } catch (err) {
@@ -184,11 +186,11 @@ export function MmsModuleRfiTableWithDynamicColumns({
 
   const handleDataChange = (newData: any[][]) => {
     if (!entry) return;
-    
+
     // Convert array of arrays back to rows with column names
     const updatedRows = newData.map(row => {
       const rowObj: any = {};
-      
+
       // Add fixed columns
       rowObj.rfiNo = row[0] || '';
       rowObj.subject = row[1] || '';
@@ -199,15 +201,15 @@ export function MmsModuleRfiTableWithDynamicColumns({
       rowObj.remarks = row[6] || '';
       rowObj.yesterdayValue = row[7] || '';
       rowObj.todayValue = row[8] || '';
-      
+
       // Add dynamic columns
       dynamicColumns.forEach((col, index) => {
         rowObj[col.column_name] = row[9 + index] || '';
       });
-      
+
       return rowObj;
     });
-    
+
     setEntry({
       ...entry,
       data_json: {
@@ -220,7 +222,9 @@ export function MmsModuleRfiTableWithDynamicColumns({
   // Convert rows to array of arrays for the table
   const convertToTableData = () => {
     if (!entry) return [];
-    
+    if (!entry.data_json) return [];
+    if (!entry.data_json.rows) return [];
+
     return entry.data_json.rows.map((row: any) => {
       const rowData = [
         row.rfiNo || '',
@@ -233,12 +237,12 @@ export function MmsModuleRfiTableWithDynamicColumns({
         row.yesterdayValue || '',
         row.todayValue || ''
       ];
-      
+
       // Add dynamic columns
       dynamicColumns.forEach(col => {
         rowData.push(row[col.column_name] || '');
       });
-      
+
       return rowData;
     });
   };

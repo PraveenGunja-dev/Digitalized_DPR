@@ -30,7 +30,7 @@ export interface AuthResponse {
 }
 
 // Get API base URL from environment variables
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -66,7 +66,7 @@ const normalizeUser = (userData: any): User => {
         normalizedRole = 'PMAG';
       }
     }
-    
+
     return {
       ObjectId: userData.user_id,
       Name: userData.name,
@@ -74,12 +74,12 @@ const normalizeUser = (userData: any): User => {
       Role: normalizedRole
     };
   }
-  
+
   // Handle Oracle P6 style response (PascalCase) - already in correct format
   if (userData.ObjectId !== undefined) {
     return userData;
   }
-  
+
   // Fallback - assume it's already in the correct format
   return userData;
 };

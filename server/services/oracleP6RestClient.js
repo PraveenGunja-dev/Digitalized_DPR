@@ -196,6 +196,45 @@ Token used: ${this.getToken().substring(0, 20)}...`);
     }
 
     /**
+     * Read UDF values for activities in a project
+     * P6 REST API endpoint: /activityudfvalue
+     * @param {Array<number>} activityObjectIds - List of activity ObjectIds to get UDFs for
+     * @returns {Promise<Array>} Array of UDF values
+     */
+    async readActivityUDFValues(activityObjectIds) {
+        try {
+            if (!activityObjectIds || activityObjectIds.length === 0) {
+                return [];
+            }
+
+            // Build filter for multiple activities (batch in groups of 50 to avoid URL length issues)
+            const batchSize = 50;
+            const allUdfValues = [];
+
+            for (let i = 0; i < activityObjectIds.length; i += batchSize) {
+                const batch = activityObjectIds.slice(i, i + batchSize);
+                const filterValue = batch.join(',');
+
+                const params = {
+                    Fields: 'ObjectId,ForeignObjectId,UDFTypeObjectId,UDFTypeTitle,Text,Double,Integer,StartDate,FinishDate',
+                    Filter: `ForeignObjectId IN (${filterValue})`
+                };
+
+                const data = await this.get('/activityudfvalue', params);
+                const udfValues = Array.isArray(data) ? data : (data.data || data.items || []);
+                allUdfValues.push(...udfValues);
+            }
+
+            console.log(`[P6 REST] Retrieved ${allUdfValues.length} UDF values for ${activityObjectIds.length} activities`);
+            return allUdfValues;
+        } catch (apiError) {
+            console.error('[P6 REST] Error fetching UDF values:', apiError.message);
+            // Return empty array on error - UDFs are optional enhancement
+            return [];
+        }
+    }
+
+    /**
      * Get a single project by ObjectId
      * @param {number} objectId - Project ObjectId
      * @param {Array<string>} fields - Fields to retrieve

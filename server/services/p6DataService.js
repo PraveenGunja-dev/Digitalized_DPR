@@ -15,6 +15,8 @@ class P6DataService {
             message: ''
         };
 
+        let activityObjectIds = [];
+
         try {
             console.log(`[P6 Sync] Starting sync for project ${projectId}`);
             await client.query('BEGIN');
@@ -29,13 +31,11 @@ class P6DataService {
 
             // 2. Sync Activities
             console.log(`[P6 Sync] Syncing Activities...`);
-            await this._syncActivities(client, projectId);
-
-            // 3. Sync UDFs (Qty, etc.) - TBD, for now just basic fields
+            activityObjectIds = await this._syncActivities(client, projectId);
 
             await client.query('COMMIT');
             logEntry.status = 'completed';
-            console.log(`[P6 Sync] Completed successfully for ${projectId}`);
+            console.log(`[P6 Sync] Core sync completed successfully for ${projectId}`);
         } catch (error) {
             await client.query('ROLLBACK');
             logEntry.status = 'failed';
@@ -54,6 +54,18 @@ class P6DataService {
                 console.error('Failed to write sync log', e);
             }
             client.release();
+        }
+
+        // 3. Sync UDFs (outside main transaction - optional enhancement)
+        // This runs after the main sync succeeds, so UDF errors won't break core functionality
+        if (activityObjectIds.length > 0) {
+            try {
+                console.log(`[P6 Sync] Syncing UDFs for ${activityObjectIds.length} activities...`);
+                await this._syncUDFs(activityObjectIds);
+            } catch (udfError) {
+                console.error('[P6 Sync] UDF sync failed (non-critical):', udfError.message);
+                // Don't throw - UDF sync is optional
+            }
         }
     }
 
@@ -130,8 +142,10 @@ class P6DataService {
         ];
 
         const activities = await restClient.readActivities(fields, projectId);
+        const activityObjectIds = [];
 
         for (const act of activities) {
+            activityObjectIds.push(act.ObjectId);
             await client.query(
                 `INSERT INTO p6_activities (
                     object_id, activity_id, name, project_object_id, wbs_object_id,
@@ -174,6 +188,129 @@ class P6DataService {
                     act.ActualDuration, act.RemainingDuration
                 ]
             );
+        }
+
+        return activityObjectIds;
+    }
+
+    /**
+     * Sync UDF values for activities
+     * Maps P6 UDF names to database columns with flexible name matching
+     * Runs outside main transaction - uses pool directly
+     */
+    async _syncUDFs(activityObjectIds) {
+        if (!activityObjectIds || activityObjectIds.length === 0) {
+            console.log('[P6 Sync] No activities to sync UDFs for');
+            return;
+        }
+
+        try {
+            // First check if UDF columns exist in the table
+            const columnCheck = await pool.query(`
+                SELECT column_name FROM information_schema.columns 
+                WHERE table_name = 'p6_activities' AND column_name = 'total_quantity'
+            `);
+
+            if (columnCheck.rows.length === 0) {
+                console.log('[P6 Sync] UDF columns not yet added to database. Run migration first.');
+                return;
+            }
+
+            // Fetch UDF values from P6
+            const udfValues = await restClient.readActivityUDFValues(activityObjectIds);
+
+            if (!udfValues || udfValues.length === 0) {
+                console.log('[P6 Sync] No UDF values found for activities');
+                return;
+            }
+
+            // Map UDF names to database columns (flexible matching)
+            // Supports variations like "Total Quantity", "TotalQuantity", "TOTAL_QUANTITY", etc.
+            const udfMapping = {
+                // Total Quantity variations
+                'total quantity': 'total_quantity',
+                'totalquantity': 'total_quantity',
+                'total_quantity': 'total_quantity',
+                'qty': 'total_quantity',
+                'quantity': 'total_quantity',
+
+                // UOM variations
+                'uom': 'uom',
+                'unit': 'uom',
+                'unit of measurement': 'uom',
+                'unitofmeasurement': 'uom',
+
+                // Block Capacity variations
+                'block capacity': 'block_capacity',
+                'blockcapacity': 'block_capacity',
+                'block_capacity': 'block_capacity',
+                'capacity': 'block_capacity',
+
+                // Phase variations
+                'phase': 'phase',
+
+                // SPV No variations
+                'spv no': 'spv_no',
+                'spv no.': 'spv_no',
+                'spvno': 'spv_no',
+                'spv_no': 'spv_no',
+                'spv number': 'spv_no',
+                'spv': 'spv_no',
+
+                // Scope variations
+                'scope': 'scope',
+
+                // Hold variations
+                'hold': 'hold',
+                'on hold': 'hold',
+                'hold status': 'hold',
+
+                // Front variations
+                'front': 'front'
+            };
+
+            let updatedCount = 0;
+
+            // Group UDF values by activity for batch updates
+            const udfsByActivity = {};
+            for (const udf of udfValues) {
+                const activityId = udf.ForeignObjectId;
+                if (!udfsByActivity[activityId]) {
+                    udfsByActivity[activityId] = {};
+                }
+
+                // Normalize UDF name for matching
+                const udfName = (udf.UDFTypeTitle || '').toLowerCase().trim();
+                const column = udfMapping[udfName];
+
+                if (column) {
+                    // Extract value (could be Text, Double, Integer, or Date)
+                    const value = udf.Text || udf.Double || udf.Integer || udf.StartDate || udf.FinishDate || null;
+                    udfsByActivity[activityId][column] = value;
+                }
+            }
+
+            // Update each activity with its UDF values
+            for (const [activityId, udfs] of Object.entries(udfsByActivity)) {
+                const columns = Object.keys(udfs);
+                if (columns.length === 0) continue;
+
+                // Build dynamic UPDATE query
+                const setClause = columns.map((col, idx) => `${col} = $${idx + 2}`).join(', ');
+                const values = [activityId, ...columns.map(col => udfs[col])];
+
+                await pool.query(
+                    `UPDATE p6_activities SET ${setClause} WHERE object_id = $1`,
+                    values
+                );
+                updatedCount++;
+            }
+
+            console.log(`[P6 Sync] Updated UDF values for ${updatedCount} activities`);
+        } catch (error) {
+            // Log error but don't fail - UDFs are optional
+            console.error('[P6 Sync] Error syncing UDFs:', error.message);
+            throw error; // Re-throw so caller can log it
         }
     }
 
@@ -256,9 +393,15 @@ class P6DataService {
             block: row.wbs_name || '',
             plot: row.wbs_code || '',
 
-            // Placeholders for UDFs (future sync)
-            totalQuantity: '',
-            uom: '',
+            // UDF Values (synced from P6)
+            totalQuantity: row.total_quantity ? String(row.total_quantity) : '',
+            uom: row.uom || '',
+            blockCapacity: row.block_capacity ? String(row.block_capacity) : '',
+            phase: row.phase || row.wbs_name || '',  // Fallback to WBS name if no phase UDF
+            spvNo: row.spv_no || '',
+            scope: row.scope || '',
+            hold: row.hold || '',
+            front: row.front || '',
             remarks: ''
         };
     }

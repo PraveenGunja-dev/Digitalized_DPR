@@ -1,7 +1,7 @@
 // src/modules/auth/services/dprSupervisorService.ts
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3002';
 
 // Add axios interceptor for debugging
 axios.interceptors.request.use(
@@ -37,7 +37,7 @@ export const getTodayAndYesterday = () => {
   const today = new Date();
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  
+
   return {
     today: today.toISOString().split('T')[0],
     yesterday: yesterday.toISOString().split('T')[0]
@@ -49,18 +49,18 @@ export const isEntryLocked = (entry: any): boolean => {
   if (!entry || !entry.status || !entry.submitted_at) {
     return false;
   }
-  
+
   // Only submitted entries can be locked
   if (entry.status !== 'submitted_to_pm') {
     return false;
   }
-  
+
   // Check if submitted within the last 2 days
   const submittedDate = new Date(entry.submitted_at);
   const now = new Date();
   const timeDiff = now.getTime() - submittedDate.getTime();
   const daysDiff = timeDiff / (1000 * 3600 * 24);
-  
+
   // Lock for 2 days
   return daysDiff < 2;
 };
@@ -75,7 +75,7 @@ export const getDraftEntry = async (projectId: number, sheetType: string) => {
 };
 
 export const saveDraftEntry = async (entryId: number, data: any) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/save-draft`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/save-draft`,
     { entryId, data },
     { headers: getAuthHeader() }
   );
@@ -83,7 +83,7 @@ export const saveDraftEntry = async (entryId: number, data: any) => {
 };
 
 export const submitEntry = async (entryId: number) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/submit`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/submit`,
     { entryId },
     { headers: getAuthHeader() }
   );
@@ -96,18 +96,18 @@ export const getEntriesForPMReview = async (projectId?: number) => {
   console.log('API Service: Fetching PM entries with params:', params);
   console.log('API Service: projectId value:', projectId);
   console.log('API Service: Using token:', localStorage.getItem('token') ? 'Token exists' : 'No token');
-  
+
   const response = await axios.get(`${API_URL}/api/dpr-supervisor/pm/entries`, {
     params,
     headers: getAuthHeader()
   });
-  
+
   console.log('API Service: Received response:', response.data);
   return response.data;
 };
 
 export const approveEntryByPM = async (entryId: number) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pm/approve`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pm/approve`,
     { entryId },
     { headers: getAuthHeader() }
   );
@@ -115,7 +115,7 @@ export const approveEntryByPM = async (entryId: number) => {
 };
 
 export const updateEntryByPM = async (entryId: number, data: any) => {
-  const response = await axios.put(`${API_URL}/api/dpr-supervisor/pm/update`, 
+  const response = await axios.put(`${API_URL}/api/dpr-supervisor/pm/update`,
     { entryId, data },
     { headers: getAuthHeader() }
   );
@@ -123,7 +123,7 @@ export const updateEntryByPM = async (entryId: number, data: any) => {
 };
 
 export const rejectEntryByPM = async (entryId: number, rejectionReason?: string) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pm/reject`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pm/reject`,
     { entryId, rejectionReason },
     { headers: getAuthHeader() }
   );
@@ -131,7 +131,7 @@ export const rejectEntryByPM = async (entryId: number, rejectionReason?: string)
 };
 
 export const rejectEntryByPMAG = async (entryId: number, rejectionReason?: string) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pmag/reject`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pmag/reject`,
     { entryId, rejectionReason },
     { headers: getAuthHeader() }
   );
@@ -160,7 +160,7 @@ export const getEntriesHistoryForPMAG = async (projectId?: number, days?: number
   const params: any = {};
   if (projectId) params.projectId = projectId;
   if (days) params.days = days;
-  
+
   const response = await axios.get(`${API_URL}/api/dpr-supervisor/pmag/history`, {
     params,
     headers: getAuthHeader()
@@ -178,7 +178,7 @@ export const getArchivedEntriesForPMAG = async (projectId?: number) => {
 };
 
 export const finalApproveByPMAG = async (entryId: number) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pmag/approve`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pmag/approve`,
     { entryId },
     { headers: getAuthHeader() }
   );
@@ -186,9 +186,10 @@ export const finalApproveByPMAG = async (entryId: number) => {
 };
 
 export const rejectEntryByPMAGWithoutReason = async (entryId: number) => {
-  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pmag/reject`, 
+  const response = await axios.post(`${API_URL}/api/dpr-supervisor/pmag/reject`,
     { entryId },
-    { headers: getAuthHeader()
-  });
+    {
+      headers: getAuthHeader()
+    });
   return response.data;
 };

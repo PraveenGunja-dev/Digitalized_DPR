@@ -279,31 +279,44 @@ const SupervisorDashboard = () => {
   }, [currentDraftEntry, activeTab]);
 
   // Fetch data when token, projectId, or activeTab changes
-  // Skip draft entry loading when using P6 data (useMockData=false)
+  // Draft entries are ALWAYS needed for the submit workflow, regardless of data source
   useEffect(() => {
     const fetchData = async () => {
+      // First, fetch assigned projects
+      let projects: any[] = [];
       try {
-        const projects = await getAssignedProjects();
+        projects = await getAssignedProjects();
         setAssignedProjects(projects);
       } catch (error) {
         console.log('Projects will be fetched from P6 API');
       }
 
-      // Only load draft entries when using mock data (local DB)
-      // When using P6 data, tables are populated from P6 activities
-      if (useMockData && currentProjectId && activeTab !== 'issues' && activeTab !== 'supervisor_table' && activeTab !== 'summary') {
+      // Determine which project ID to use
+      let projectIdToUse = currentProjectId;
+
+      // If no project is selected, auto-select the first assigned project
+      if (!projectIdToUse && projects.length > 0) {
+        const firstProject = projects[0];
+        projectIdToUse = firstProject.id || firstProject.ObjectId || firstProject.project_id;
+        console.log('Auto-selecting first project:', projectIdToUse);
+        setCurrentProjectId(projectIdToUse);
+      }
+
+      // Always load/create draft entries for sheet tabs (needed for submit workflow)
+      // The draft entry tracks the submission status, separate from where table data comes from
+      if (projectIdToUse && activeTab !== 'issues' && activeTab !== 'supervisor_table' && activeTab !== 'summary') {
         try {
-          console.log('Loading draft entry for projectId:', currentProjectId, 'activeTab:', activeTab);
-          const draft = await getDraftEntry(currentProjectId, activeTab);
+          console.log('Loading draft entry for projectId:', projectIdToUse, 'activeTab:', activeTab);
+          const draft = await getDraftEntry(projectIdToUse, activeTab);
           console.log('Draft entry loaded:', draft);
           setCurrentDraftEntry(draft);
         } catch (draftError) {
-          console.log('Draft entry not available - tables will show empty state:', draftError);
+          console.log('Draft entry not available:', draftError);
           setCurrentDraftEntry(null);
         }
       } else {
-        // Using P6 data - no draft entries needed
-        console.log('Using P6 data - skipping draft entry load. activeTab:', activeTab);
+        // Non-sheet tabs or no project selected
+        console.log('No draft entry needed. activeTab:', activeTab, 'projectId:', projectIdToUse);
         setCurrentDraftEntry(null);
       }
     };
@@ -311,7 +324,7 @@ const SupervisorDashboard = () => {
     if (token) {
       fetchData();
     }
-  }, [token, currentProjectId, activeTab, useMockData]);
+  }, [token, currentProjectId, activeTab]);
 
   // Fetch P6 activities when project changes (only when not using mock data)
   // Reset P6 data when project changes
@@ -500,8 +513,15 @@ const SupervisorDashboard = () => {
     console.log('currentProjectId:', currentProjectId);
 
     if (!currentDraftEntry) {
-      toast.error("No entry to submit. Please ensure you have selected a project and sheet type.");
-      console.error('No currentDraftEntry found');
+      // Provide more specific error based on why draft entry might be missing
+      if (!currentProjectId) {
+        toast.error("No project selected. Please select a project first by clicking 'Change Project'.");
+      } else if (activeTab === 'summary' || activeTab === 'issues' || activeTab === 'supervisor_table') {
+        toast.error("Cannot submit from this tab. Please switch to a sheet tab (like DP Qty, DP Block, etc.).");
+      } else {
+        toast.error("Unable to load entry. Please try refreshing the page or selecting a different project.");
+      }
+      console.error('No currentDraftEntry found. projectId:', currentProjectId, 'activeTab:', activeTab);
       return;
     }
 
