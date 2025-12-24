@@ -2,13 +2,16 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  Edit, 
-  Check, 
-  X, 
+import { StyledExcelTable } from "@/components/StyledExcelTable";
+import {
+  Edit,
+  Check,
+  X,
   CheckCircle,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Upload,
+  Send
 } from "lucide-react";
 
 interface EntryCardProps {
@@ -19,7 +22,11 @@ interface EntryCardProps {
   onApprove?: () => void;
   onReject?: () => void;
   onViewDetails?: () => void;
+  onPushToP6?: () => void;
+  onSendToPMAG?: () => void;
   sheetType: string;
+  showPushToP6?: boolean;
+  showSendToPMAG?: boolean;
 }
 
 export const EntryCard: React.FC<EntryCardProps> = ({
@@ -30,13 +37,18 @@ export const EntryCard: React.FC<EntryCardProps> = ({
   onApprove,
   onReject,
   onViewDetails,
-  sheetType
+  onPushToP6,
+  onSendToPMAG,
+  sheetType,
+  showPushToP6 = false,
+  showSendToPMAG = false
 }) => {
   const getStatusVariant = (status: string) => {
     switch (status) {
       case "submitted_to_pm": return "secondary";
       case "approved_by_pm": return "default";
       case "rejected_by_pm": return "destructive";
+      case "final_approved": return "default";
       default: return "secondary";
     }
   };
@@ -46,21 +58,46 @@ export const EntryCard: React.FC<EntryCardProps> = ({
       case "submitted_to_pm": return "Pending";
       case "approved_by_pm": return "Approved";
       case "rejected_by_pm": return "Rejected";
-      default: return status;
+      case "final_approved": return "Final Approved";
+      default: return status?.replace(/_/g, ' ');
     }
   };
 
+  // Parse entry data
+  const entryData = entry.data_json
+    ? (typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json)
+    : null;
+
+  // Prepare data for StyledExcelTable
+  const prepareTableData = () => {
+    if (!entryData?.rows || entryData.rows.length === 0) {
+      return { columns: [], data: [] };
+    }
+
+    // Get columns from first row keys
+    const columns = Object.keys(entryData.rows[0]);
+
+    // Convert rows to array format for StyledExcelTable
+    const data = entryData.rows.map((row: any) =>
+      columns.map((col) => row[col] || '')
+    );
+
+    return { columns, data };
+  };
+
+  const { columns: tableColumns, data: tableData } = prepareTableData();
+
   return (
-    <motion.div 
-      key={entry.id} 
+    <motion.div
+      key={entry.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       className="border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800"
     >
       {/* Collapsible Entry Header */}
-      <motion.div 
-        className="flex flex-col md:flex-row md:items-center justify-between p-3 cursor-pointer"
+      <motion.div
+        className="flex flex-col md:flex-row md:items-center justify-between p-4 cursor-pointer"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
@@ -71,7 +108,7 @@ export const EntryCard: React.FC<EntryCardProps> = ({
             <div className="flex flex-col md:flex-row md:items-center md:justify-between">
               <div className="flex items-center space-x-2">
                 <span className="font-semibold">Entry #{entry.id}</span>
-                <Badge 
+                <Badge
                   variant={getStatusVariant(entry.status)}
                   className="px-2 py-0.5 text-xs font-medium"
                 >
@@ -79,12 +116,12 @@ export const EntryCard: React.FC<EntryCardProps> = ({
                 </Badge>
               </div>
               <span className="text-xs text-muted-foreground mt-1 md:mt-0">
-                {new Date(entry.submitted_at).toLocaleDateString()}
+                {new Date(entry.submitted_at || entry.created_at).toLocaleDateString()}
               </span>
             </div>
             <div className="flex flex-col md:flex-row md:items-center md:space-x-4 mt-1">
               <span className="text-sm text-muted-foreground truncate">
-                {entry.supervisor_name || 'Supervisor'} ({entry.supervisor_email})
+                {entry.supervisor_name || 'Supervisor'} ({entry.supervisor_email || entry.user_email || 'N/A'})
               </span>
               <span className="text-xs font-medium text-primary hidden md:block">
                 Project ID: {entry.project_id}
@@ -95,11 +132,12 @@ export const EntryCard: React.FC<EntryCardProps> = ({
             </div>
           </div>
           <div className="flex items-center space-x-2 flex-shrink-0">
+            {/* Action buttons based on status */}
             {entry.status === "submitted_to_pm" && (
               <>
                 {onEdit && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -111,8 +149,8 @@ export const EntryCard: React.FC<EntryCardProps> = ({
                   </Button>
                 )}
                 {onApprove && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="default"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -124,8 +162,8 @@ export const EntryCard: React.FC<EntryCardProps> = ({
                   </Button>
                 )}
                 {onReject && (
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="destructive"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -138,12 +176,78 @@ export const EntryCard: React.FC<EntryCardProps> = ({
                 )}
               </>
             )}
-            {entry.status === "approved_by_pm" && onApprove && (
+
+            {/* Sent to PMAG badge */}
+            {entry.status === "approved_by_pm" && (
               <Badge variant="outline" className="text-green-600 border-green-600 px-2 py-0.5 text-xs font-medium">
                 <CheckCircle className="w-3 h-3 mr-1" />
                 Sent to PMAG
               </Badge>
             )}
+
+            {/* Send to PMAG button */}
+            {showSendToPMAG && onSendToPMAG && entry.status === "approved_by_pm" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSendToPMAG();
+                }}
+                className="bg-purple-600 hover:bg-purple-700 text-white transition-colors duration-200 px-3 py-1 h-7"
+              >
+                <Send className="w-3 h-3 mr-1" />
+                Send to PMAG
+              </Button>
+            )}
+
+            {/* Push to P6 button */}
+            {showPushToP6 && onPushToP6 && (entry.status === "final_approved" || entry.status === "approved_by_pm") && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPushToP6();
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white transition-colors duration-200 px-3 py-1 h-7"
+              >
+                <Upload className="w-3 h-3 mr-1" />
+                Push to P6
+              </Button>
+            )}
+
+            {/* Approve/Reject for PMAG (approved_by_pm entries) */}
+            {entry.status === "approved_by_pm" && onApprove && (
+              <>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApprove();
+                  }}
+                  className="bg-green-600 hover:bg-green-700 transition-colors duration-200 px-2 py-1 h-7"
+                >
+                  <Check className="w-3 h-3 mr-1" />
+                  Final Approve
+                </Button>
+                {onReject && (
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReject();
+                    }}
+                    className="transition-colors duration-200 px-2 py-1 h-7"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                )}
+              </>
+            )}
+
             {isExpanded ? (
               <ChevronDown className="w-5 h-5 text-muted-foreground" />
             ) : (
@@ -153,33 +257,107 @@ export const EntryCard: React.FC<EntryCardProps> = ({
         </div>
       </motion.div>
 
-      {/* Expanded Content */}
+      {/* Expanded Content with StyledExcelTable */}
       {isExpanded && (
-        <motion.div 
+        <motion.div
           initial={{ height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
           transition={{ duration: 0.3 }}
           className="overflow-hidden border-t border-gray-200 dark:border-gray-700"
         >
-          <div className="p-3 bg-gray-50 dark:bg-gray-700">
-            {onViewDetails && (
-              <div className="flex justify-end mb-2">
-                <Button 
-                  size="sm" 
+          <div className="p-4 bg-gray-50 dark:bg-gray-700">
+            {/* Entry Metadata */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Submitted</p>
+                <p className="font-medium">{new Date(entry.submitted_at || entry.created_at).toLocaleString()}</p>
+              </div>
+              {entry.approved_at && (
+                <div>
+                  <p className="text-muted-foreground">Approved</p>
+                  <p className="font-medium">{new Date(entry.approved_at).toLocaleString()}</p>
+                </div>
+              )}
+              {entry.project_name && (
+                <div>
+                  <p className="text-muted-foreground">Project</p>
+                  <p className="font-medium">{entry.project_name}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-muted-foreground">Sheet Type</p>
+                <p className="font-medium">{sheetType.replace(/_/g, ' ')}</p>
+              </div>
+            </div>
+
+            {/* Static Header */}
+            {entryData?.staticHeader && (
+              <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded mb-4 border border-blue-200 dark:border-blue-800">
+                <h4 className="font-semibold mb-2 text-sm">Header Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                  {entryData.staticHeader.projectInfo && (
+                    <p><strong>Project:</strong> {entryData.staticHeader.projectInfo}</p>
+                  )}
+                  {entryData.staticHeader.reportingDate && (
+                    <p><strong>Reporting Date:</strong> {entryData.staticHeader.reportingDate}</p>
+                  )}
+                  {entryData.staticHeader.progressDate && (
+                    <p><strong>Progress Date:</strong> {entryData.staticHeader.progressDate}</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Data Table using StyledExcelTable */}
+            {tableColumns.length > 0 && tableData.length > 0 && (
+              <div className="mb-4">
+                <StyledExcelTable
+                  title={`${sheetType.replace(/_/g, ' ')} - Entry #${entry.id}`}
+                  columns={tableColumns}
+                  data={tableData}
+                  onDataChange={() => { }} // No-op since it's read-only
+                  isReadOnly={true}
+                  hideAddRow={true}
+                  status={entry.status}
+                />
+              </div>
+            )}
+
+            {/* Total Manpower (if applicable) */}
+            {entryData?.totalManpower !== undefined && (
+              <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 rounded border border-green-200 dark:border-green-800">
+                <p className="text-sm font-semibold">Total Manpower: {entryData.totalManpower}</p>
+              </div>
+            )}
+
+            {/* No Data Message */}
+            {(!entryData?.rows || entryData.rows.length === 0) && !entryData?.staticHeader && (
+              <div className="text-center py-4 text-muted-foreground">
+                <p>No detailed data available for this entry</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              {onViewDetails && (
+                <Button
+                  size="sm"
                   variant="outline"
                   onClick={onViewDetails}
                 >
-                  View Details
+                  View Full Details
                 </Button>
-              </div>
-            )}
-            <div className="text-sm space-y-1">
-              <p><strong>Submitted:</strong> {new Date(entry.submitted_at).toLocaleString()}</p>
-              {entry.approved_at && (
-                <p><strong>Approved:</strong> {new Date(entry.approved_at).toLocaleString()}</p>
               )}
-              {entry.rejected_at && (
-                <p><strong>Rejected:</strong> {new Date(entry.rejected_at).toLocaleString()}</p>
+              {showPushToP6 && onPushToP6 && (entry.status === "final_approved" || entry.status === "approved_by_pm") && (
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={onPushToP6}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Push to P6
+                </Button>
               )}
             </div>
           </div>

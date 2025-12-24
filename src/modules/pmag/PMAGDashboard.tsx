@@ -13,6 +13,7 @@ import {
   PMAGUserManagementModals,
   PMAGSuccessModal
 } from "./components";
+import { SnapshotFilterModal } from "@/modules/superadmin/components/SnapshotFilterModal";
 import { fetchData, fetchApprovedEntries, fetchHistoryEntries, fetchArchivedEntries, finalApproveEntry, rejectEntry } from "./services";
 
 const PMAGDashboard = () => {
@@ -73,6 +74,7 @@ const PMAGDashboard = () => {
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
   const [supervisorSearchTerm, setSupervisorSearchTerm] = useState('');
   const [expandedEntries, setExpandedEntries] = useState<Record<number, boolean>>({});
+  const [showSnapshotFilter, setShowSnapshotFilter] = useState(false);
 
   // Fetch projects and supervisors
   const loadInitialData = async () => {
@@ -375,6 +377,7 @@ const PMAGDashboard = () => {
           await loadArchivedEntries();
           setShowArchivedListModal(true);
         }}
+        onShowSnapshotFilter={() => setShowSnapshotFilter(true)}
       />
 
       <PMAGSheetEntries
@@ -385,6 +388,9 @@ const PMAGDashboard = () => {
         onReject={handleReject}
         expandedEntries={expandedEntries}
         setExpandedEntries={setExpandedEntries}
+        onPushToP6={(entry) => {
+          toast.info(`Push to P6 functionality for entry #${entry.id} coming soon`);
+        }}
       />
 
       <PMAGChartsSection />
@@ -666,6 +672,13 @@ const PMAGDashboard = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Snapshot Filter Modal */}
+      <SnapshotFilterModal
+        isOpen={showSnapshotFilter}
+        onClose={() => setShowSnapshotFilter(false)}
+        projects={projects}
+      />
     </DashboardLayout>
   );
 };

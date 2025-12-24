@@ -36,7 +36,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
   const navigate = useNavigate()
   const { logout, user, refreshUserProfile } = useAuth()
   const { notifications, unreadCount, markAllAsRead, markAsRead } = useNotification()
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false)
   // Track expanded state for each notification
@@ -113,7 +113,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
   const handleNotificationClick = (notification: any) => {
     // Mark notification as read
     markAsRead(notification.id);
-    
+
     // Map sheet types to navigation paths and tab values
     const sheetTypeToTabMap: Record<string, string> = {
       'dp_qty': 'dp_qty',
@@ -123,11 +123,11 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
       'dp_vendor_block': 'dp_vendor_block',
       'manpower_details': 'manpower_details'
     };
-    
+
     // If notification has a sheetType, navigate to the supervisor dashboard with that tab active
     if (notification.sheetType && sheetTypeToTabMap[notification.sheetType]) {
       const tab = sheetTypeToTabMap[notification.sheetType];
-      
+
       // Navigate to supervisor dashboard with the specific tab activated
       // Pass projectId and entryId in state if available
       const state: any = { activeTab: tab };
@@ -137,7 +137,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
       if (notification.entryId) {
         state.entryId = notification.entryId;
       }
-      
+
       navigate("/supervisor", { state });
     } else if (notification.projectId) {
       // If no sheetType but has projectId, navigate to projects page
@@ -146,7 +146,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
       // Default action - show alert for now
       alert(`Notification: ${notification.title}\n${notification.message}`);
     }
-    
+
     // Close modal after navigation
     setIsModalOpen(false);
   }
@@ -157,7 +157,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
       ...prev,
       [id]: !prev[id]
     }));
-    
+
     // Mark as read when expanding
     if (!expandedItems[id]) {
       markAsRead(id);
@@ -180,7 +180,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
           onClick={() => setIsModalOpen(false)}
         >
           {/* Modal Container */}
-          <div 
+          <div
             className="bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col border border-border"
             onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
           >
@@ -197,9 +197,9 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                   </Button>
                 )}
                 {/* Close Button */}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   className="rounded-full"
                   onClick={() => setIsModalOpen(false)}
                 >
@@ -210,7 +210,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                 </Button>
               </div>
             </div>
-            
+
             {/* Notifications List - Fixed height with scroll */}
             <div className="overflow-y-auto flex-grow" style={{ maxHeight: 'calc(80vh - 80px)' }}>
               {notifications.length === 0 ? (
@@ -220,12 +220,12 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
               ) : (
                 <div className="divide-y divide-border">
                   {notifications.map((notification) => (
-                    <div 
-                      key={notification.id} 
+                    <div
+                      key={notification.id}
                       className={`p-4 ${!notification.read ? 'bg-muted/50' : ''}`}
                     >
                       {/* Notification Item Header */}
-                      <div 
+                      <div
                         className="flex items-start gap-3 cursor-pointer"
                         onClick={() => toggleExpand(notification.id)}
                       >
@@ -237,12 +237,12 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                             <Circle className="w-2 h-2 fill-current text-blue-500" />
                           )}
                         </div>
-                        
+
                         {/* Type Icon - using Bell as default, could be customized based on type */}
                         <div className="mt-0.5">
                           <Bell className="w-4 h-4 text-muted-foreground" />
                         </div>
-                        
+
                         {/* Content */}
                         <div className="flex-grow">
                           <div className="flex items-start justify-between">
@@ -264,7 +264,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                             {new Date(notification.timestamp).toLocaleDateString()}
                           </div>
                         </div>
-                        
+
                         {/* Expand/Collapse Arrow */}
                         <div className="self-center">
                           {expandedItems[notification.id] ? (
@@ -274,7 +274,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                           )}
                         </div>
                       </div>
-                      
+
                       {/* Expanded Content */}
                       {expandedItems[notification.id] && (
                         <motion.div
@@ -287,8 +287,8 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                           <div className="pl-10 pr-5 pt-3 pb-2 border-t border-border mt-3">
                             <div className="font-medium mb-2">Remarks</div>
                             <div className="text-sm mb-3">{notification.message}</div>
-                            <Button 
-                              size="sm" 
+                            <Button
+                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleNotificationClick(notification);
@@ -304,11 +304,11 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                 </div>
               )}
             </div>
-            
+
             {/* Modal Footer */}
             <div className="p-4 border-t border-border text-center text-sm text-muted-foreground flex-shrink-0">
-              {notifications.length > 0 
-                ? `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}` 
+              {notifications.length > 0
+                ? `${notifications.length} notification${notifications.length !== 1 ? 's' : ''}`
                 : 'No notifications'}
             </div>
           </div>
@@ -323,20 +323,20 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
       <motion.nav
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        transition={{ 
-          type: "spring", 
-          stiffness: 100, 
+        transition={{
+          type: "spring",
+          stiffness: 100,
           damping: 15,
-          duration: 0.5 
+          duration: 0.5
         }}
         className="sticky top-0 z-50 w-full border-b border-border glass-effect"
       >
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <img 
-                src="/logo.png" 
-                alt="Adani Logo" 
+              <img
+                src="/logo.png"
+                alt="Adani Logo"
                 className="h-8 w-auto"
                 onError={(e) => {
                   // Fallback to text if image doesn't load
@@ -360,11 +360,11 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
           <div className="flex items-center space-x-4">
             {/* Theme Toggle */}
             <ThemeToggle />
-            
+
             {/* Notification Bell */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="relative rounded-full"
               onClick={() => setIsModalOpen(true)}
             >
@@ -444,10 +444,16 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
                       </DropdownMenuItem>
                     )}
                     {displayRole === "Super Admin" && (
-                      <DropdownMenuItem onClick={() => navigate("/superadmin")}>
-                        <User className="mr-2 h-4 w-4" />
-                        <span>Dashboard</span>
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem onClick={() => navigate("/superadmin")}>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/superadmin", { state: { openSnapshotFilter: true } })}>
+                          <BarChart3 className="mr-2 h-4 w-4" />
+                          <span>Snapshot Filter</span>
+                        </DropdownMenuItem>
+                      </>
                     )}
                     <DropdownMenuItem onClick={handleProjects}>
                       <FolderPlus className="mr-2 h-4 w-4" />
@@ -469,7 +475,7 @@ export const Navbar = ({ userName, userRole, projectName, onAddUser, onAddProjec
           </div>
         </div>
       </motion.nav>
-      
+
       {/* Notification Modal Portal */}
       <NotificationModal />
     </>

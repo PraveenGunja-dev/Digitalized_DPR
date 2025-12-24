@@ -1,33 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  Users, 
-  FolderPlus, 
-  Settings, 
-  FileText, 
-  BarChart3, 
-  Search, 
-  Filter, 
-  Eye, 
-  Edit, 
-  Trash2, 
+import {
+  Users,
+  FolderPlus,
+  Settings,
+  FileText,
+  BarChart3,
+  Search,
+  Filter,
+  Eye,
+  Edit,
+  Trash2,
   Plus,
   RefreshCw,
   Download,
   Upload,
   Activity
 } from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
   Cell,
   LineChart,
   Line,
@@ -54,7 +54,9 @@ import {
   EditUserModal,
   AssignProjectModal,
   ViewProjectModal,
-  EditProjectModal
+  EditProjectModal,
+  SnapshotFilterModal,
+  SuperAdminSheetEntries
 } from './components';
 import { DashboardLayout } from '@/components/shared/DashboardLayout';
 // Type definitions
@@ -118,6 +120,7 @@ const SuperAdminDashboard = () => {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'users');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showSnapshotFilter, setShowSnapshotFilter] = useState(false);
   const [usersData, setUsersData] = useState<User[]>([]);
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -147,7 +150,7 @@ const SuperAdminDashboard = () => {
       setLoading(false);
     }
   };
-  
+
   // Fetch all projects for assignment
   const fetchAllProjects = async () => {
     try {
@@ -176,25 +179,25 @@ const SuperAdminDashboard = () => {
 
   // State for role management
   const [rolesData, setRolesData] = useState([]);
-    const [editingRole, setEditingRole] = useState<any>(null);
-    const [showEditRoleModal, setShowEditRoleModal] = useState(false);
-    const [editRoleForm, setEditRoleForm] = useState({
-      name: '',
-      permissions: ''
-    });
-  
+  const [editingRole, setEditingRole] = useState<any>(null);
+  const [showEditRoleModal, setShowEditRoleModal] = useState(false);
+  const [editRoleForm, setEditRoleForm] = useState({
+    name: '',
+    permissions: ''
+  });
+
   // State for workflow overrides
   const [workflowOverrides, setWorkflowOverrides] = useState([]);
-  
+
   // State for system logs
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
-  
+
   // State for logs filters
   const [timeFilter, setTimeFilter] = useState('all'); // all, 10min, 1hr, 24hr, 7days
   const [actionFilter, setActionFilter] = useState('all'); // all, submission, approval, rejection, pushed
-  
+
   // State for analytics data
   const [analyticsData, setAnalyticsData] = useState({
     totalUsers: 0,
@@ -202,14 +205,14 @@ const SuperAdminDashboard = () => {
     totalSheets: 0,
     activeUsers: 0
   });
-  
+
   // State for chart data
   const [userGrowthData, setUserGrowthData] = useState([]);
   const [projectStatusData, setProjectStatusData] = useState([]);
   const [sheetSubmissionData, setSheetSubmissionData] = useState([]);
   const [roleDistributionData, setRoleDistributionData] = useState([]);
   const [monthlyActivityData, setMonthlyActivityData] = useState([]);
-  
+
   // State for create user form
   const [showCreateUserForm, setShowCreateUserForm] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -218,18 +221,18 @@ const SuperAdminDashboard = () => {
     password: '',
     role: 'supervisor'
   });
-  
+
   // State for view user modal
   const [showViewUserModal, setShowViewUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userProjects, setUserProjects] = useState<any[]>([]);
   const [viewUserLoading, setViewUserLoading] = useState(false);
   const [viewUserError, setViewUserError] = useState('');
-  
+
   // State for edit user modal
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  
+
   // State for assign project modal
   const [showAssignProjectModal, setShowAssignProjectModal] = useState(false);
   const [assigningToUser, setAssigningToUser] = useState<User | null>(null);
@@ -237,7 +240,7 @@ const SuperAdminDashboard = () => {
   const [allProjects, setAllProjects] = useState<any[]>([]);
   const [assignProjectLoading, setAssignProjectLoading] = useState(false);
   const [assignProjectError, setAssignProjectError] = useState('');
-  
+
   // State for view/edit project modals
   const [showViewProjectModal, setShowViewProjectModal] = useState(false);
   const [showEditProjectModal, setShowEditProjectModal] = useState(false);
@@ -250,7 +253,7 @@ const SuperAdminDashboard = () => {
     planStart: '',
     planEnd: ''
   });
-  
+
   // State for create project form
   const [showCreateProjectForm, setShowCreateProjectForm] = useState(false);
   const [newProject, setNewProject] = useState({
@@ -259,7 +262,7 @@ const SuperAdminDashboard = () => {
     status: 'planning',
     progress: 0
   });
-  
+
   // Fetch roles data
   const fetchRoles = async () => {
     setLoading(true);
@@ -274,7 +277,7 @@ const SuperAdminDashboard = () => {
       setLoading(false);
     }
   };
-  
+
   // Fetch workflow overrides
   const fetchWorkflowOverrides = async () => {
     setLoading(true);
@@ -294,7 +297,7 @@ const SuperAdminDashboard = () => {
       setLoading(false);
     }
   };
-  
+
   // Fetch system logs
   const fetchSystemLogs = async () => {
     setLogsLoading(true);
@@ -302,7 +305,7 @@ const SuperAdminDashboard = () => {
     try {
       let url = '/api/super-admin/logs';
       const params = new URLSearchParams();
-      
+
       // Add action type filter if not 'all'
       if (actionFilter !== 'all') {
         const actionTypeMap: Record<string, string> = {
@@ -313,19 +316,19 @@ const SuperAdminDashboard = () => {
         };
         params.append('actionType', actionTypeMap[actionFilter] || actionFilter.toUpperCase());
       }
-      
+
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
-      
+
       const response = await api.get(url);
       let logs = response.data || [];
-      
+
       // Apply time filter on client side since API doesn't support it yet
       if (timeFilter !== 'all') {
         const now = new Date();
         const filterTime = new Date();
-        
+
         switch (timeFilter) {
           case '10min':
             filterTime.setMinutes(now.getMinutes() - 10);
@@ -342,13 +345,13 @@ const SuperAdminDashboard = () => {
           default:
             break;
         }
-        
+
         logs = logs.filter((log: SystemLog) => {
           const logTime = new Date(log.timestamp);
           return logTime >= filterTime;
         });
       }
-      
+
       setSystemLogs(logs);
     } catch (err) {
       setLogsError('Failed to fetch system logs');
@@ -357,7 +360,7 @@ const SuperAdminDashboard = () => {
       setLogsLoading(false);
     }
   };
-  
+
   // Export logs to PDF
   const exportLogsToPDF = () => {
     // Import jsPDF and autoTable dynamically
@@ -366,17 +369,17 @@ const SuperAdminDashboard = () => {
       import('jspdf-autotable')
     ]).then(([jsPDF]) => {
       const doc = new jsPDF.jsPDF();
-      
+
       // Add title
       doc.setFontSize(18);
       doc.text('System Logs Report', 14, 20);
-      
+
       // Add filter information
       doc.setFontSize(12);
       doc.text(`Time Filter: ${timeFilter}`, 14, 30);
       doc.text(`Action Filter: ${actionFilter}`, 14, 37);
       doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 44);
-      
+
       // Prepare data for table
       const filteredLogs = systemLogs.filter((log: SystemLog) => {
         if (!searchTerm) return true;
@@ -388,7 +391,7 @@ const SuperAdminDashboard = () => {
           log.remarks?.toLowerCase().includes(search)
         );
       });
-      
+
       // Add table
       const headers = [['Timestamp', 'Performed By', 'Action Type', 'Target Entity', 'Details']];
       const data = filteredLogs.map((log: SystemLog) => [
@@ -398,7 +401,7 @@ const SuperAdminDashboard = () => {
         log.target_entity || 'N/A',
         log.remarks || 'N/A'
       ]);
-      
+
       // @ts-ignore - AutoTable types might not be available
       doc.autoTable({
         head: headers,
@@ -408,7 +411,7 @@ const SuperAdminDashboard = () => {
         headStyles: { fillColor: [22, 160, 133] },
         alternateRowStyles: { fillColor: [245, 245, 245] }
       });
-      
+
       // Save the PDF
       doc.save('system-logs-report.pdf');
     }).catch((error) => {
@@ -432,7 +435,7 @@ const SuperAdminDashboard = () => {
           log.remarks?.toLowerCase().includes(search)
         );
       });
-      
+
       // Transform data for Excel
       const data = filteredLogs.map((log: SystemLog) => ({
         Timestamp: new Date(log.timestamp).toLocaleString(),
@@ -441,14 +444,14 @@ const SuperAdminDashboard = () => {
         'Target Entity': log.target_entity || 'N/A',
         Details: log.remarks || 'N/A'
       }));
-      
+
       // Create worksheet
       const ws = XLSX.utils.json_to_sheet(data);
-      
+
       // Create workbook
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'System Logs');
-      
+
       // Save the file
       XLSX.writeFile(wb, 'system-logs-report.xlsx');
     }).catch((error) => {
@@ -466,7 +469,7 @@ const SuperAdminDashboard = () => {
       totalSheets: 1247, // Mock data
       activeUsers: usersData.filter(user => user.IsActive !== false).length
     });
-    
+
     // Mock user growth data (last 6 months)
     setUserGrowthData([
       { month: 'Jan', users: 12 },
@@ -476,7 +479,7 @@ const SuperAdminDashboard = () => {
       { month: 'May', users: 18 },
       { month: 'Jun', users: 25 }
     ]);
-    
+
     // Mock project status data
     setProjectStatusData([
       { name: 'Planning', value: projectsData.filter(p => p.Status === 'planning').length },
@@ -484,7 +487,7 @@ const SuperAdminDashboard = () => {
       { name: 'Completed', value: projectsData.filter(p => p.Status === 'completed').length },
       { name: 'On Hold', value: projectsData.filter(p => p.Status === 'on hold').length }
     ]);
-    
+
     // Mock sheet submission data (last 6 months)
     setSheetSubmissionData([
       { month: 'Jan', submissions: 120 },
@@ -494,7 +497,7 @@ const SuperAdminDashboard = () => {
       { month: 'May', submissions: 165 },
       { month: 'Jun', submissions: 205 }
     ]);
-    
+
     // Mock role distribution data
     setRoleDistributionData([
       { name: 'Supervisor', value: usersData.filter(u => u.Role === 'supervisor').length },
@@ -502,7 +505,7 @@ const SuperAdminDashboard = () => {
       { name: 'PMAG', value: usersData.filter(u => u.Role === 'PMAG').length },
       { name: 'Super Admin', value: usersData.filter(u => u.Role === 'Super Admin').length }
     ]);
-    
+
     // Mock monthly activity data
     setMonthlyActivityData([
       { month: 'Jan', activity: 45 },
@@ -513,11 +516,11 @@ const SuperAdminDashboard = () => {
       { month: 'Jun', activity: 80 }
     ]);
   };
-  
+
   // Fetch data when component mounts or tab changes
   useEffect(() => {
     if (!token) return;
-    
+
     switch (activeTab) {
       case 'users':
         fetchUsers();
@@ -538,7 +541,7 @@ const SuperAdminDashboard = () => {
         break;
     }
   }, [activeTab, token]);
-  
+
   // Fetch users when filters change
   useEffect(() => {
     if (activeTab === 'users') {
@@ -568,12 +571,12 @@ const SuperAdminDashboard = () => {
   const handleCreateUser = () => {
     setShowCreateUserForm(true);
   };
-  
+
   const handleCreateUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       await api.post('/api/super-admin/users', newUser);
       setShowCreateUserForm(false);
@@ -590,12 +593,12 @@ const SuperAdminDashboard = () => {
   const handleCreateProject = () => {
     setShowCreateProjectForm(true);
   };
-  
+
   const handleCreateProjectSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    
+
     try {
       await api.post('/api/super-admin/projects', newProject);
       setShowCreateProjectForm(false);
@@ -616,7 +619,7 @@ const SuperAdminDashboard = () => {
       setShowEditUserModal(true);
     }
   };
-  
+
   const handleEditRole = (role: any) => {
     setEditingRole(role);
     setEditRoleForm({
@@ -625,50 +628,50 @@ const SuperAdminDashboard = () => {
     });
     setShowEditRoleModal(true);
   };
-  
+
   const handleEditRoleSave = async (roleId: number, data: { name: string; permissions: string }) => {
     console.log('Updating role:', roleId, data);
     // In a real implementation, this would call the API to update the role
     // For now, we'll just update the local state
-    
-    const updatedRoles = rolesData.map((role: any) => 
+
+    const updatedRoles = rolesData.map((role: any) =>
       role.id === roleId ? { ...role, ...data } : role
     );
-    
+
     setRolesData(updatedRoles);
     setShowEditRoleModal(false);
     setEditingRole(null);
-    
+
     setTimeout(() => {
       alert('Role updated successfully!');
     }, 100);
   };
-  
+
   const handleEditRoleCancel = () => {
     setShowEditRoleModal(false);
     setEditingRole(null);
   };
-  
+
   const handleEditRoleFormChange = (field: string, value: string) => {
     setEditRoleForm(prev => ({
       ...prev,
       [field]: value
     }));
   };
-  
+
   const handleEditUserSave = async (userId: number, data: { role: string; isActive: boolean }) => {
     console.log('Updating user:', userId, data);
     setLoading(true);
     setError('');
-    
+
     try {
       const response = await api.put(`/api/super-admin/users/${userId}`, data);
       console.log('User updated successfully:', response.data);
-      
+
       setShowEditUserModal(false);
       setEditingUser(null);
       await fetchUsers();
-      
+
       setTimeout(() => {
         alert('User updated successfully!');
       }, 100);
@@ -689,20 +692,20 @@ const SuperAdminDashboard = () => {
       setError('User not found');
       return;
     }
-    
+
     setAssigningToUser(user);
     setUserAssignedProjects([]);
     setAllProjects([]);
     setAssignProjectLoading(true);
     setAssignProjectError('');
     setShowAssignProjectModal(true);
-    
+
     try {
       const [projectsResponse, allProjectsResponse] = await Promise.all([
         api.get(`/api/super-admin/users/${userId}/projects`),
         api.get('/api/super-admin/projects')
       ]);
-      
+
       setUserAssignedProjects(projectsResponse.data || []);
       setAllProjects(allProjectsResponse.data || []);
     } catch (err: any) {
@@ -713,34 +716,34 @@ const SuperAdminDashboard = () => {
       setAssignProjectLoading(false);
     }
   };
-  
+
   const handleAssignProjects = async (userId: number, projectIds: number[]) => {
     setAssignProjectLoading(true);
     setAssignProjectError('');
-    
+
     try {
       const currentProjectIds = userAssignedProjects.map(p => p.id || p.ObjectId);
       const newProjectIds = projectIds.filter(id => !currentProjectIds.includes(id));
-      
+
       if (newProjectIds.length === 0) {
         setAssignProjectError('All selected projects are already assigned to this user');
         setAssignProjectLoading(false);
         return;
       }
-      
-      const assignmentPromises = newProjectIds.map(projectId => 
+
+      const assignmentPromises = newProjectIds.map(projectId =>
         api.post('/api/super-admin/users/assign-project', {
           userId: userId,
           projectId: projectId
         })
       );
-      
+
       await Promise.all(assignmentPromises);
-      
+
       setShowAssignProjectModal(false);
       setAssigningToUser(null);
       await fetchUsers();
-      
+
       setTimeout(() => {
         alert(`Successfully assigned ${newProjectIds.length} project(s)!`);
       }, 100);
@@ -758,16 +761,16 @@ const SuperAdminDashboard = () => {
     setViewUserLoading(true);
     setViewUserError('');
     setShowViewUserModal(true);
-    
+
     try {
       const [userResponse, projectsResponse] = await Promise.all([
         api.get(`/api/super-admin/users/${userId}`),
         api.get(`/api/super-admin/users/${userId}/projects`)
       ]);
-      
+
       const userData = userResponse.data;
       const projects = projectsResponse.data || [];
-      
+
       setUserProjects(projects);
       setSelectedUser({
         ObjectId: userData.ObjectId,
@@ -785,7 +788,7 @@ const SuperAdminDashboard = () => {
       setViewUserLoading(false);
     }
   };
-  
+
   const handleCloseViewUserModal = () => {
     setShowViewUserModal(false);
     setSelectedUser(null);
@@ -798,8 +801,14 @@ const SuperAdminDashboard = () => {
     if (location.state?.activeTab) {
       setActiveTab(location.state.activeTab);
     }
-  }, [location.state?.activeTab]);
-  
+    // Open snapshot filter if requested from navbar
+    if (location.state?.openSnapshotFilter) {
+      setShowSnapshotFilter(true);
+      // Clear the state after opening
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state?.activeTab, location.state?.openSnapshotFilter]);
+
   // Reset filters when switching tabs
   useEffect(() => {
     if (activeTab !== 'users') {
@@ -808,7 +817,7 @@ const SuperAdminDashboard = () => {
       setSearchTerm('');
     }
   }, [activeTab]);
-  
+
   return (
     <DashboardLayout
       userName={user?.Name || "Super Admin"}
@@ -825,7 +834,7 @@ const SuperAdminDashboard = () => {
                 <input
                   type="text"
                   value={newUser.name}
-                  onChange={(e) => setNewUser({...newUser, name: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
                   required
                   className="w-full p-2 border rounded"
                 />
@@ -835,7 +844,7 @@ const SuperAdminDashboard = () => {
                 <input
                   type="email"
                   value={newUser.email}
-                  onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                   required
                   className="w-full p-2 border rounded"
                 />
@@ -845,7 +854,7 @@ const SuperAdminDashboard = () => {
                 <input
                   type="password"
                   value={newUser.password}
-                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   required
                   className="w-full p-2 border rounded"
                 />
@@ -855,7 +864,7 @@ const SuperAdminDashboard = () => {
                 <select
                   className="w-full p-2 border rounded"
                   value={newUser.role}
-                  onChange={(e) => setNewUser({...newUser, role: e.target.value})}
+                  onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
                 >
                   <option value="supervisor">Supervisor</option>
                   <option value="Site PM">Site PM</option>
@@ -875,7 +884,7 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* Create Project Modal */}
       {showCreateProjectForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -887,7 +896,7 @@ const SuperAdminDashboard = () => {
                 <input
                   type="text"
                   value={newProject.name}
-                  onChange={(e) => setNewProject({...newProject, name: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                   required
                   className="w-full p-2 border rounded"
                 />
@@ -897,7 +906,7 @@ const SuperAdminDashboard = () => {
                 <input
                   type="text"
                   value={newProject.location}
-                  onChange={(e) => setNewProject({...newProject, location: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
                   className="w-full p-2 border rounded"
                 />
               </div>
@@ -906,7 +915,7 @@ const SuperAdminDashboard = () => {
                 <select
                   className="w-full p-2 border rounded"
                   value={newProject.status}
-                  onChange={(e) => setNewProject({...newProject, status: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, status: e.target.value })}
                 >
                   <option value="planning">Planning</option>
                   <option value="active">Active</option>
@@ -921,7 +930,7 @@ const SuperAdminDashboard = () => {
                   min="0"
                   max="100"
                   value={newProject.progress}
-                  onChange={(e) => setNewProject({...newProject, progress: parseInt(e.target.value) || 0})}
+                  onChange={(e) => setNewProject({ ...newProject, progress: parseInt(e.target.value) || 0 })}
                   className="w-full p-2 border rounded"
                 />
               </div>
@@ -937,7 +946,7 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* View User Modal */}
       <ViewUserModal
         isOpen={showViewUserModal}
@@ -947,7 +956,7 @@ const SuperAdminDashboard = () => {
         loading={viewUserLoading}
         error={viewUserError}
       />
-      
+
       {/* Edit User Modal */}
       <EditUserModal
         isOpen={showEditUserModal}
@@ -959,7 +968,7 @@ const SuperAdminDashboard = () => {
         onSave={handleEditUserSave}
         loading={loading}
       />
-      
+
       {/* Assign Project Modal */}
       <AssignProjectModal
         isOpen={showAssignProjectModal}
@@ -975,7 +984,7 @@ const SuperAdminDashboard = () => {
         error={assignProjectError}
         onAssign={handleAssignProjects}
       />
-      
+
       {/* Edit Role Modal */}
       {showEditRoleModal && editingRole && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1018,9 +1027,9 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
       )}
-      
+
       <div className="container mx-auto px-4 py-8">
-        <SuperAdminHeader 
+        <SuperAdminHeader
           onCreateUser={handleCreateUser}
           onCreateProject={handleCreateProject}
         />
@@ -1069,9 +1078,9 @@ const SuperAdminDashboard = () => {
                         <SelectItem value="inactive">Inactive</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="flex items-center gap-2"
                       onClick={fetchUsers}
                     >
@@ -1080,7 +1089,7 @@ const SuperAdminDashboard = () => {
                     </Button>
                   </div>
                 </div>
-                
+
                 {loading ? (
                   <div className="flex justify-center items-center h-32">
                     <RefreshCw className="w-6 h-6 animate-spin" />
@@ -1121,82 +1130,82 @@ const SuperAdminDashboard = () => {
                                 return false;
                               }
                             }
-                            
+
                             // Apply role filter
                             if (roleFilter !== 'all' && user.Role !== roleFilter) {
                               return false;
                             }
-                            
+
                             // Apply status filter
                             if (statusFilter !== 'all') {
                               const isActive = user.IsActive !== false;
                               if (statusFilter === 'active' && !isActive) return false;
                               if (statusFilter === 'inactive' && isActive) return false;
                             }
-                            
+
                             return true;
                           })
                           .map((user) => (
-                          <TableRow key={user.ObjectId}>
-                            <TableCell className="font-medium">{user.Name}</TableCell>
-                            <TableCell>{user.Email}</TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                user.Role === 'supervisor' ? 'default' :
-                                user.Role === 'Site PM' ? 'secondary' :
-                                user.Role === 'PMAG' ? 'destructive' : 'outline'
-                              }>
-                                {user.Role}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={user.IsActive !== false ? 'default' : 'secondary'}>
-                                {user.IsActive !== false ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{new Date(user.CreatedAt).toLocaleDateString()}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewUser(user.ObjectId);
-                                  }}
-                                  title="View User"
-                                  className="hover:bg-gray-100 "
-                                >
-                                  <Eye className="w-4 h-4 hover:text-blue-500" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditUser(user.ObjectId);
-                                  }}
-                                  title="Edit User"
-                                  className="hover:bg-gray-100"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAssignProject(user.ObjectId);
-                                  }}
-                                  title="Assign Project"
-                                  className="hover:bg-gray-100"
-                                >
-                                  <FolderPlus className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                            <TableRow key={user.ObjectId}>
+                              <TableCell className="font-medium">{user.Name}</TableCell>
+                              <TableCell>{user.Email}</TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  user.Role === 'supervisor' ? 'default' :
+                                    user.Role === 'Site PM' ? 'secondary' :
+                                      user.Role === 'PMAG' ? 'destructive' : 'outline'
+                                }>
+                                  {user.Role}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={user.IsActive !== false ? 'default' : 'secondary'}>
+                                  {user.IsActive !== false ? 'Active' : 'Inactive'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{new Date(user.CreatedAt).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleViewUser(user.ObjectId);
+                                    }}
+                                    title="View User"
+                                    className="hover:bg-gray-100 "
+                                  >
+                                    <Eye className="w-4 h-4 hover:text-blue-500" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleEditUser(user.ObjectId);
+                                    }}
+                                    title="Edit User"
+                                    className="hover:bg-gray-100"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAssignProject(user.ObjectId);
+                                    }}
+                                    title="Assign Project"
+                                    className="hover:bg-gray-100"
+                                  >
+                                    <FolderPlus className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
                       </TableBody>
                     </Table>
                   </div>
@@ -1235,9 +1244,9 @@ const SuperAdminDashboard = () => {
                         <SelectItem value="completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="flex items-center gap-2"
                       onClick={fetchProjects}
                     >
@@ -1246,7 +1255,7 @@ const SuperAdminDashboard = () => {
                     </Button>
                   </div>
                 </div>
-                
+
                 {loading ? (
                   <div className="flex justify-center items-center h-32">
                     <RefreshCw className="w-6 h-6 animate-spin" />
@@ -1287,65 +1296,65 @@ const SuperAdminDashboard = () => {
                                 return false;
                               }
                             }
-                            
+
                             // Apply status filter
                             if (projectStatusFilter !== 'all' && project.Status !== projectStatusFilter) {
                               return false;
                             }
-                            
+
                             return true;
                           })
                           .map((project) => (
-                          <TableRow key={project.ObjectId}>
-                            <TableCell className="font-medium">{project.Name}</TableCell>
-                            <TableCell>{project.Location || 'N/A'}</TableCell>
-                            <TableCell>
-                              <Badge variant={
-                                project.Status === 'active' ? 'default' :
-                                project.Status === 'planning' ? 'secondary' : 'outline'
-                              }>
-                                {project.Status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{project.Progress || 0}%</TableCell>
-                            <TableCell>{project.PlanStart ? new Date(project.PlanStart).toLocaleDateString() : 'N/A'}</TableCell>
-                            <TableCell>{project.PlanEnd ? new Date(project.PlanEnd).toLocaleDateString() : 'N/A'}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedProject(project);
-                                    setShowViewProjectModal(true);
-                                  }}
-                                  title="View Project"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedProject(project);
-                                    setEditProjectForm({
-                                      name: project.Name,
-                                      location: project.Location || '',
-                                      status: project.Status || 'planning',
-                                      progress: project.Progress || 0,
-                                      planStart: project.PlanStart ? new Date(project.PlanStart).toISOString().split('T')[0] : '',
-                                      planEnd: project.PlanEnd ? new Date(project.PlanEnd).toISOString().split('T')[0] : ''
-                                    });
-                                    setShowEditProjectModal(true);
-                                  }}
-                                  title="Edit Project"
-                                >
-                                  <Edit className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                            <TableRow key={project.ObjectId}>
+                              <TableCell className="font-medium">{project.Name}</TableCell>
+                              <TableCell>{project.Location || 'N/A'}</TableCell>
+                              <TableCell>
+                                <Badge variant={
+                                  project.Status === 'active' ? 'default' :
+                                    project.Status === 'planning' ? 'secondary' : 'outline'
+                                }>
+                                  {project.Status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{project.Progress || 0}%</TableCell>
+                              <TableCell>{project.PlanStart ? new Date(project.PlanStart).toLocaleDateString() : 'N/A'}</TableCell>
+                              <TableCell>{project.PlanEnd ? new Date(project.PlanEnd).toLocaleDateString() : 'N/A'}</TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedProject(project);
+                                      setShowViewProjectModal(true);
+                                    }}
+                                    title="View Project"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedProject(project);
+                                      setEditProjectForm({
+                                        name: project.Name,
+                                        location: project.Location || '',
+                                        status: project.Status || 'planning',
+                                        progress: project.Progress || 0,
+                                        planStart: project.PlanStart ? new Date(project.PlanStart).toISOString().split('T')[0] : '',
+                                        planEnd: project.PlanEnd ? new Date(project.PlanEnd).toISOString().split('T')[0] : ''
+                                      });
+                                      setShowEditProjectModal(true);
+                                    }}
+                                    title="Edit Project"
+                                  >
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
                       </TableBody>
                     </Table>
                   </div>
@@ -1353,6 +1362,12 @@ const SuperAdminDashboard = () => {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Sheet Entries Tab */}
+          <TabsContent value="sheet-entries" className="mt-6">
+            <SuperAdminSheetEntries projects={projectsData} />
+          </TabsContent>
+
           {/* Roles Tab */}
           <TabsContent value="roles" className="mt-6">
             <Card>
@@ -1428,7 +1443,7 @@ const SuperAdminDashboard = () => {
                           </TableCell>
                           <TableCell>{override.overrideAction}</TableCell>
                           <TableCell className="text-right">
-                            <Button 
+                            <Button
                               size="sm"
                               onClick={() => {
                                 if (window.confirm(`Are you sure you want to execute override: ${override.overrideAction}?`)) {
@@ -1454,7 +1469,7 @@ const SuperAdminDashboard = () => {
 
           {/* System Logs Tab */}
           <TabsContent value="logs" className="mt-6">
-            <SuperAdminLogs 
+            <SuperAdminLogs
               systemLogs={systemLogs}
               logsLoading={logsLoading}
               logsError={logsError}
@@ -1471,7 +1486,7 @@ const SuperAdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-      
+
       {/* View Project Modal */}
       <ViewProjectModal
         isOpen={showViewProjectModal}
@@ -1481,7 +1496,7 @@ const SuperAdminDashboard = () => {
         }}
         project={selectedProject}
       />
-      
+
       {/* Edit Project Modal */}
       <EditProjectModal
         isOpen={showEditProjectModal}
@@ -1517,6 +1532,13 @@ const SuperAdminDashboard = () => {
           }
         }}
         loading={loading}
+      />
+
+      {/* Snapshot Filter Modal */}
+      <SnapshotFilterModal
+        isOpen={showSnapshotFilter}
+        onClose={() => setShowSnapshotFilter(false)}
+        projects={projectsData}
       />
     </DashboardLayout>
   );

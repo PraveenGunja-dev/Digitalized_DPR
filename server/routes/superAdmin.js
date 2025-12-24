@@ -41,9 +41,9 @@ router.get('/users', (req, res, next) => {
       FROM information_schema.columns 
       WHERE table_name = 'users' AND column_name = 'is_active'
     `);
-    
+
     const hasIsActiveColumn = columnCheck.rows.length > 0;
-    
+
     let query;
     if (hasIsActiveColumn) {
       query = `SELECT user_id AS "ObjectId", name AS "Name", email AS "Email", role AS "Role", 
@@ -54,9 +54,9 @@ router.get('/users', (req, res, next) => {
                       true AS "IsActive", created_at AS "CreatedAt" 
                FROM users ORDER BY name`;
     }
-    
+
     const result = await pool.query(query);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -76,50 +76,50 @@ router.post('/users', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
-    
+
     // Validate required fields
     if (!name || !email || !password || !role) {
-      return res.status(400).json({ 
-        message: 'All fields are required: name, email, password, role' 
+      return res.status(400).json({
+        message: 'All fields are required: name, email, password, role'
       });
     }
-    
+
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return res.status(400).json({ 
-        message: 'Invalid email format' 
+      return res.status(400).json({
+        message: 'Invalid email format'
       });
     }
-    
+
     // Validate password strength (at least 8 characters)
     if (password.length < 8) {
-      return res.status(400).json({ 
-        message: 'Password must be at least 8 characters long' 
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long'
       });
     }
-    
+
     // Validate role
     const validRoles = ['supervisor', 'Site PM', 'PMAG', 'admin', 'Super Admin'];
     if (!validRoles.includes(role)) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Invalid role. Must be one of: ' + validRoles.join(', ')
       });
     }
-    
+
     // Hash password
     const bcrypt = require('bcrypt');
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    
+
     // Insert user into database
     const result = await pool.query(
       'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, name, email, role',
       [name, email, hashedPassword, role]
     );
-    
+
     const user = result.rows[0];
-    
+
     // Log user creation
     await logAction(
       'USER_CREATED',
@@ -127,7 +127,7 @@ router.post('/users', (req, res, next) => {
       `User: ${user.name} (${user.email})`,
       `Created user ${user.name} with role ${user.role}`
     );
-    
+
     res.status(201).json({
       message: 'User created successfully',
       user: {
@@ -159,41 +159,41 @@ router.put('/users/:userId', (req, res, next) => {
   try {
     const { userId } = req.params;
     const { name, email, role, isActive } = req.body;
-    
+
     // Build update query dynamically based on provided fields
     const updates = [];
     const values = [];
     let index = 1;
-    
+
     if (name !== undefined) {
       updates.push(`name = $${index++}`);
       values.push(name);
     }
-    
+
     if (email !== undefined) {
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return res.status(400).json({ 
-          message: 'Invalid email format' 
+        return res.status(400).json({
+          message: 'Invalid email format'
         });
       }
       updates.push(`email = $${index++}`);
       values.push(email);
     }
-    
+
     if (role !== undefined) {
       // Validate role
       const validRoles = ['supervisor', 'Site PM', 'PMAG', 'admin', 'Super Admin'];
       if (!validRoles.includes(role)) {
-        return res.status(400).json({ 
+        return res.status(400).json({
           message: 'Invalid role. Must be one of: ' + validRoles.join(', ')
         });
       }
       updates.push(`role = $${index++}`);
       values.push(role);
     }
-    
+
     // Check if is_active column exists before processing updates
     const columnCheck = await pool.query(`
       SELECT column_name 
@@ -202,7 +202,7 @@ router.put('/users/:userId', (req, res, next) => {
     `);
     const hasIsActiveColumn = columnCheck.rows.some(row => row.column_name === 'is_active');
     const hasUpdatedAtColumn = columnCheck.rows.some(row => row.column_name === 'updated_at');
-    
+
     if (isActive !== undefined) {
       if (hasIsActiveColumn) {
         updates.push(`is_active = $${index++}`);
@@ -212,11 +212,11 @@ router.put('/users/:userId', (req, res, next) => {
         console.warn('is_active column does not exist, skipping isActive update');
       }
     }
-    
+
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
-    
+
     // Get old user data for logging before update
     let oldUserQuery;
     if (hasIsActiveColumn) {
@@ -224,40 +224,40 @@ router.put('/users/:userId', (req, res, next) => {
     } else {
       oldUserQuery = 'SELECT role, true as is_active FROM users WHERE user_id = $1';
     }
-    
+
     const oldUserResult = await pool.query(oldUserQuery, [userId]);
-    
+
     if (oldUserResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     const oldUser = oldUserResult.rows[0];
-    
+
     // Add updated_at if column exists
     if (hasUpdatedAtColumn) {
       updates.push(`updated_at = CURRENT_TIMESTAMP`);
     }
-    
+
     values.push(userId);
-    
+
     let returnFields = 'user_id, name, email, role';
     if (hasIsActiveColumn) {
       returnFields += ', COALESCE(is_active, true) as is_active';
     } else {
       returnFields += ', true as is_active';
     }
-    
+
     const result = await pool.query(
       `UPDATE users SET ${updates.join(', ')} WHERE user_id = $${index} RETURNING ${returnFields}`,
       values
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     const user = result.rows[0];
-    
+
     // Log role change if role was updated
     if (role !== undefined && role !== oldUser.role) {
       await logAction(
@@ -267,7 +267,7 @@ router.put('/users/:userId', (req, res, next) => {
         `Role changed from ${oldUser.role} to ${role}`
       );
     }
-    
+
     // Log activation/deactivation if status was updated
     if (isActive !== undefined && isActive !== oldUser.is_active) {
       await logAction(
@@ -277,7 +277,7 @@ router.put('/users/:userId', (req, res, next) => {
         `User ${isActive ? 'activated' : 'deactivated'}`
       );
     }
-    
+
     res.json({
       message: 'User updated successfully',
       user: {
@@ -309,21 +309,21 @@ router.delete('/users/:userId', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     // Prevent deletion of self
     if (parseInt(userId) === req.user.userId) {
       return res.status(400).json({ message: 'Cannot delete your own account' });
     }
-    
+
     const result = await pool.query(
       'DELETE FROM users WHERE user_id = $1 RETURNING user_id',
       [userId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -344,30 +344,30 @@ router.post('/users/:userId/reset-password', (req, res, next) => {
   try {
     const { userId } = req.params;
     const { newPassword } = req.body;
-    
+
     // Validate password strength
     if (!newPassword || newPassword.length < 8) {
-      return res.status(400).json({ 
-        message: 'Password must be at least 8 characters long' 
+      return res.status(400).json({
+        message: 'Password must be at least 8 characters long'
       });
     }
-    
+
     // Hash new password
     const bcrypt = require('bcrypt');
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
-    
+
     const result = await pool.query(
       'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING user_id, name, email',
       [hashedPassword, userId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     const user = result.rows[0];
-    
+
     res.json({
       message: 'Password reset successfully',
       user: {
@@ -396,7 +396,7 @@ router.get('/projects', (req, res, next) => {
     const result = await pool.query(
       'SELECT DISTINCT id AS "ObjectId", name AS "Name", location AS "Location", status AS "Status", progress AS "Progress", plan_start AS "PlanStart", plan_end AS "PlanEnd", created_at AS "CreatedAt" FROM projects ORDER BY name'
     );
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -416,21 +416,21 @@ router.post('/projects', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { name, location, status, progress, planStart, planEnd } = req.body;
-    
+
     // Validate required fields
     if (!name) {
-      return res.status(400).json({ 
-        message: 'Project name is required' 
+      return res.status(400).json({
+        message: 'Project name is required'
       });
     }
-    
+
     const result = await pool.query(
       'INSERT INTO projects (name, location, status, progress, plan_start, plan_end) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, location, status, progress, plan_start, plan_end',
       [name, location || null, status || 'planning', progress || 0, planStart || null, planEnd || null]
     );
-    
+
     const project = result.rows[0];
-    
+
     res.status(201).json({
       message: 'Project created successfully',
       project: {
@@ -462,59 +462,59 @@ router.put('/projects/:projectId', (req, res, next) => {
   try {
     const { projectId } = req.params;
     const { name, location, status, progress, planStart, planEnd } = req.body;
-    
+
     // Build update query dynamically based on provided fields
     const updates = [];
     const values = [];
     let index = 1;
-    
+
     if (name !== undefined) {
       updates.push(`name = $${index++}`);
       values.push(name);
     }
-    
+
     if (location !== undefined) {
       updates.push(`location = $${index++}`);
       values.push(location);
     }
-    
+
     if (status !== undefined) {
       updates.push(`status = $${index++}`);
       values.push(status);
     }
-    
+
     if (progress !== undefined) {
       updates.push(`progress = $${index++}`);
       values.push(progress);
     }
-    
+
     if (planStart !== undefined) {
       updates.push(`plan_start = $${index++}`);
       values.push(planStart);
     }
-    
+
     if (planEnd !== undefined) {
       updates.push(`plan_end = $${index++}`);
       values.push(planEnd);
     }
-    
+
     if (updates.length === 0) {
       return res.status(400).json({ message: 'No fields to update' });
     }
-    
+
     values.push(projectId);
-    
+
     const result = await pool.query(
       `UPDATE projects SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${index} RETURNING id, name, location, status, progress, plan_start, plan_end`,
       values
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
+
     const project = result.rows[0];
-    
+
     res.json({
       message: 'Project updated successfully',
       project: {
@@ -545,16 +545,16 @@ router.delete('/projects/:projectId', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     const result = await pool.query(
       'DELETE FROM projects WHERE id = $1 RETURNING id',
       [projectId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
+
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
     console.error('Error deleting project:', error);
@@ -580,7 +580,7 @@ router.get('/stats', (req, res, next) => {
       GROUP BY role
       ORDER BY role
     `);
-    
+
     // Get project counts by status
     const projectStats = await pool.query(`
       SELECT status, COUNT(*) as count
@@ -588,7 +588,7 @@ router.get('/stats', (req, res, next) => {
       GROUP BY status
       ORDER BY status
     `);
-    
+
     // Get total sheets count
     const sheetsStats = await pool.query(`
       SELECT COUNT(*) as total_sheets,
@@ -597,7 +597,7 @@ router.get('/stats', (req, res, next) => {
              COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_sheets
       FROM dpr_sheets
     `);
-    
+
     res.json({
       userStats: userStats.rows,
       projectStats: projectStats.rows,
@@ -621,16 +621,16 @@ router.get('/users/:userId', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     // Check if is_active column exists
     const columnCheck = await pool.query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'users' AND column_name = 'is_active'
     `);
-    
+
     const hasIsActiveColumn = columnCheck.rows.length > 0;
-    
+
     let query;
     if (hasIsActiveColumn) {
       query = `SELECT user_id AS "ObjectId", name AS "Name", email AS "Email", role AS "Role", 
@@ -641,13 +641,13 @@ router.get('/users/:userId', (req, res, next) => {
                       true AS "IsActive", created_at AS "CreatedAt" 
                FROM users WHERE user_id = $1`;
     }
-    
+
     const result = await pool.query(query, [userId]);
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching user:', error);
@@ -668,7 +668,7 @@ router.get('/users/:userId/projects', (req, res, next) => {
   try {
     const { userId } = req.params;
     console.log('Fetching projects for user:', userId);
-    
+
     // Query to get user's assigned projects
     const result = await pool.query(`
       SELECT p.id, p.name
@@ -677,7 +677,7 @@ router.get('/users/:userId/projects', (req, res, next) => {
       WHERE pa.user_id = $1
       ORDER BY p.name
     `, [userId]);
-    
+
     console.log('Projects query result:', result.rows);
     res.json(result.rows);
   } catch (error) {
@@ -699,7 +699,7 @@ router.get('/users/:userId/analytics', (req, res, next) => {
   try {
     const { userId } = req.params;
     console.log('Fetching analytics for user:', userId);
-    
+
     // Query to get user analytics
     const result = await pool.query(`
       SELECT 
@@ -710,10 +710,10 @@ router.get('/users/:userId/analytics', (req, res, next) => {
       FROM dpr_sheets 
       WHERE user_id = $1
     `, [userId]);
-    
+
     console.log('Analytics query result:', result.rows);
     const analytics = result.rows[0];
-    
+
     res.json({
       totalSheets: parseInt(analytics.total_sheets) || 0,
       approvedSheets: parseInt(analytics.approved_sheets) || 0,
@@ -739,7 +739,7 @@ router.get('/users/:userId/sheets', (req, res, next) => {
   try {
     const { userId } = req.params;
     console.log('Fetching sheets for user:', userId);
-    
+
     // Query to get user's submitted sheets with project names
     const result = await pool.query(`
       SELECT 
@@ -753,7 +753,7 @@ router.get('/users/:userId/sheets', (req, res, next) => {
       ORDER BY ds.sheet_date DESC
       LIMIT 10
     `, [userId]);
-    
+
     console.log('Sheets query result:', result.rows);
     const sheets = result.rows.map(row => ({
       id: `SHT-${row.id.toString().padStart(3, '0')}`,
@@ -761,7 +761,7 @@ router.get('/users/:userId/sheets', (req, res, next) => {
       status: row.status.charAt(0).toUpperCase() + row.status.slice(1),
       project: row.project
     }));
-    
+
     res.json(sheets);
   } catch (error) {
     console.error('Error fetching user sheets:', error);
@@ -779,39 +779,39 @@ router.post('/users/assign-project', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { userId, projectId } = req.body;
-    
+
     if (!userId || !projectId) {
       return res.status(400).json({ message: 'User ID and Project ID are required' });
     }
-    
+
     // Check if project exists
     const projectResult = await pool.query('SELECT id, name FROM projects WHERE id = $1', [projectId]);
     if (projectResult.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
+
     // Check if user exists
     const userResult = await pool.query('SELECT user_id, name FROM users WHERE user_id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
+
     // Check if assignment already exists
     const existingAssignment = await pool.query(
       'SELECT id FROM project_assignments WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
     );
-    
+
     if (existingAssignment.rows.length > 0) {
       return res.status(400).json({ message: 'Project is already assigned to this user' });
     }
-    
+
     // Assign project
     const result = await pool.query(
       'INSERT INTO project_assignments (project_id, user_id, assigned_by) VALUES ($1, $2, $3) RETURNING id',
       [projectId, userId, req.user.userId]
     );
-    
+
     // Log project assignment
     await logAction(
       'PROJECT_ASSIGNED',
@@ -819,7 +819,7 @@ router.post('/users/assign-project', (req, res, next) => {
       `User: ${userResult.rows[0].name}, Project: ${projectResult.rows[0].name}`,
       `Assigned project ${projectResult.rows[0].name} to user ${userResult.rows[0].name}`
     );
-    
+
     res.status(201).json({
       message: 'Project assigned successfully',
       assignment: result.rows[0]
@@ -842,16 +842,16 @@ router.get('/projects/:projectId', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     const result = await pool.query(
       'SELECT id AS "ObjectId", name AS "Name", location AS "Location", status AS "Status", progress AS "Progress", plan_start AS "PlanStart", plan_end AS "PlanEnd", created_at AS "CreatedAt" FROM projects WHERE id = $1',
       [projectId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Project not found' });
     }
-    
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Error fetching project:', error);
@@ -871,7 +871,7 @@ router.get('/projects/:projectId/users', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     // Query to get users assigned to this project
     const result = await pool.query(`
       SELECT u.user_id AS "ObjectId", u.name AS "Name", u.email AS "Email", u.role AS "Role"
@@ -880,7 +880,7 @@ router.get('/projects/:projectId/users', (req, res, next) => {
       WHERE pa.project_id = $1
       ORDER BY u.name
     `, [projectId]);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching project users:', error);
@@ -898,7 +898,7 @@ router.get('/logs', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     const { actionType } = req.query;
-    
+
     let query = `
       SELECT 
         sl.id,
@@ -911,17 +911,17 @@ router.get('/logs', (req, res, next) => {
       FROM system_logs sl
       LEFT JOIN users u ON sl.performed_by = u.user_id
     `;
-    
+
     const params = [];
     if (actionType) {
       query += ' WHERE sl.action_type = $1';
       params.push(actionType);
     }
-    
+
     query += ' ORDER BY sl.created_at DESC LIMIT 1000';
-    
+
     const result = await pool.query(query, params);
-    
+
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching system logs:', error);
@@ -947,7 +947,7 @@ router.get('/roles', (req, res, next) => {
       GROUP BY role
       ORDER BY role
     `);
-    
+
     // Define role permissions (these could be stored in a separate table in a more complex system)
     const rolePermissions = {
       'supervisor': 'Create and submit DPR sheets, View assigned projects, Update personal profile',
@@ -955,7 +955,7 @@ router.get('/roles', (req, res, next) => {
       'PMAG': 'Final approval of PM-reviewed sheets, System-wide analytics and reporting, User management, Project oversight',
       'Super Admin': 'Full system access, User and role management, System configuration, All project access, Audit logs'
     };
-    
+
     // Format the response to match the frontend expectations
     const roles = result.rows.map((roleRow, index) => ({
       id: index + 1,
@@ -963,11 +963,217 @@ router.get('/roles', (req, res, next) => {
       permissions: rolePermissions[roleRow.name] || 'Standard permissions',
       userCount: parseInt(roleRow.usercount) // PostgreSQL returns lowercase column names
     }));
-    
+
     res.json(roles);
   } catch (error) {
     console.error('Error fetching roles:', error);
     res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// Get all sheet entries (Super Admin only)
+router.get('/entries', (req, res, next) => {
+  if (typeof authenticateToken === 'function') {
+    authenticateToken(req, res, next);
+  } else {
+    res.status(401).json({ message: 'Authentication middleware not initialized' });
+  }
+}, isSuperAdmin, async (req, res) => {
+  try {
+    const { status, projectId, sheetType, limit = 50, offset = 0 } = req.query;
+
+    let query = `
+      SELECT 
+        e.id,
+        e.sheet_type,
+        e.project_id,
+        p.name AS project_name,
+        e.user_id,
+        u.name AS submitted_by,
+        e.status,
+        e.data_json,
+        e.created_at,
+        e.updated_at,
+        e.submitted_at,
+        e.approved_at,
+        e.final_approved_at
+      FROM entries e
+      LEFT JOIN projects p ON e.project_id = p.id
+      LEFT JOIN users u ON e.user_id = u.user_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramIndex = 1;
+
+    // Filter by status
+    if (status && status !== 'all') {
+      query += ` AND e.status = $${paramIndex++}`;
+      params.push(status);
+    }
+
+    // Filter by project
+    if (projectId && projectId !== 'all') {
+      query += ` AND e.project_id = $${paramIndex++}`;
+      params.push(projectId);
+    }
+
+    // Filter by sheet type
+    if (sheetType && sheetType !== 'all') {
+      query += ` AND e.sheet_type = $${paramIndex++}`;
+      params.push(sheetType);
+    }
+
+    // Add ordering and pagination
+    query += ` ORDER BY e.updated_at DESC, e.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
+    params.push(parseInt(limit), parseInt(offset));
+
+    const result = await pool.query(query, params);
+
+    // Get total count for pagination
+    let countQuery = `
+      SELECT COUNT(*) as total
+      FROM entries e
+      WHERE 1=1
+    `;
+
+    const countParams = [];
+    let countParamIndex = 1;
+
+    if (status && status !== 'all') {
+      countQuery += ` AND e.status = $${countParamIndex++}`;
+      countParams.push(status);
+    }
+
+    if (projectId && projectId !== 'all') {
+      countQuery += ` AND e.project_id = $${countParamIndex++}`;
+      countParams.push(projectId);
+    }
+
+    if (sheetType && sheetType !== 'all') {
+      countQuery += ` AND e.sheet_type = $${countParamIndex++}`;
+      countParams.push(sheetType);
+    }
+
+    const countResult = await pool.query(countQuery, countParams);
+
+    res.json({
+      entries: result.rows,
+      total: parseInt(countResult.rows[0].total),
+      limit: parseInt(limit),
+      offset: parseInt(offset)
+    });
+  } catch (error) {
+    console.error('Error fetching sheet entries:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
+  }
+});
+
+// Get snapshot data with filters (Super Admin only)
+router.get('/snapshot', (req, res, next) => {
+  if (typeof authenticateToken === 'function') {
+    authenticateToken(req, res, next);
+  } else {
+    res.status(401).json({ message: 'Authentication middleware not initialized' });
+  }
+}, isSuperAdmin, async (req, res) => {
+  try {
+    const { startDate, endDate, projectId, sheetType } = req.query;
+
+    // Build query
+    let query = `
+      SELECT 
+        e.id,
+        e.sheet_type,
+        e.project_id,
+        p.name AS project_name,
+        e.user_id,
+        u.name AS submitted_by,
+        u.role AS user_role,
+        e.status,
+        e.data_json,
+        e.created_at,
+        e.updated_at,
+        e.submitted_at,
+        e.approved_at,
+        e.final_approved_at,
+        e.rejection_reason
+      FROM entries e
+      LEFT JOIN projects p ON e.project_id = p.id
+      LEFT JOIN users u ON e.user_id = u.user_id
+      WHERE 1=1
+    `;
+
+    const params = [];
+    let paramIndex = 1;
+
+    // Date range filter
+    if (startDate) {
+      query += ` AND e.created_at >= $${paramIndex++}`;
+      params.push(startDate);
+    }
+
+    if (endDate) {
+      // Add one day to include the entire end date
+      query += ` AND e.created_at < ($${paramIndex++}::date + interval '1 day')`;
+      params.push(endDate);
+    }
+
+    // Project filter
+    if (projectId && projectId !== 'all') {
+      query += ` AND e.project_id = $${paramIndex++}`;
+      params.push(projectId);
+    }
+
+    // Sheet type filter (can be comma-separated for multiple types)
+    if (sheetType && sheetType !== 'all') {
+      const sheetTypes = sheetType.split(',');
+      query += ` AND e.sheet_type = ANY($${paramIndex++}::text[])`;
+      params.push(sheetTypes);
+    }
+
+    // Order by most recent first
+    query += ` ORDER BY e.created_at DESC, e.id DESC`;
+
+    // Limit to prevent excessive data
+    query += ` LIMIT 1000`;
+
+    const result = await pool.query(query, params);
+
+    // Get summary statistics
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_entries,
+        COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft_count,
+        COUNT(CASE WHEN status = 'submitted_to_pm' THEN 1 END) as submitted_count,
+        COUNT(CASE WHEN status = 'approved_by_pm' THEN 1 END) as approved_count,
+        COUNT(CASE WHEN status = 'final_approved' THEN 1 END) as final_approved_count,
+        COUNT(CASE WHEN status = 'rejected_by_pm' OR status = 'rejected_by_pmag' THEN 1 END) as rejected_count,
+        COUNT(DISTINCT project_id) as unique_projects,
+        COUNT(DISTINCT user_id) as unique_users
+      FROM entries e
+      WHERE 1=1
+      ${startDate ? `AND e.created_at >= '${startDate}'` : ''}
+      ${endDate ? `AND e.created_at < ('${endDate}'::date + interval '1 day')` : ''}
+      ${projectId && projectId !== 'all' ? `AND e.project_id = ${projectId}` : ''}
+      ${sheetType && sheetType !== 'all' ? `AND e.sheet_type = ANY(ARRAY[${sheetType.split(',').map(t => `'${t}'`).join(',')}])` : ''}
+    `;
+
+    const statsResult = await pool.query(statsQuery);
+
+    res.json({
+      entries: result.rows,
+      statistics: statsResult.rows[0],
+      filters: {
+        startDate: startDate || null,
+        endDate: endDate || null,
+        projectId: projectId || null,
+        sheetType: sheetType || null
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching snapshot data:', error);
+    res.status(500).json({ message: 'Internal server error', error: error.message });
   }
 });
 

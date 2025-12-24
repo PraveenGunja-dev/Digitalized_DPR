@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { FileCheck, TrendingUp, Users, Award, History, Archive } from "lucide-react";
+import { FileCheck, TrendingUp, Users, Award, History, Archive, Filter } from "lucide-react";
 import { StatsCards } from "@/components/shared/StatsCards";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,7 @@ interface PMAGDashboardSummaryProps {
   archivedEntries: any[];
   onShowHistory?: () => void;
   onShowArchived?: () => void;
+  onShowSnapshotFilter?: () => void;
 }
 
 export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
@@ -19,7 +20,8 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
   historyEntries,
   archivedEntries,
   onShowHistory,
-  onShowArchived
+  onShowArchived,
+  onShowSnapshotFilter
 }) => {
   const statsData = [
     { title: "Approved Sheets", value: approvedEntries.length, icon: FileCheck },
@@ -50,11 +52,21 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
           </motion.p>
         </div>
         <motion.div
-          className="flex items-center space-x-4"
+          className="flex items-center space-x-3"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
+          {onShowSnapshotFilter && (
+            <Button
+              variant="default"
+              onClick={onShowSnapshotFilter}
+              className="flex items-center bg-purple-600 hover:bg-purple-700"
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Snapshot Filter
+            </Button>
+          )}
           {onShowHistory && (
             <Button
               variant="outline"

@@ -1,18 +1,20 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { 
+import {
   FileSpreadsheet,
   Grid3X3,
   Wrench,
   Building,
   Package,
-  User
+  User,
+  Upload
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw } from "lucide-react";
 import { EntryCard } from "@/components/shared/EntryCard";
+import { toast } from "sonner";
 
 interface PMAGSheetEntriesProps {
   approvedEntries: any[];
@@ -22,6 +24,7 @@ interface PMAGSheetEntriesProps {
   onReject: (entryId: number) => void;
   expandedEntries: Record<number, boolean>;
   setExpandedEntries: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
+  onPushToP6?: (entry: any) => void;
 }
 
 export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
@@ -31,7 +34,8 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
   onFinalApprove,
   onReject,
   expandedEntries,
-  setExpandedEntries
+  setExpandedEntries,
+  onPushToP6
 }) => {
   const [activeTab, setActiveTab] = useState('dp_qty');
 
@@ -58,13 +62,22 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
     }));
   };
 
+  // Handle Push to P6
+  const handlePushToP6 = (entry: any) => {
+    if (onPushToP6) {
+      onPushToP6(entry);
+    } else {
+      toast.info("Push to P6 functionality coming soon");
+    }
+  };
+
   // Render sheet entries for a specific sheet type
   const renderSheetEntries = (sheetType: string) => {
     const entries = getEntriesBySheetType(sheetType);
-    
+
     if (entries.length === 0) {
       return (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
@@ -78,9 +91,9 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
 
     return (
       <div className="space-y-4">
-        {entries.map((entry, entryIndex) => {
+        {entries.map((entry) => {
           const isExpanded = expandedEntries[entry.id] || false;
-          
+
           return (
             <EntryCard
               key={entry.id}
@@ -89,7 +102,9 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
               onToggleExpand={() => toggleEntryExpansion(entry.id)}
               onApprove={() => onFinalApprove(entry.id)}
               onReject={() => onReject(entry.id)}
+              onPushToP6={() => handlePushToP6(entry)}
               sheetType={sheetType}
+              showPushToP6={true}
             />
           );
         })}
@@ -112,8 +127,8 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
               whileTap={{ scale: 0.95 }}
               whileHover={{ scale: 1.05 }}
             >
-              <Button 
-                size="sm" 
+              <Button
+                size="sm"
                 variant="outline"
                 onClick={onRefresh}
                 disabled={loadingEntries}
@@ -125,14 +140,14 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
             <Badge variant="secondary">{approvedEntries.length} Pending</Badge>
           </div>
         </div>
-        
+
         {loadingEntries ? (
-          <motion.div 
+          <motion.div
             className="text-center py-8 text-muted-foreground"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <motion.div 
+            <motion.div
               className="flex justify-center"
               animate={{ rotate: 360 }}
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -142,7 +157,7 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
             <p className="mt-2">Loading approved sheets...</p>
           </motion.div>
         ) : approvedEntries.length === 0 ? (
-          <motion.div 
+          <motion.div
             className="text-center py-8 text-muted-foreground"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -156,8 +171,8 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
                 whileTap={{ scale: 0.95 }}
                 whileHover={{ scale: 1.05 }}
               >
-                <Button 
-                  onClick={onRefresh} 
+                <Button
+                  onClick={onRefresh}
                   size="sm"
                   variant="outline"
                 >
@@ -169,22 +184,27 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
           </motion.div>
         ) : (
           <div className="space-y-4">
-            <div className="flex space-x-2 overflow-x-auto pb-2">
+            {/* Sheet Type Tabs - Improved alignment */}
+            <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-4">
               {sheetTypes.map((sheet) => {
                 const Icon = sheet.icon;
                 const count = getEntriesBySheetType(sheet.value).length;
+                const isActive = activeTab === sheet.value;
                 return (
                   <Button
                     key={sheet.value}
-                    variant={activeTab === sheet.value ? "default" : "outline"}
+                    variant={isActive ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setActiveTab(sheet.value)}
-                    className="flex items-center whitespace-nowrap"
+                    className={`flex items-center gap-2 ${isActive ? 'shadow-md' : 'hover:bg-muted'}`}
                   >
-                    <Icon className="w-4 h-4 mr-2" />
+                    <Icon className="w-4 h-4" />
                     <span>{sheet.label}</span>
                     {count > 0 && (
-                      <Badge variant="secondary" className="ml-2">
+                      <Badge
+                        variant={isActive ? "secondary" : "outline"}
+                        className={`ml-1 ${isActive ? 'bg-white/20 text-white' : ''}`}
+                      >
                         {count}
                       </Badge>
                     )}
@@ -192,7 +212,11 @@ export const PMAGSheetEntries: React.FC<PMAGSheetEntriesProps> = ({
                 );
               })}
             </div>
-            {renderSheetEntries(activeTab)}
+
+            {/* Sheet Entries */}
+            <div className="mt-4">
+              {renderSheetEntries(activeTab)}
+            </div>
           </div>
         )}
       </Card>
