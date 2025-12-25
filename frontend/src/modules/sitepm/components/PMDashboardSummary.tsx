@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface PMDashboardSummaryProps {
   projectName: string;
+  userName?: string;
   projectDetails: any;
   formatDate: (dateString: string | null | undefined) => string;
   submittedEntries: any[];
@@ -15,6 +16,7 @@ interface PMDashboardSummaryProps {
 
 export const PMDashboardSummary: React.FC<PMDashboardSummaryProps> = ({
   projectName,
+  userName,
   projectDetails,
   formatDate,
   submittedEntries,
@@ -32,15 +34,15 @@ export const PMDashboardSummary: React.FC<PMDashboardSummaryProps> = ({
     <div className="mb-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <motion.h1 
+          <motion.h1
             className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-           Site PM Dashboard
+            Welcome, {userName || 'User'}
           </motion.h1>
-          <motion.p 
+          <motion.p
             className="text-muted-foreground"
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -49,7 +51,7 @@ export const PMDashboardSummary: React.FC<PMDashboardSummaryProps> = ({
             {projectName ? `Project: ${projectName}` : "Project dashboard for project management"}
           </motion.p>
           {projectDetails && (
-            <motion.div 
+            <motion.div
               className="mt-2 text-sm text-muted-foreground"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -60,7 +62,7 @@ export const PMDashboardSummary: React.FC<PMDashboardSummaryProps> = ({
             </motion.div>
           )}
         </div>
-        <motion.div 
+        <motion.div
           className="flex items-center space-x-4"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -70,7 +72,7 @@ export const PMDashboardSummary: React.FC<PMDashboardSummaryProps> = ({
       </div>
 
       {/* Stats Cards */}
-      <motion.div 
+      <motion.div
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

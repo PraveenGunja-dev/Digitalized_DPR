@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 
 interface PMAGDashboardSummaryProps {
   projectName: string;
+  userName?: string;
   approvedEntries: any[];
   historyEntries: any[];
   archivedEntries: any[];
@@ -16,6 +17,7 @@ interface PMAGDashboardSummaryProps {
 
 export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
   projectName,
+  userName,
   approvedEntries,
   historyEntries,
   archivedEntries,
@@ -40,7 +42,7 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
           >
-            PMAG Dashboard
+            Welcome, {userName || 'User'}
           </motion.h1>
           <motion.p
             className="text-muted-foreground"

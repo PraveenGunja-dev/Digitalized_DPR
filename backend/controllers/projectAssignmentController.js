@@ -227,14 +227,42 @@ const assignProjectsToMultipleSupervisors = async (req, res) => {
       return res.status(400).json({ message: 'Arrays of Project IDs and Supervisor IDs are required' });
     }
 
-    // Check if all projects exist
-    const projectResults = await pool.query(
+    // Check if all projects exist - check both projects table and p6_projects table
+    // 1. Check local projects table
+    const localProjectResults = await pool.query(
       'SELECT id FROM projects WHERE id = ANY($1)',
       [projectIds]
     );
 
-    if (projectResults.rows.length !== projectIds.length) {
-      return res.status(404).json({ message: 'One or more projects not found' });
+    // 2. Check p6_projects table
+    const p6ProjectResults = await pool.query(
+      'SELECT object_id as id FROM p6_projects WHERE object_id = ANY($1)',
+      [projectIds]
+    );
+
+    // Combine valid IDs found in either table
+    const validProjectIds = new Set([
+      ...localProjectResults.rows.map(r => r.id),
+      ...p6ProjectResults.rows.map(r => r.id)
+    ]);
+
+    // Verify all requested project IDs exist
+    const missingProjects = projectIds.filter(id => !validProjectIds.has(id));
+
+    if (missingProjects.length > 0) {
+      console.log('Missing projects:', missingProjects);
+      // Only fail if we can't find ANY projects. 
+      // Ideally we should fail if ANY are missing, but for now strictness might be the issue.
+      // Let's stick to "One or more projects not found" if strict compliance is needed.
+      // But wait... if using P6 IDs that simply haven't synced yet?
+      // For now, return 404 only if strict validation fails.
+
+      // Actually, let's log specifically which ones and return 404 to be safe, 
+      // but ensure we checked both tables properly.
+      return res.status(404).json({
+        message: `One or more projects not found. Missing IDs: ${missingProjects.join(', ')}`,
+        missingIds: missingProjects
+      });
     }
 
     // Track successful assignments and errors
@@ -356,7 +384,8 @@ const getAssignedProjects = async (req, res) => {
     } catch (p6Error) {
       console.warn('P6 API unavailable, falling back to local database:', p6Error.message);
 
-      // Fallback: Get projects from local database
+      // Fallback: Get projects from local database (both local projects and P6 synced projects)
+      // We need to fetch from both tables and combine the results
       const result = await pool.query(`
         SELECT 
           p.id AS "ObjectId",
@@ -367,11 +396,32 @@ const getAssignedProjects = async (req, res) => {
           p.plan_start AS "PlannedStartDate",
           p.plan_end AS "PlannedFinishDate",
           p.actual_start AS "ActualStartDate",
-          p.actual_end AS "ActualFinishDate"
+          p.actual_end AS "ActualFinishDate",
+          NULL AS "P6Id",
+          'local' AS "Source"
         FROM projects p
         INNER JOIN project_assignments pa ON p.id = pa.project_id
         WHERE pa.user_id = $1
-        ORDER BY p.name
+        
+        UNION ALL
+        
+        SELECT 
+          p6.object_id AS "ObjectId",
+          p6.name AS "Name",
+          p6.location_name AS "Location",
+          p6.status AS "Status",
+          0 AS "PercentComplete", -- P6 percent complete logic to be added
+          p6.planned_start_date AS "PlannedStartDate",
+          p6.scheduled_finish_date AS "PlannedFinishDate",
+          NULL AS "ActualStartDate",
+          NULL AS "ActualFinishDate",
+          p6.p6_id AS "P6Id",
+          'p6' AS "Source"
+        FROM p6_projects p6
+        INNER JOIN project_assignments pa ON p6.object_id = pa.project_id
+        WHERE pa.user_id = $1
+        
+        ORDER BY "Name"
       `, [userId]);
 
       projects = result.rows;

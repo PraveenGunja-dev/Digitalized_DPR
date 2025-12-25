@@ -464,7 +464,7 @@ const DPRDashboard = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1, duration: 0.5 }}
               >
-                DPR Dashboard - {user?.Name || "Supervisor"}
+                Welcome, {user?.Name || "User"}
               </motion.h1>
               <motion.p
                 className="text-muted-foreground text-xs sm:text-sm"

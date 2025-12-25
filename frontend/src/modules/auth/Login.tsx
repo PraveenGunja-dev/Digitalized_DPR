@@ -16,20 +16,20 @@ const LoginForm = () => {
   const { login } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     // Get form data
     const formData = new FormData(e.target as HTMLFormElement);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
-    
+
     try {
       await login(email, password);
-      
+
       // Check user role and redirect accordingly
       const storedUser = localStorage.getItem('user');
       if (storedUser) {
@@ -84,7 +84,7 @@ const LoginForm = () => {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-300 text-sm"
+          className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-700 dark:text-red-300 text-sm"
         >
           {error}
         </motion.div>
@@ -117,7 +117,7 @@ export const SmoothScrollHero = () => {
   useEffect(() => {
     const video1 = videoRef1.current;
     const video2 = videoRef2.current;
-    
+
     if (!video1 || !video2) return;
 
     // Configure both videos
@@ -184,7 +184,7 @@ export const SmoothScrollHero = () => {
       {/* Fixed Video Background with Zoom Effect */}
       <div className="fixed inset-0 z-0">
         <div className="relative w-full h-full overflow-hidden">
-          <video 
+          <video
             ref={videoRef1}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-1000 scale-110"
             style={{ opacity: currentVideo === 1 ? 1 : 0, objectFit: 'cover', animation: 'zoomEffect 30s infinite alternate' }}
@@ -192,7 +192,7 @@ export const SmoothScrollHero = () => {
             <source src="/Wind.mp4" type="video/mp4" />
             Your browser does not support the video tag.
           </video>
-          <video 
+          <video
             ref={videoRef2}
             className="absolute inset-0 w-full h-full object-cover transition-all duration-1000 scale-110"
             style={{ opacity: currentVideo === 2 ? 1 : 0, objectFit: 'cover', animation: 'zoomEffect 30s infinite alternate' }}
@@ -202,14 +202,14 @@ export const SmoothScrollHero = () => {
           </video>
         </div>
       </div>
-      
+
       {/* Content layered on top */}
       <div className="relative z-10 min-h-screen flex flex-col">
         {/* Header with Logo */}
         <header className="pt-8 px-8">
           <img src="/logo.png" alt="Adani Logo" className="h-16 w-auto" />
         </header>
-        
+
         {/* Main Content - Centered Login Form */}
         <main className="flex-grow flex items-center justify-center px-4">
           <div className="w-full max-w-md">
@@ -225,7 +225,7 @@ export const SmoothScrollHero = () => {
           </div>
         </main>
       </div>
-      
+
       {/* Add keyframes for zoom animation */}
       <style>{`
         @keyframes zoomEffect {

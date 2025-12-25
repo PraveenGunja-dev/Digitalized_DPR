@@ -5,6 +5,7 @@ import { useAuth } from '@/modules/auth/contexts/AuthContext';
 import { getUserProjects, getAssignedProjects } from "./services/projectService";
 import { toast } from "sonner";
 import { ProjectListing } from "@/components/ProjectListing";
+import { SummaryModal } from "@/components/SummaryModal";
 import { DashboardLayout } from "@/components/shared/DashboardLayout";
 import { ProjectsHeader, ProjectsEmptyState } from "./components";
 
@@ -16,7 +17,11 @@ const ProjectsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const projectsPerPage = 4;
+  const projectsPerPage = 6;
+
+  // Summary modal state
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [selectedSummaryProject, setSelectedSummaryProject] = useState<any>(null);
 
   // Filter projects based on search term
   const filteredProjects = useMemo(() => {
@@ -165,17 +170,24 @@ const ProjectsPage = () => {
           <ProjectListing
             projects={paginatedProjects.map(project => ({
               name: project.Name,
-              planStart: project.PlannedStartDate ? new Date(project.PlannedStartDate).toISOString().split('T')[0] : "N/A",
-              planEnd: project.PlannedFinishDate ? new Date(project.PlannedFinishDate).toISOString().split('T')[0] : "N/A",
-              actualStart: project.ActualStartDate ? new Date(project.ActualStartDate).toISOString().split('T')[0] : "N/A",
-              actualEnd: project.ActualFinishDate ? new Date(project.ActualFinishDate).toISOString().split('T')[0] : "N/A",
-              members: project.members || 0
+              status: project.Status || 'Active',
+              startDate: project.PlannedStartDate ? new Date(project.PlannedStartDate).toLocaleDateString('en-IN') : 'N/A',
+              endDate: project.PlannedFinishDate ? new Date(project.PlannedFinishDate).toLocaleDateString('en-IN') : 'N/A'
             }))}
             onProjectClick={(clickedProject) => {
               // Find the original project object that matches the clicked project
               const originalProject = filteredProjects.find(p => p.Name === clickedProject.name);
               if (originalProject) {
                 handleProjectSelect(originalProject);
+              }
+            }}
+            userRole={user?.Role}
+            onSummaryClick={(clickedProject) => {
+              // Find the original project object that matches the clicked project
+              const originalProject = filteredProjects.find(p => p.Name === clickedProject.name);
+              if (originalProject) {
+                setSelectedSummaryProject(originalProject);
+                setShowSummaryModal(true);
               }
             }}
           />
@@ -206,6 +218,17 @@ const ProjectsPage = () => {
           )}
         </div>
       )}
+
+      {/* Summary Modal for Site PM and PMAG */}
+      <SummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => {
+          setShowSummaryModal(false);
+          setSelectedSummaryProject(null);
+        }}
+        projectId={selectedSummaryProject?.ObjectId}
+        projectName={selectedSummaryProject?.Name || 'Project'}
+      />
     </DashboardLayout>
   );
 };

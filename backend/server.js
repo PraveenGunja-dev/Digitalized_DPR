@@ -74,6 +74,12 @@ const runMigrations = async () => {
       DROP CONSTRAINT IF EXISTS dpr_supervisor_entries_project_id_fkey
     `);
 
+    // Drop the foreign key constraint on project_assignments to support P6 projects
+    await pool.query(`
+        ALTER TABLE project_assignments 
+        DROP CONSTRAINT IF EXISTS project_assignments_project_id_fkey
+    `);
+
     // Add audit tracking fields to dpr_supervisor_entries if they don't exist
     await pool.query(`
       ALTER TABLE dpr_supervisor_entries 

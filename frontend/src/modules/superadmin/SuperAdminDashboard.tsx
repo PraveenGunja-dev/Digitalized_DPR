@@ -1030,6 +1030,7 @@ const SuperAdminDashboard = () => {
 
       <div className="container mx-auto px-4 py-8">
         <SuperAdminHeader
+          userName={user?.Name}
           onCreateUser={handleCreateUser}
           onCreateProject={handleCreateProject}
         />

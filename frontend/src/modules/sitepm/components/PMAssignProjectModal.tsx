@@ -41,7 +41,7 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
     setAssignForm(prev => {
       const currentIds = [...prev.supervisorIds];
       const index = currentIds.indexOf(supervisorId);
-      
+
       if (index >= 0) {
         // Remove if already selected
         currentIds.splice(index, 1);
@@ -49,7 +49,7 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
         // Add if not selected
         currentIds.push(supervisorId);
       }
-      
+
       return {
         ...prev,
         supervisorIds: currentIds
@@ -62,7 +62,7 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
     setAssignForm(prev => {
       const currentIds = [...prev.projectIds];
       const index = currentIds.indexOf(projectId);
-      
+
       if (index >= 0) {
         // Remove if already selected
         currentIds.splice(index, 1);
@@ -70,7 +70,7 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
         // Add if not selected
         currentIds.push(projectId);
       }
-      
+
       return {
         ...prev,
         projectIds: currentIds
@@ -91,20 +91,20 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Assign project to multiple supervisors using the new API endpoint
       await assignProjectsToMultipleSupervisors(
         assignForm.projectIds.map(id => parseInt(id)),
         assignForm.supervisorIds.map(id => parseInt(id))
       );
-      
+
       toast.success("Project assigned to selected users successfully!");
       onClose();
-      
+
       // Reset form and search terms
       handleAssignFormReset();
-      
+
       // Trigger refresh
       onAssignmentComplete();
     } catch (err) {
@@ -140,21 +140,20 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
               {projects.length > 0 ? (
                 // Filter projects based on search term
                 projects
-                  .filter(project => 
+                  .filter(project =>
                     project.Name.toLowerCase().includes(projectSearchTerm.toLowerCase())
                   )
                   .map((project) => {
                     const value = (project.ObjectId || project.id || '').toString();
-                    
+
                     // Skip items with empty values
                     if (!value) return null;
-                    
+
                     return (
-                      <div 
-                        key={project.ObjectId || project.id || project.Name} 
-                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${
-                          assignForm.projectIds.includes(value) ? 'bg-muted' : ''
-                        }`}
+                      <div
+                        key={project.ObjectId || project.id || project.Name}
+                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${assignForm.projectIds.includes(value) ? 'bg-muted' : ''
+                          }`}
                         onClick={() => toggleProjectSelection(value)}
                       >
                         <input
@@ -195,22 +194,21 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
               {supervisors && supervisors.length > 0 ? (
                 // Filter supervisors based on search term
                 supervisors
-                  .filter(supervisor => 
+                  .filter(supervisor =>
                     supervisor.Name.toLowerCase().includes(supervisorSearchTerm.toLowerCase()) ||
                     supervisor.Email.toLowerCase().includes(supervisorSearchTerm.toLowerCase())
                   )
                   .map((supervisor) => {
                     const value = (supervisor.ObjectId || supervisor.id || '').toString();
-                    
+
                     // Skip items with empty values
                     if (!value) return null;
-                    
+
                     return (
-                      <div 
-                        key={supervisor.ObjectId || supervisor.id || supervisor.Name} 
-                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${
-                          assignForm.supervisorIds.includes(value) ? 'bg-muted' : ''
-                        }`}
+                      <div
+                        key={supervisor.ObjectId || supervisor.id || supervisor.Name}
+                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${assignForm.supervisorIds.includes(value) ? 'bg-muted' : ''
+                          }`}
                         onClick={() => toggleSupervisorSelection(value)}
                       >
                         <input
@@ -242,11 +240,11 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={assignForm.projectIds.length === 0 || assignForm.supervisorIds.length === 0}
             >
-              {assignForm.projectIds.length > 0 && assignForm.supervisorIds.length > 0 
+              {assignForm.projectIds.length > 0 && assignForm.supervisorIds.length > 0
                 ? `Assign ${assignForm.projectIds.length} Project(s) to ${assignForm.supervisorIds.length} User(s)`
                 : 'Assign Projects to Users'}
             </Button>

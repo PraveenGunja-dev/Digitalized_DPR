@@ -5,7 +5,7 @@ import { useAuth } from "@/modules/auth/contexts/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { toast } from "sonner";
 import { useNotification } from "@/modules/auth/contexts/NotificationContext";
-import { 
+import {
   PMDashboardSummary,
   PMSheetEntries,
   PMChartsSection,
@@ -16,7 +16,7 @@ import {
   PMSuccessModal,
   PMRejectReasonModal
 } from "./components";
-import { 
+import {
   fetchSubmittedEntries,
   fetchUserProjects,
   fetchSupervisors,
@@ -33,7 +33,7 @@ const PMDashboard = () => {
   const location = useLocation();
   const { user } = useAuth();
   const { addNotification } = useNotification();
-  
+
   // Extract project data from location state
   const locationState = location.state || {};
   const projectName = locationState.projectName || "Project";
@@ -48,14 +48,14 @@ const PMDashboard = () => {
   const [editingEntry, setEditingEntry] = useState<any>(null);
   const [editData, setEditData] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
-  
+
   // State for multiple supervisor assignment
   const [showAssignProjectModal, setShowAssignProjectModal] = useState(false);
   const [supervisors, setSupervisors] = useState<any[]>([]);
-  
+
   // State for collapsible entries
   const [expandedEntries, setExpandedEntries] = useState<Record<number, boolean>>({});
-  
+
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [registeredUser, setRegisteredUser] = useState({
     email: "",
@@ -82,7 +82,7 @@ const PMDashboard = () => {
   const handleApprove = async (entryId: number) => {
     try {
       await approveEntry(entryId);
-      
+
       // Find the entry that was approved to get details for notification
       const entry = submittedEntries.find(e => e.id === entryId);
       if (entry) {
@@ -97,7 +97,7 @@ const PMDashboard = () => {
           sheetType: entry.sheet_type // Add sheetType for navigation
         });
       }
-      
+
       toast.success("Entry approved successfully!");
       // Refresh entries
       await fetchEntries();
@@ -116,7 +116,7 @@ const PMDashboard = () => {
   // Handle save edited entry
   const handleSaveEdit = async () => {
     if (!editingEntry || !editData) return;
-    
+
     try {
       await updateEntry(editingEntry.id, editData);
       toast.success("Entry updated successfully");
@@ -143,10 +143,10 @@ const PMDashboard = () => {
   // Handle confirm reject with reason
   const handleConfirmReject = async (rejectionReason: string) => {
     if (!rejectingEntryId) return;
-    
+
     try {
       await rejectEntry(rejectingEntryId, rejectionReason);
-      
+
       // Find the entry that was rejected to get details for notification
       const entry = submittedEntries.find(e => e.id === rejectingEntryId);
       if (entry) {
@@ -161,7 +161,7 @@ const PMDashboard = () => {
           sheetType: entry.sheet_type // Add sheetType for navigation
         });
       }
-      
+
       toast.success("Entry rejected and sent back to supervisor");
       // Refresh entries
       await fetchEntries();
@@ -189,7 +189,7 @@ const PMDashboard = () => {
       try {
         const projectsData = await fetchUserProjects();
         setProjects(projectsData);
-        
+
         // Fetch all supervisors for assignment
         const supervisorsData = await fetchSupervisors();
         setSupervisors(supervisorsData);
@@ -220,7 +220,7 @@ const PMDashboard = () => {
       toast.error(`Failed to update entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
-  
+
   // Handle save entry
   const handleSaveEntry = async (entryId: number, data: any) => {
     try {
@@ -231,17 +231,17 @@ const PMDashboard = () => {
       toast.error(`Failed to save entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
-  
+
   // Handle user created
   const handleUserCreated = async () => {
     // Refresh data after user creation
     await fetchEntries();
-    
+
     // Refresh projects and supervisors
     try {
       const projectsData = await fetchUserProjects();
       setProjects(projectsData);
-      
+
       const supervisorsData = await fetchSupervisors();
       setSupervisors(supervisorsData);
     } catch (error) {
@@ -253,12 +253,12 @@ const PMDashboard = () => {
   const handleAssignmentComplete = async () => {
     // Refresh data after assignment
     await fetchEntries();
-    
+
     // Refresh projects and supervisors
     try {
       const projectsData = await fetchUserProjects();
       setProjects(projectsData);
-      
+
       const supervisorsData = await fetchSupervisors();
       setSupervisors(supervisorsData);
     } catch (error) {
@@ -267,15 +267,15 @@ const PMDashboard = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <Navbar 
-        userName={user?.Name || "User"} 
-        userRole={user?.Role || "Site PM"} 
+      <Navbar
+        userName={user?.Name || "User"}
+        userRole={user?.Role || "Site PM"}
         projectName={projectName}
         onAddUser={() => setShowCreateSupervisorModal(true)}
         onAssignProject={() => setShowAssignProjectModal(true)}
@@ -284,6 +284,7 @@ const PMDashboard = () => {
       <div className="container mx-auto px-4 py-8">
         <PMDashboardSummary
           projectName={projectName}
+          userName={user?.Name}
           projectDetails={projectDetails}
           formatDate={formatDate}
           submittedEntries={submittedEntries}
@@ -350,14 +351,14 @@ const PMDashboard = () => {
         supervisors={supervisors}
         onAssignmentComplete={handleAssignmentComplete}
       />
-    
+
       <PMSuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
         registeredUser={registeredUser}
         projects={projects}
       />
-    
+
       <PMRejectReasonModal
         isOpen={showRejectReasonModal}
         onClose={() => {

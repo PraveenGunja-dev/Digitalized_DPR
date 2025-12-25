@@ -38,7 +38,7 @@ try {
   };
 }
 
-// Get all projects for a user - ALWAYS reads from local database (p6_projects)
+// Get all projects for a user - reads from both local projects and p6_projects
 // P6 API sync should be done separately via sync endpoints
 const getUserProjects = async (req, res) => {
   try {
@@ -47,52 +47,88 @@ const getUserProjects = async (req, res) => {
     const userRole = req.user.role;
 
     // Create cache key based on user ID and role
-    const cacheKey = `user_projects_${userId}_${userRole}_local`;
-    console.log('Cache key:', cacheKey);
+    const cacheKey = `user_projects_${userId}_${userRole}_all_sources`;
+    console.log(`[getUserProjects] Cache key: ${cacheKey}, User: ${userId}, Role: '${userRole}'`);
 
     // Try to get data from cache first
     let cachedProjects = await cache.get(cacheKey);
     if (cachedProjects) {
-      console.log(`Returning projects for user ${userId} from cache`);
+      console.log(`[getUserProjects] Returning projects from cache. Count: ${cachedProjects.length}`);
       return res.status(200).json(cachedProjects);
     }
 
-    // Always read from local p6_projects table
     let result;
 
-    if (userRole === 'PMAG' || userRole === 'Super Admin') {
-      // Get all projects from p6_projects
+    if (userRole === 'PMAG' || userRole === 'Super Admin' || userRole === 'Site PM') {
+      console.log('[getUserProjects] User is Admin/Site PM - Fetching ALL projects');
+      // PMAG, Super Admin, and Site PM can see all projects from both tables
       result = await pool.query(`
+        SELECT 
+          id AS "ObjectId", 
+          name AS "Name", 
+          location AS "Location", 
+          status AS "Status", 
+          COALESCE(progress, 0) AS "PercentComplete", 
+          plan_start as "PlannedStartDate", 
+          plan_end as "PlannedFinishDate", 
+          NULL AS "Description",
+          NULL as "P6Id",
+          'local' as "Source"
+        FROM projects
+        
+        UNION ALL
+        
         SELECT 
           object_id AS "ObjectId", 
           name AS "Name", 
-          parent_eps_name AS "Location", 
+          COALESCE(parent_eps_name, location_name) AS "Location", 
           status AS "Status", 
           0 AS "PercentComplete", 
           start_date as "PlannedStartDate", 
           finish_date as "PlannedFinishDate",
           description AS "Description",
-          p6_id AS "P6Id"
+          p6_id as "P6Id",
+          'p6' as "Source"
         FROM p6_projects
-        ORDER BY name
+        
+        ORDER BY "Name"
       `);
     } else {
-      // For other roles, check project_assignments
+      // For other roles (Supervisor), check project_assignments
       result = await pool.query(`
+        SELECT 
+          p.id AS "ObjectId", 
+          p.name AS "Name", 
+          p.location AS "Location", 
+          p.status AS "Status", 
+          COALESCE(p.progress, 0) AS "PercentComplete", 
+          p.plan_start as "PlannedStartDate", 
+          p.plan_end as "PlannedFinishDate", 
+          NULL AS "Description",
+          NULL as "P6Id",
+          'local' as "Source"
+        FROM projects p
+        INNER JOIN project_assignments pa ON p.id = pa.project_id
+        WHERE pa.user_id = $1
+        
+        UNION ALL
+        
         SELECT 
           p.object_id AS "ObjectId", 
           p.name AS "Name", 
-          p.parent_eps_name AS "Location", 
+          COALESCE(p.parent_eps_name, p.location_name) AS "Location", 
           p.status AS "Status", 
           0 AS "PercentComplete", 
           p.start_date as "PlannedStartDate", 
           p.finish_date as "PlannedFinishDate",
           p.description AS "Description",
-          p.p6_id AS "P6Id"
+          p.p6_id as "P6Id",
+          'p6' as "Source"
         FROM p6_projects p
-        LEFT JOIN project_assignments pa ON p.object_id = pa.project_id OR p.id = pa.project_id
+        INNER JOIN project_assignments pa ON p.object_id = pa.project_id
         WHERE pa.user_id = $1
-        ORDER BY p.name
+        
+        ORDER BY "Name"
       `, [userId]);
     }
 
@@ -345,31 +381,67 @@ const getAllProjectsForAssignment = async (req, res) => {
           name AS "Name", 
           location AS "Location", 
           status AS "Status", 
-          progress AS "PercentComplete", 
+          COALESCE(progress, 0) AS "PercentComplete", 
           plan_start as "PlannedStartDate", 
           plan_end as "PlannedFinishDate", 
           actual_start as "ActualStartDate", 
-          actual_end as "ActualFinishDate"
+          actual_end as "ActualFinishDate",
+          'local' as "Source"
         FROM projects
-        ORDER BY name
+        
+        UNION ALL
+        
+        SELECT 
+          object_id AS "ObjectId", 
+          name AS "Name", 
+          COALESCE(parent_eps_name, location_name) AS "Location", 
+          status AS "Status", 
+          0 AS "PercentComplete", 
+          start_date as "PlannedStartDate", 
+          finish_date as "PlannedFinishDate",
+          NULL AS "ActualStartDate",
+          NULL AS "ActualFinishDate",
+          'p6' as "Source"
+        FROM p6_projects
+        
+        ORDER BY "Name"
       `);
     } else {
-      // Site PM sees only projects assigned to them
+      // Site PM sees only projects assigned to them (from both sources)
       result = await pool.query(`
         SELECT 
           p.id AS "ObjectId", 
           p.name AS "Name", 
           p.location AS "Location", 
           p.status AS "Status", 
-          p.progress AS "PercentComplete", 
+          COALESCE(p.progress, 0) AS "PercentComplete", 
           p.plan_start as "PlannedStartDate", 
           p.plan_end as "PlannedFinishDate", 
           p.actual_start as "ActualStartDate", 
-          p.actual_end as "ActualFinishDate"
+          p.actual_end as "ActualFinishDate",
+          'local' as "Source"
         FROM projects p
         INNER JOIN project_assignments pa ON p.id = pa.project_id
         WHERE pa.user_id = $1
-        ORDER BY p.name
+        
+        UNION ALL
+        
+        SELECT 
+          p.object_id AS "ObjectId", 
+          p.name AS "Name", 
+          COALESCE(p.parent_eps_name, p.location_name) AS "Location", 
+          p.status AS "Status", 
+          0 AS "PercentComplete", 
+          p.start_date as "PlannedStartDate", 
+          p.finish_date as "PlannedFinishDate", 
+          NULL AS "ActualStartDate", 
+          NULL AS "ActualFinishDate",
+          'p6' as "Source"
+        FROM p6_projects p
+        INNER JOIN project_assignments pa ON p.object_id = pa.project_id
+        WHERE pa.user_id = $1
+        
+        ORDER BY "Name"
       `, [userId]);
     }
 

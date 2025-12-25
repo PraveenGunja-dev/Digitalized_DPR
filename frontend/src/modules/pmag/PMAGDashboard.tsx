@@ -366,6 +366,7 @@ const PMAGDashboard = () => {
     >
       <PMAGDashboardSummary
         projectName={projectName}
+        userName={user?.Name}
         approvedEntries={approvedEntries}
         historyEntries={historyEntries}
         archivedEntries={archivedEntries}
@@ -439,13 +440,16 @@ const PMAGDashboard = () => {
 
       {/* History Modal */}
       <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>History</DialogTitle>
-          </DialogHeader>
-          <div className="mb-4 flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <label htmlFor="history-filter" className="text-sm font-medium">Show entries from:</label>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+          {/* Excel-style Header */}
+          <div className="flex items-center justify-between px-4 py-3 bg-[#F3F3F3] dark:bg-[#2B2B2B] border-b-2 border-[#999999]">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-black dark:text-white">📋 Submission History</h2>
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                ({historyEntries.length} entries)
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <select
                 id="history-filter"
                 value={historyFilter?.toString() || "all"}
@@ -454,67 +458,304 @@ const PMAGDashboard = () => {
                   setHistoryFilter(days);
                   loadHistoryEntries(days);
                 }}
-                className="border rounded px-3 py-1 text-sm"
+                className="border border-[#999999] rounded px-3 py-1.5 text-sm bg-white dark:bg-[#1E1E1E] text-black dark:text-white"
               >
                 <option value="all">All time</option>
                 <option value="1">Last 24 hours</option>
                 <option value="7">Last 7 days</option>
                 <option value="30">Last 30 days</option>
               </select>
+              <button
+                onClick={() => loadHistoryEntries(historyFilter)}
+                className="px-3 py-1.5 text-sm bg-white dark:bg-[#1E1E1E] border border-[#999999] rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-black dark:text-white"
+              >
+                ⟳ Refresh
+              </button>
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-600 border border-[#999999] rounded hover:bg-gray-300 dark:hover:bg-gray-500 text-black dark:text-white"
+              >
+                ✕ Close
+              </button>
             </div>
-            <button
-              onClick={() => loadHistoryEntries(historyFilter)}
-              className="px-3 py-1 text-sm border rounded hover:bg-gray-100"
-            >
-              Refresh
-            </button>
           </div>
-          <div className="space-y-4">
+
+          {/* Excel-style Table Container */}
+          <div className="flex-1 overflow-auto bg-white dark:bg-[#1E1E1E]">
             {historyEntries.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No history entries found</p>
+              <div className="text-center py-16">
+                <div className="text-6xl mb-4">📭</div>
+                <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No history entries found</p>
+                <p className="text-sm text-gray-400 mt-1">Try adjusting your filter settings</p>
               </div>
             ) : (
-              historyEntries.map((entry: any) => (
-                <div key={entry.id} className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <h3 className="font-semibold text-lg mb-1">Entry #{entry.id}</h3>
-                      <div className="space-y-1 text-sm">
-                        <p><span className="font-medium">Sheet:</span> {entry.sheet_type?.replace(/_/g, ' ')}</p>
-                        <p><span className="font-medium">Project:</span> {entry.project_name || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="space-y-1 text-sm">
-                        <p><span className="font-medium">Submitted by:</span> {entry.supervisor_name || 'Supervisor'}</p>
-                        <p><span className="font-medium">Status:</span> {entry.status?.replace(/_/g, ' ')}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col justify-center md:items-end">
-                      <button
-                        onClick={() => {
-                          setSelectedArchivedEntry(entry);
-                          setShowHistoryModal(false);
-                          setShowArchivedModal(true);
-                        }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))
+              <table className="w-full border-collapse" style={{ border: "2px solid #999999", minWidth: "900px" }}>
+                {/* Excel-style Header */}
+                <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
+                  <tr>
+                    <th style={{
+                      backgroundColor: "#f1f5f9",
+                      color: "#000000",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "1px solid #cbd5e1",
+                      borderLeft: "2px solid #999999",
+                      borderTop: "2px solid #999999",
+                      width: "80px"
+                    }}>
+                      ENTRY ID
+                    </th>
+                    <th style={{
+                      backgroundColor: "#f1f5f9",
+                      color: "#000000",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "1px solid #cbd5e1",
+                      borderTop: "2px solid #999999",
+                      width: "180px"
+                    }}>
+                      SHEET TYPE
+                    </th>
+                    <th style={{
+                      backgroundColor: "#f1f5f9",
+                      color: "#000000",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "1px solid #cbd5e1",
+                      borderTop: "2px solid #999999",
+                      width: "150px"
+                    }}>
+                      PROJECT
+                    </th>
+                    <th style={{
+                      backgroundColor: "#f1f5f9",
+                      color: "#000000",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "1px solid #cbd5e1",
+                      borderTop: "2px solid #999999",
+                      width: "130px"
+                    }}>
+                      SUBMITTED BY
+                    </th>
+                    <th style={{
+                      backgroundColor: "#f1f5f9",
+                      color: "#000000",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "1px solid #cbd5e1",
+                      borderTop: "2px solid #999999",
+                      width: "150px"
+                    }}>
+                      SUBMITTED DATE
+                    </th>
+                    <th style={{
+                      backgroundColor: "#86efac",
+                      color: "#000000",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "1px solid #cbd5e1",
+                      borderTop: "2px solid #999999",
+                      width: "120px"
+                    }}>
+                      STATUS
+                    </th>
+                    <th style={{
+                      backgroundColor: "#3b82f6",
+                      color: "#ffffff",
+                      fontSize: "11px",
+                      fontWeight: "700",
+                      padding: "10px 8px",
+                      textAlign: "center",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.5px",
+                      borderBottom: "2px solid #94a3b8",
+                      borderRight: "2px solid #999999",
+                      borderTop: "2px solid #999999",
+                      width: "100px"
+                    }}>
+                      ACTION
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyEntries.map((entry: any, index: number) => {
+                    const isEvenRow = index % 2 === 0;
+                    const rowBg = isEvenRow ? "#FFFFFF" : "#F8FBFF";
+                    const darkRowBg = isEvenRow ? "#1E1E1E" : "#242424";
+
+                    return (
+                      <tr key={entry.id} className="hover:bg-[#EAF2FB] dark:hover:bg-[#2E3238]">
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          fontSize: "12px",
+                          textAlign: "center",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "1px solid #D4D4D4",
+                          borderLeft: "2px solid #999999",
+                          color: "#2563eb",
+                          fontWeight: "bold"
+                        }} className="dark:!bg-[#1E1E1E]">
+                          #{entry.id}
+                        </td>
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          fontSize: "12px",
+                          textAlign: "left",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "1px solid #D4D4D4",
+                          color: "#000000",
+                          textTransform: "capitalize"
+                        }} className="dark:!bg-[#1E1E1E] dark:!text-white">
+                          {entry.sheet_type?.replace(/_/g, ' ')}
+                        </td>
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          fontSize: "12px",
+                          textAlign: "left",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "1px solid #D4D4D4",
+                          color: "#000000"
+                        }} className="dark:!bg-[#1E1E1E] dark:!text-white">
+                          {entry.project_name || 'N/A'}
+                        </td>
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          fontSize: "12px",
+                          textAlign: "center",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "1px solid #D4D4D4",
+                          color: "#000000"
+                        }} className="dark:!bg-[#1E1E1E] dark:!text-white">
+                          {entry.supervisor_name || 'Supervisor'}
+                        </td>
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          fontSize: "11px",
+                          textAlign: "center",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "1px solid #D4D4D4",
+                          color: "#666666"
+                        }} className="dark:!bg-[#1E1E1E] dark:!text-gray-400">
+                          {entry.created_at ? new Date(entry.created_at).toLocaleString('en-IN', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          }) : 'N/A'}
+                        </td>
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          fontSize: "11px",
+                          textAlign: "center",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "1px solid #D4D4D4"
+                        }} className="dark:!bg-[#1E1E1E]">
+                          <span style={{
+                            display: "inline-block",
+                            padding: "3px 8px",
+                            borderRadius: "4px",
+                            fontSize: "10px",
+                            fontWeight: "600",
+                            backgroundColor:
+                              entry.status === 'final_approved' || entry.status === 'archived' ? '#dcfce7' :
+                                entry.status === 'rejected' ? '#fee2e2' :
+                                  entry.status === 'pm_approved' ? '#dbeafe' :
+                                    '#fef3c7',
+                            color:
+                              entry.status === 'final_approved' || entry.status === 'archived' ? '#166534' :
+                                entry.status === 'rejected' ? '#991b1b' :
+                                  entry.status === 'pm_approved' ? '#1e40af' :
+                                    '#92400e'
+                          }}>
+                            {entry.status === 'final_approved' ? '✓ APPROVED' :
+                              entry.status === 'archived' ? '📦 ARCHIVED' :
+                                entry.status === 'rejected' ? '✕ REJECTED' :
+                                  entry.status === 'pm_approved' ? '⏳ PM APPROVED' :
+                                    (entry.status?.replace(/_/g, ' ').toUpperCase() || 'DRAFT')}
+                          </span>
+                        </td>
+                        <td style={{
+                          backgroundColor: rowBg,
+                          padding: "8px",
+                          textAlign: "center",
+                          borderBottom: "1px solid #D4D4D4",
+                          borderRight: "2px solid #999999"
+                        }} className="dark:!bg-[#1E1E1E]">
+                          <button
+                            onClick={() => {
+                              setSelectedArchivedEntry(entry);
+                              setShowHistoryModal(false);
+                              setShowArchivedModal(true);
+                            }}
+                            style={{
+                              backgroundColor: "#2563eb",
+                              color: "#ffffff",
+                              padding: "5px 12px",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              fontWeight: "600",
+                              border: "none",
+                              cursor: "pointer"
+                            }}
+                            className="hover:bg-blue-700 transition-colors"
+                          >
+                            👁 View
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={() => setShowHistoryModal(false)}
-              className="px-4 py-2 border rounded hover:bg-gray-100"
-            >
-              Close
-            </button>
+
+          {/* Footer Status Bar */}
+          <div className="px-4 py-2 bg-[#F4F4F4] dark:bg-[#252525] border-t-2 border-[#999999] flex justify-between items-center">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
+              Showing {historyEntries.length} of {historyEntries.length} entries
+            </span>
+            <span className="text-xs text-gray-500">
+              {historyFilter ? `Filtered: Last ${historyFilter} days` : 'All time'}
+            </span>
           </div>
         </DialogContent>
       </Dialog>
@@ -575,100 +816,198 @@ const PMAGDashboard = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Archived Entry Detail Modal */}
+      {/* Archived Entry Detail Modal - Excel Style */}
       <Dialog open={showArchivedModal} onOpenChange={setShowArchivedModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Sheet Details</DialogTitle>
-          </DialogHeader>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col p-0">
           {selectedArchivedEntry && (
-            <div className="space-y-6">
-              {/* Entry Header */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 pb-3 border-b bg-gray-50 dark:bg-gray-700 rounded-lg p-3">
-                <div className="flex flex-col mb-3 md:mb-0">
-                  <span className="font-semibold text-lg">Entry #{selectedArchivedEntry.id}</span>
-                  <span className="text-sm text-muted-foreground">
-                    Submitted by: {selectedArchivedEntry.supervisor_name || 'Supervisor'}
+            <>
+              {/* Excel-style Header Bar */}
+              <div className="flex items-center justify-between px-4 py-3 bg-[#F3F3F3] dark:bg-[#2B2B2B] border-b-2 border-[#999999]">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-lg font-bold text-black dark:text-white">
+                    📊 {selectedArchivedEntry.sheet_type?.replace(/_/g, ' ').toUpperCase() || 'Sheet Details'}
+                  </h2>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    Entry #{selectedArchivedEntry.id}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    Date: {new Date(selectedArchivedEntry.updated_at || selectedArchivedEntry.created_at).toLocaleString()}
-                  </span>
-                  <span className="text-xs font-medium text-primary mt-1">
-                    Project ID: {selectedArchivedEntry.project_id} | Sheet Type: {selectedArchivedEntry.sheet_type?.replace(/_/g, ' ')}
+                  <span style={{
+                    padding: "3px 10px",
+                    borderRadius: "4px",
+                    fontSize: "10px",
+                    fontWeight: "600",
+                    backgroundColor:
+                      selectedArchivedEntry.status === 'final_approved' || selectedArchivedEntry.status === 'archived' ? '#dcfce7' :
+                        selectedArchivedEntry.status === 'rejected' ? '#fee2e2' :
+                          selectedArchivedEntry.status === 'pm_approved' ? '#dbeafe' :
+                            '#fef3c7',
+                    color:
+                      selectedArchivedEntry.status === 'final_approved' || selectedArchivedEntry.status === 'archived' ? '#166534' :
+                        selectedArchivedEntry.status === 'rejected' ? '#991b1b' :
+                          selectedArchivedEntry.status === 'pm_approved' ? '#1e40af' :
+                            '#92400e'
+                  }}>
+                    {selectedArchivedEntry.status?.replace(/_/g, ' ').toUpperCase() || 'DRAFT'}
                   </span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium">
-                    {selectedArchivedEntry.status?.replace(/_/g, ' ') || 'Final Approved'}
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    Submitted by: <strong>{selectedArchivedEntry.supervisor_name || 'Supervisor'}</strong>
                   </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {new Date(selectedArchivedEntry.updated_at || selectedArchivedEntry.created_at).toLocaleString('en-IN', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                  <button
+                    onClick={() => setShowArchivedModal(false)}
+                    className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-600 border border-[#999999] rounded hover:bg-gray-300 dark:hover:bg-gray-500 text-black dark:text-white"
+                  >
+                    ✕ Close
+                  </button>
                 </div>
               </div>
 
-              {/* Sheet Data */}
-              {(() => {
-                const entryData = typeof selectedArchivedEntry.data_json === 'string'
-                  ? JSON.parse(selectedArchivedEntry.data_json)
-                  : selectedArchivedEntry.data_json;
+              {/* Excel-style Content Area */}
+              <div className="flex-1 overflow-auto bg-white dark:bg-[#1E1E1E] p-4">
+                {(() => {
+                  const entryData = typeof selectedArchivedEntry.data_json === 'string'
+                    ? JSON.parse(selectedArchivedEntry.data_json)
+                    : selectedArchivedEntry.data_json;
 
-                return (
-                  <>
-                    {/* Static Header */}
-                    {entryData?.staticHeader && (
-                      <div className="bg-blue-50 dark:bg-blue-900/30 p-3 rounded mb-4 border border-blue-100">
-                        <p className="text-sm"><strong>Project:</strong> {entryData.staticHeader.projectInfo}</p>
-                        <p className="text-sm"><strong>Reporting Date:</strong> {entryData.staticHeader.reportingDate}</p>
-                        <p className="text-sm"><strong>Progress Date:</strong> {entryData.staticHeader.progressDate}</p>
-                      </div>
-                    )}
+                  return (
+                    <>
+                      {/* Static Header Info */}
+                      {entryData?.staticHeader && (
+                        <div className="mb-4 rounded-lg overflow-hidden" style={{ border: "2px solid #999999" }}>
+                          <div className="bg-[#f1f5f9] dark:bg-[#2B2B2B] px-4 py-2 border-b-2 border-[#94a3b8]">
+                            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">📋 Project Information</span>
+                          </div>
+                          <div className="bg-white dark:bg-[#1E1E1E] p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Project:</span>
+                              <span className="text-sm font-medium text-black dark:text-white">{entryData.staticHeader.projectInfo}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Reporting Date:</span>
+                              <span className="text-sm font-medium text-black dark:text-white">{entryData.staticHeader.reportingDate}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-gray-500 uppercase">Progress Date:</span>
+                              <span className="text-sm font-medium text-black dark:text-white">{entryData.staticHeader.progressDate}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
-                    {/* Data Table */}
-                    {entryData?.rows && entryData.rows.length > 0 && (
-                      <div className="mb-4 overflow-x-auto">
-                        <table className="w-full border-collapse">
-                          <thead>
-                            <tr className="bg-gray-100 dark:bg-gray-700">
-                              {Object.keys(entryData.rows[0]).map((key) => (
-                                <th key={key} className="border border-gray-300 dark:border-gray-600 p-2 text-left text-xs font-semibold">
-                                  {key.replace(/([A-Z])/g, ' $1').trim().toUpperCase()}
-                                </th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {entryData.rows.map((row: any, rowIndex: number) => (
-                              <tr key={rowIndex} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                {Object.values(row).map((value: any, colIndex: number) => (
-                                  <td key={`${rowIndex}-${colIndex}`} className="border border-gray-300 dark:border-gray-600 p-2 text-sm">
-                                    {value || '-'}
-                                  </td>
+                      {/* Excel-style Data Table */}
+                      {entryData?.rows && entryData.rows.length > 0 && (
+                        <div className="overflow-x-auto rounded-lg" style={{ border: "2px solid #999999" }}>
+                          <table className="w-full border-collapse" style={{ minWidth: "100%" }}>
+                            <thead style={{ position: "sticky", top: 0, zIndex: 10 }}>
+                              <tr>
+                                {Object.keys(entryData.rows[0]).map((key, index) => (
+                                  <th
+                                    key={key}
+                                    style={{
+                                      backgroundColor: "#f1f5f9",
+                                      color: "#000000",
+                                      fontSize: "10px",
+                                      fontWeight: "700",
+                                      padding: "10px 8px",
+                                      textAlign: "center",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.5px",
+                                      borderBottom: "2px solid #94a3b8",
+                                      borderRight: index === Object.keys(entryData.rows[0]).length - 1 ? "none" : "1px solid #cbd5e1",
+                                      whiteSpace: "nowrap",
+                                      minWidth: "80px"
+                                    }}
+                                  >
+                                    {key.replace(/([A-Z])/g, ' $1').trim().replace(/_/g, ' ')}
+                                  </th>
                                 ))}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                            </thead>
+                            <tbody>
+                              {entryData.rows.map((row: any, rowIndex: number) => {
+                                const isEvenRow = rowIndex % 2 === 0;
+                                const rowBg = isEvenRow ? "#FFFFFF" : "#F8FBFF";
 
-                    {/* Total Manpower (if applicable) */}
-                    {entryData?.totalManpower !== undefined && (
-                      <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/30 rounded border border-green-200">
-                        <p className="text-sm font-semibold">Total Manpower: {entryData.totalManpower}</p>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
+                                return (
+                                  <tr key={rowIndex} className="hover:bg-[#EAF2FB] dark:hover:bg-[#2E3238]">
+                                    {Object.values(row).map((value: any, colIndex: number) => (
+                                      <td
+                                        key={`${rowIndex}-${colIndex}`}
+                                        style={{
+                                          backgroundColor: rowBg,
+                                          padding: "8px 10px",
+                                          fontSize: "12px",
+                                          textAlign: typeof value === 'number' ? "right" : "left",
+                                          borderBottom: "1px solid #D4D4D4",
+                                          borderRight: colIndex === Object.values(row).length - 1 ? "none" : "1px solid #D4D4D4",
+                                          color: "#000000",
+                                          whiteSpace: "nowrap"
+                                        }}
+                                        className="dark:!bg-[#1E1E1E] dark:!text-white"
+                                      >
+                                        {value !== null && value !== undefined && value !== '' ? value : '-'}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-2 pt-4 border-t">
-                <button
-                  onClick={() => setShowArchivedModal(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-100"
-                >
-                  Close
-                </button>
+                      {/* Total Manpower (if applicable) */}
+                      {entryData?.totalManpower !== undefined && (
+                        <div className="mt-4 rounded-lg overflow-hidden" style={{ border: "2px solid #22c55e" }}>
+                          <div className="bg-[#86efac] px-4 py-2 border-b-2 border-[#22c55e]">
+                            <span className="text-xs font-bold text-green-800 uppercase tracking-wider">📊 Summary</span>
+                          </div>
+                          <div className="bg-[#dcfce7] dark:bg-green-900/30 p-4">
+                            <p className="text-lg font-bold text-green-800 dark:text-green-400">
+                              Total Manpower: {entryData.totalManpower}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Show message if no data */}
+                      {(!entryData?.rows || entryData.rows.length === 0) && !entryData?.staticHeader && (
+                        <div className="text-center py-16">
+                          <div className="text-6xl mb-4">📭</div>
+                          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">No data available for this entry</p>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
-            </div>
+
+              {/* Footer Status Bar */}
+              <div className="px-4 py-2 bg-[#F4F4F4] dark:bg-[#252525] border-t-2 border-[#999999] flex justify-between items-center">
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  {(() => {
+                    const entryData = typeof selectedArchivedEntry.data_json === 'string'
+                      ? JSON.parse(selectedArchivedEntry.data_json)
+                      : selectedArchivedEntry.data_json;
+                    const rowCount = entryData?.rows?.length || 0;
+                    const colCount = entryData?.rows?.[0] ? Object.keys(entryData.rows[0]).length : 0;
+                    return `${rowCount} rows × ${colCount} columns`;
+                  })()}
+                </span>
+                <span className="text-xs text-gray-500">
+                  Project ID: {selectedArchivedEntry.project_id} | Sheet: {selectedArchivedEntry.sheet_type?.replace(/_/g, ' ')}
+                </span>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>

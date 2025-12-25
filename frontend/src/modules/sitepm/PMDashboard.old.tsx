@@ -1,13 +1,13 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { 
-  FileText, 
-  Check, 
-  X, 
-  Edit, 
-  Clock, 
-  AlertCircle, 
-  CheckCircle, 
+import {
+  FileText,
+  Check,
+  X,
+  Edit,
+  Clock,
+  AlertCircle,
+  CheckCircle,
   FileCheck,
   Calendar,
   User,
@@ -30,15 +30,15 @@ import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/Navbar";
 import { StatsCard } from "@/components/StatsCard";
 import { StyledExcelTable } from "@/components/StyledExcelTable";
-import { 
+import {
   getEntriesForPMReview,
-  approveEntryByPM, 
-  rejectEntryByPM, 
+  approveEntryByPM,
+  rejectEntryByPM,
   updateEntryByPM,
   getTodayAndYesterday
 } from "@/modules/auth/services/dprSupervisorService";
 import { getUserProjects, assignProjectToSupervisor, assignProjectToMultipleSupervisors, assignProjectsToMultipleSupervisors } from "@/modules/auth/services/projectService";
-import { 
+import {
   DPQtyTable,
   DPVendorBlockTable,
   ManpowerDetailsTable,
@@ -69,7 +69,7 @@ const PMDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { addNotification } = useNotification();
-  
+
   // Extract project data from location state
   const locationState = location.state || {};
   const projectName = locationState.projectName || "Project";
@@ -91,7 +91,7 @@ const PMDashboard = () => {
     assignProject: false,
     ProjectId: "" as string | number
   });
-  
+
   // State for multiple supervisor assignment
   const [assignForm, setAssignForm] = useState({
     projectIds: [] as string[],  // Changed to array for multiple projects
@@ -101,10 +101,10 @@ const PMDashboard = () => {
   const [supervisors, setSupervisors] = useState<any[]>([]);
   const [projectSearchTerm, setProjectSearchTerm] = useState('');
   const [supervisorSearchTerm, setSupervisorSearchTerm] = useState('');
-  
+
   // State for collapsible entries
   const [expandedEntries, setExpandedEntries] = useState<Record<number, boolean>>({});
-  
+
   // Note: Site PM can only create supervisors, not other roles
   // This is a business rule enforced in both frontend and backend
   const [supervisorLoading, setSupervisorLoading] = useState(false);
@@ -121,15 +121,15 @@ const PMDashboard = () => {
   const getEntriesBySheetType = (sheetType: string) => {
     // Filter by sheet type and status (only submitted_to_pm)
     if (projectId) {
-      return submittedEntries.filter(entry => 
-        entry.sheet_type === sheetType && 
+      return submittedEntries.filter(entry =>
+        entry.sheet_type === sheetType &&
         entry.project_id === projectId &&
         entry.status === 'submitted_to_pm'  // Only show submitted entries
       );
     } else {
       // If no project specified, show all submitted entries for this sheet type
-      return submittedEntries.filter(entry => 
-        entry.sheet_type === sheetType && 
+      return submittedEntries.filter(entry =>
+        entry.sheet_type === sheetType &&
         entry.status === 'submitted_to_pm'  // Only show submitted entries
       );
     }
@@ -168,7 +168,7 @@ const PMDashboard = () => {
   const handleApprove = async (entryId: number) => {
     try {
       await approveEntryByPM(entryId);
-      
+
       // Find the entry that was approved to get details for notification
       const entry = submittedEntries.find(e => e.id === entryId);
       if (entry) {
@@ -183,7 +183,7 @@ const PMDashboard = () => {
           sheetType: entry.sheet_type // Add sheetType for navigation
         });
       }
-      
+
       toast.success("Entry approved successfully!");
       // Refresh entries
       await fetchEntries();
@@ -203,7 +203,7 @@ const PMDashboard = () => {
   // Handle save edited entry
   const handleSaveEdit = async () => {
     if (!editingEntry || !editData) return;
-    
+
     try {
       await updateEntryByPM(editingEntry.id, editData);
       toast.success("Entry updated successfully");
@@ -220,7 +220,7 @@ const PMDashboard = () => {
   const handleReject = async (entryId: number) => {
     try {
       await rejectEntryByPM(entryId);
-      
+
       // Find the entry that was rejected to get details for notification
       const entry = submittedEntries.find(e => e.id === entryId);
       if (entry) {
@@ -235,7 +235,7 @@ const PMDashboard = () => {
           sheetType: entry.sheet_type // Add sheetType for navigation
         });
       }
-      
+
       toast.success("Entry rejected and sent back to supervisor");
       // Refresh entries
       await fetchEntries();
@@ -262,7 +262,7 @@ const PMDashboard = () => {
       try {
         const projectsData = await getUserProjects();
         setProjects(projectsData);
-        
+
         // Fetch all supervisors for assignment
         try {
           const response = await fetch('/api/users/supervisors');
@@ -307,7 +307,7 @@ const PMDashboard = () => {
       toast.error(`Failed to update entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
-  
+
   // Handle save entry
   const handleSaveEntry = async (entryId: number, data: any) => {
     try {
@@ -319,12 +319,12 @@ const PMDashboard = () => {
       toast.error(`Failed to save entry: ${(error as Error).message || 'Unknown error'}`);
     }
   };
-  
+
   // Toggle fullscreen mode
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
-  
+
   // Close fullscreen mode
   const closeFullscreen = () => {
     setIsFullscreen(false);
@@ -333,10 +333,10 @@ const PMDashboard = () => {
   // Render sheet entries for a specific sheet type
   const renderSheetEntries = (sheetType: string) => {
     const entries = getEntriesBySheetType(sheetType);
-    
+
     if (entries.length === 0) {
       return (
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3 }}
@@ -350,7 +350,7 @@ const PMDashboard = () => {
 
     // Get selected entries for this sheet type
     // Removed bulk selection state and related functions
-    
+
     // Toggle entry expansion
     const toggleEntryExpansion = (entryId: number) => {
       setExpandedEntries(prev => ({
@@ -358,31 +358,31 @@ const PMDashboard = () => {
         [entryId]: !prev[entryId]
       }));
     };
-    
+
     return (
       <div className="space-y-4">
         {/* Removed Bulk Actions Toolbar */}
-        
+
         {entries.map((entry, entryIndex) => {
           const entryData = typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json;
           const { today, yesterday } = getTodayAndYesterday();
-          
+
           // Determine if entry is locked (submitted or approved)
           const isLocked = entry.status !== 'submitted_to_pm';
-          
+
           // Check if entry is expanded
           const isExpanded = expandedEntries[entry.id] || false;
-          
+
           return (
-            <motion.div 
-              key={entry.id} 
+            <motion.div
+              key={entry.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: entryIndex * 0.1 }}
               className="border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 bg-white dark:bg-gray-800"
             >
               {/* Collapsible Entry Header */}
-              <motion.div 
+              <motion.div
                 className="flex flex-col md:flex-row md:items-center justify-between p-3 cursor-pointer"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -395,17 +395,17 @@ const PMDashboard = () => {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between">
                       <div className="flex items-center space-x-2">
                         <span className="font-semibold">Entry #{entry.id}</span>
-                        <Badge 
+                        <Badge
                           variant={
-                            entry.status === "submitted_to_pm" ? "secondary" : 
-                            entry.status === "approved_by_pm" ? "default" : 
-                            "destructive"
+                            entry.status === "submitted_to_pm" ? "secondary" :
+                              entry.status === "approved_by_pm" ? "default" :
+                                "destructive"
                           }
                           className="px-2 py-0.5 text-xs font-medium"
                         >
-                          {entry.status === "submitted_to_pm" ? "Pending" : 
-                           entry.status === "approved_by_pm" ? "Approved" : 
-                           "Rejected"}
+                          {entry.status === "submitted_to_pm" ? "Pending" :
+                            entry.status === "approved_by_pm" ? "Approved" :
+                              "Rejected"}
                         </Badge>
                       </div>
                       <span className="text-xs text-muted-foreground mt-1 md:mt-0">
@@ -427,8 +427,8 @@ const PMDashboard = () => {
                   <div className="flex items-center space-x-2 flex-shrink-0">
                     {entry.status === "submitted_to_pm" && (
                       <>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="outline"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -438,8 +438,8 @@ const PMDashboard = () => {
                         >
                           <Edit className="w-3 h-3" />
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="default"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -449,8 +449,8 @@ const PMDashboard = () => {
                         >
                           <Check className="w-3 h-3" />
                         </Button>
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           variant="destructive"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -480,7 +480,7 @@ const PMDashboard = () => {
               {/* Expanded Content */}
               <AnimatePresence>
                 {isExpanded && (
-                  <motion.div 
+                  <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
@@ -505,8 +505,8 @@ const PMDashboard = () => {
                           <div className={isFullscreen ? 'overflow-auto max-h-[calc(100vh-120px)]' : ''}>
                             {/* Render the appropriate table component based on sheet type */}
                             {sheetType === 'dp_qty' && (
-                              <DPQtyTable 
-                                data={entryData.rows} 
+                              <DPQtyTable
+                                data={entryData.rows}
                                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => handleSaveEntry(entry.id, entryData)}
                                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -517,10 +517,10 @@ const PMDashboard = () => {
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'dp_block' && (
-                              <DPBlockTable 
-                                data={entryData.rows} 
+                              <DPBlockTable
+                                data={entryData.rows}
                                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => handleSaveEntry(entry.id, entryData)}
                                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -531,10 +531,10 @@ const PMDashboard = () => {
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'dp_vendor_idt' && (
-                              <DPVendorIdtTable 
-                                data={entryData.rows} 
+                              <DPVendorIdtTable
+                                data={entryData.rows}
                                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => handleSaveEntry(entry.id, entryData)}
                                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -545,10 +545,10 @@ const PMDashboard = () => {
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'dp_vendor_block' && (
-                              <DPVendorBlockTable 
-                                data={entryData.rows} 
+                              <DPVendorBlockTable
+                                data={entryData.rows}
                                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => handleSaveEntry(entry.id, entryData)}
                                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -559,10 +559,10 @@ const PMDashboard = () => {
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'manpower_details' && (
-                              <ManpowerDetailsTable 
-                                data={entryData.rows} 
+                              <ManpowerDetailsTable
+                                data={entryData.rows}
                                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 totalManpower={entryData.totalManpower || 0}
                                 setTotalManpower={(total) => handleUpdateEntry(entry.id, { ...entryData, totalManpower: total })}
@@ -575,10 +575,10 @@ const PMDashboard = () => {
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {sheetType === 'mms_module_rfi' && (
-                              <MmsModuleRfiTable 
-                                data={entryData.rows} 
+                              <MmsModuleRfiTable
+                                data={entryData.rows}
                                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                                 onSave={() => handleSaveEntry(entry.id, entryData)}
                                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -589,7 +589,7 @@ const PMDashboard = () => {
                                 useMockData={false}
                               />
                             )}
-                            
+
                             {/* Fallback for unknown sheet types */}
                             {!['dp_qty', 'dp_block', 'dp_vendor_idt', 'dp_vendor_block', 'manpower_details', 'mms_module_rfi'].includes(sheetType) && (
                               <div className="overflow-x-auto">
@@ -605,8 +605,8 @@ const PMDashboard = () => {
                                   </thead>
                                   <tbody>
                                     {entryData.rows.map((row: any, rowIndex: number) => (
-                                      <motion.tr 
-                                        key={rowIndex} 
+                                      <motion.tr
+                                        key={rowIndex}
                                         className="hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
                                         initial={{ opacity: 0, x: -5 }}
                                         animate={{ opacity: 1, x: 0 }}
@@ -625,10 +625,10 @@ const PMDashboard = () => {
                               </div>
                             )}
                           </div>
-                          
+
                           {entryData.rows.length > 50 && (
                             <div className="mt-2 text-right">
-                              <Button 
+                              <Button
                                 onClick={toggleFullscreen}
                                 variant="outline"
                                 size="sm"
@@ -658,27 +658,27 @@ const PMDashboard = () => {
       </div>
     );
   };
-  
+
   // Render fullscreen overlay
   const renderFullscreenOverlay = () => {
     if (!isFullscreen) return null;
-    
+
     // Find the currently expanded entry
     const expandedEntryId = Object.keys(expandedEntries).find(id => expandedEntries[Number(id)]);
     if (!expandedEntryId) return null;
-    
+
     const entry = submittedEntries.find(e => e.id === Number(expandedEntryId));
     if (!entry) return null;
-    
+
     const entryData = typeof entry.data_json === 'string' ? JSON.parse(entry.data_json) : entry.data_json;
     const { today, yesterday } = getTodayAndYesterday();
     const isLocked = entry.status !== 'submitted_to_pm';
-    
+
     return (
       <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900 p-4 md:p-6 overflow-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 p-2 border-b dark:border-gray-700">
           <h3 className="text-lg font-semibold">Fullscreen View - Entry #{entry.id}</h3>
-          <Button 
+          <Button
             onClick={closeFullscreen}
             variant="outline"
             size="sm"
@@ -687,7 +687,7 @@ const PMDashboard = () => {
             Exit Fullscreen
           </Button>
         </div>
-        
+
         <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-4 border dark:border-gray-700">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <div>
@@ -708,7 +708,7 @@ const PMDashboard = () => {
             </div>
           </div>
         </div>
-        
+
         {entryData?.staticHeader && (
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4 border border-blue-100 dark:border-blue-800">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -727,12 +727,12 @@ const PMDashboard = () => {
             </div>
           </div>
         )}
-        
+
         {entryData?.rows && entryData.rows.length > 0 && (
           <div className="overflow-auto max-h-[calc(100vh-300px)]">
             {activeTab === 'dp_qty' && (
-              <DPQtyTable 
-                data={entryData.rows} 
+              <DPQtyTable
+                data={entryData.rows}
                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                 onSave={() => handleSaveEntry(entry.id, entryData)}
                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -743,10 +743,10 @@ const PMDashboard = () => {
                 useMockData={false}
               />
             )}
-            
+
             {activeTab === 'dp_block' && (
-              <DPBlockTable 
-                data={entryData.rows} 
+              <DPBlockTable
+                data={entryData.rows}
                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                 onSave={() => handleSaveEntry(entry.id, entryData)}
                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -757,10 +757,10 @@ const PMDashboard = () => {
                 useMockData={false}
               />
             )}
-            
+
             {activeTab === 'dp_vendor_idt' && (
-              <DPVendorIdtTable 
-                data={entryData.rows} 
+              <DPVendorIdtTable
+                data={entryData.rows}
                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                 onSave={() => handleSaveEntry(entry.id, entryData)}
                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -771,10 +771,10 @@ const PMDashboard = () => {
                 useMockData={false}
               />
             )}
-            
+
             {activeTab === 'dp_vendor_block' && (
-              <DPVendorBlockTable 
-                data={entryData.rows} 
+              <DPVendorBlockTable
+                data={entryData.rows}
                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                 onSave={() => handleSaveEntry(entry.id, entryData)}
                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -785,10 +785,10 @@ const PMDashboard = () => {
                 useMockData={false}
               />
             )}
-            
+
             {activeTab === 'manpower_details' && (
-              <ManpowerDetailsTable 
-                data={entryData.rows} 
+              <ManpowerDetailsTable
+                data={entryData.rows}
                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                 totalManpower={entryData.totalManpower || 0}
                 setTotalManpower={(total) => handleUpdateEntry(entry.id, { ...entryData, totalManpower: total })}
@@ -801,10 +801,10 @@ const PMDashboard = () => {
                 useMockData={false}
               />
             )}
-            
+
             {activeTab === 'mms_module_rfi' && (
-              <MmsModuleRfiTable 
-                data={entryData.rows} 
+              <MmsModuleRfiTable
+                data={entryData.rows}
                 setData={(data) => handleUpdateEntry(entry.id, { ...entryData, rows: data })}
                 onSave={() => handleSaveEntry(entry.id, entryData)}
                 onSubmit={() => handleSaveEntry(entry.id, entryData)}
@@ -887,7 +887,7 @@ const PMDashboard = () => {
     setAssignForm(prev => {
       const currentIds = [...prev.supervisorIds];
       const index = currentIds.indexOf(supervisorId);
-      
+
       if (index >= 0) {
         // Remove if already selected
         currentIds.splice(index, 1);
@@ -895,7 +895,7 @@ const PMDashboard = () => {
         // Add if not selected
         currentIds.push(supervisorId);
       }
-      
+
       return {
         ...prev,
         supervisorIds: currentIds
@@ -908,7 +908,7 @@ const PMDashboard = () => {
     setAssignForm(prev => {
       const currentIds = [...prev.projectIds];
       const index = currentIds.indexOf(projectId);
-      
+
       if (index >= 0) {
         // Remove if already selected
         currentIds.splice(index, 1);
@@ -916,7 +916,7 @@ const PMDashboard = () => {
         // Add if not selected
         currentIds.push(projectId);
       }
-      
+
       return {
         ...prev,
         projectIds: currentIds
@@ -927,7 +927,7 @@ const PMDashboard = () => {
   const handleSupervisorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSupervisorLoading(true);
-    
+
     try {
       // First create the supervisor - Site PM can only create supervisors
       const userData: Omit<import('@/modules/auth/services/authService').User, 'ObjectId'> = {
@@ -936,9 +936,9 @@ const PMDashboard = () => {
         password: supervisorForm.password,
         Role: "supervisor"  // Hardcoded - Site PM can only create supervisors
       };
-      
+
       const registeredUserResponse = await registerUser(userData);
-      
+
       // If assignProject is checked and a project is selected, assign the project
       // This is the project assignment functionality for Site PM when creating supervisors
       let assignedProjectId = null;
@@ -948,15 +948,15 @@ const PMDashboard = () => {
           // Ensure we're passing numbers to the API
           const projectId = parseInt(supervisorForm.ProjectId.toString());
           const supervisorId = registeredUserResponse.user.ObjectId;
-          
+
           console.log('Assigning project:', { projectId, supervisorId });
-          
+
           await assignProjectToSupervisor(projectId, supervisorId);
-          
+
           // Store the project ID and name for display
           assignedProjectId = supervisorForm.ProjectId;
           assignedProjectName = projects.find(p => p.ObjectId == supervisorForm.ProjectId || p.id == supervisorForm.ProjectId)?.Name || "Unknown Project";
-          
+
           toast.success(`Supervisor created and project assigned successfully!`);
         } catch (assignError) {
           console.error('Project assignment error:', assignError);
@@ -965,7 +965,7 @@ const PMDashboard = () => {
       } else {
         toast.success("Supervisor created successfully!");
       }
-      
+
       // Show success modal with user details
       setRegisteredUser({
         email: supervisorForm.Email,
@@ -976,7 +976,7 @@ const PMDashboard = () => {
       });
       setShowSuccessModal(true);
       setShowCreateSupervisorModal(false);
-      
+
       // Reset form
       setSupervisorForm({
         Name: "",
@@ -995,17 +995,17 @@ const PMDashboard = () => {
 
   const handleAssignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       // Assign project to multiple supervisors using the new API endpoint
       await assignProjectsToMultipleSupervisors(
         assignForm.projectIds.map(id => parseInt(id)),
         assignForm.supervisorIds.map(id => parseInt(id))
       );
-      
+
       toast.success("Project assigned to selected users successfully!");
       setShowAssignProjectModal(false);
-      
+
       // Reset form and search terms
       setAssignForm({
         projectIds: [],
@@ -1017,7 +1017,7 @@ const PMDashboard = () => {
       toast.error(err instanceof Error ? err.message : 'Project assignment failed');
     }
   };
-  
+
   // Reset registered user state when closing the success modal
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
@@ -1029,7 +1029,7 @@ const PMDashboard = () => {
       projectName: null
     });
   };
-  
+
   // Function to handle assignment form reset
   const handleAssignFormReset = () => {
     setAssignForm({
@@ -1042,15 +1042,15 @@ const PMDashboard = () => {
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="min-h-screen bg-background"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
     >
-      <Navbar 
-        userName={user?.Name || "User"} 
-        userRole={user?.Role || "Site PM"} 
+      <Navbar
+        userName={user?.Name || "User"}
+        userRole={user?.Role || "Site PM"}
         projectName={projectName}
         onAddUser={handleCreateSupervisor}
         onAssignProject={() => setShowAssignProjectModal(true)}
@@ -1065,15 +1065,15 @@ const PMDashboard = () => {
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
             <div>
-              <motion.h1 
+              <motion.h1
                 className="text-3xl md:text-4xl font-bold mb-2 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 }}
               >
-               Site PM Dashboard
+                Site PM Dashboard
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="text-muted-foreground"
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1082,7 +1082,7 @@ const PMDashboard = () => {
                 {projectName ? `Project: ${projectName}` : "Project dashboard for project management"}
               </motion.p>
               {projectDetails && (
-                <motion.div 
+                <motion.div
                   className="mt-2 text-sm text-muted-foreground"
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -1093,7 +1093,7 @@ const PMDashboard = () => {
                 </motion.div>
               )}
             </div>
-            <motion.div 
+            <motion.div
               className="flex items-center space-x-4"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
@@ -1104,7 +1104,7 @@ const PMDashboard = () => {
         </motion.div>
 
         {/* Stats Cards */}
-        <motion.div 
+        <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1150,8 +1150,8 @@ const PMDashboard = () => {
                   whileTap={{ scale: 0.95 }}
                   whileHover={{ scale: 1.05 }}
                 >
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     variant="outline"
                     onClick={fetchEntries}
                     disabled={loading}
@@ -1165,15 +1165,15 @@ const PMDashboard = () => {
                 <Badge variant="outline">{submittedEntries.length} Total</Badge>
               </div>
             </div>
-            
+
             {loading ? (
-              <motion.div 
+              <motion.div
                 className="text-center py-8 text-muted-foreground"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
-                <motion.div 
+                <motion.div
                   className="flex justify-center"
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
@@ -1183,7 +1183,7 @@ const PMDashboard = () => {
                 <p className="mt-2">Loading submitted sheets...</p>
               </motion.div>
             ) : submittedEntries.length === 0 ? (
-              <motion.div 
+              <motion.div
                 className="text-center py-8 text-muted-foreground"
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -1204,8 +1204,8 @@ const PMDashboard = () => {
                     whileTap={{ scale: 0.95 }}
                     whileHover={{ scale: 1.05 }}
                   >
-                    <Button 
-                      onClick={fetchEntries} 
+                    <Button
+                      onClick={fetchEntries}
                       size="sm"
                       variant="outline"
                       className="transition-all duration-200 px-3 py-1 h-8"
@@ -1219,7 +1219,7 @@ const PMDashboard = () => {
               </motion.div>
             ) : (
               <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
@@ -1235,8 +1235,8 @@ const PMDashboard = () => {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: index * 0.05, duration: 0.2 }}
                         >
-                          <TabsTrigger 
-                            value={sheet.value} 
+                          <TabsTrigger
+                            value={sheet.value}
                             className="flex items-center justify-center w-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground py-2 px-1 border border-transparent data-[state=active]:border-primary data-[state=active]:shadow"
                           >
                             <Icon className="w-4 h-4 mr-2" />
@@ -1259,7 +1259,7 @@ const PMDashboard = () => {
                         <motion.div
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
-                          transition={{ 
+                          transition={{
                             duration: 0.3,
                             delay: 0.1
                           }}
@@ -1448,8 +1448,8 @@ const PMDashboard = () => {
             {supervisorForm.assignProject && (
               <div>
                 <Label htmlFor="project">Project</Label>
-                <Select 
-                  value={supervisorForm.ProjectId.toString()} 
+                <Select
+                  value={supervisorForm.ProjectId.toString()}
                   onValueChange={(value) => handleSupervisorFormChange("ProjectId", value)}
                 >
                   <SelectTrigger>
@@ -1459,13 +1459,13 @@ const PMDashboard = () => {
                     {projects.map((project) => {
                       // Ensure we have a valid value for the SelectItem
                       const value = (project.ObjectId || project.id || '').toString();
-                      
+
                       // Skip items with empty values
                       if (!value) return null;
-                      
+
                       return (
-                        <SelectItem 
-                          key={project.ObjectId || project.id || project.Name} 
+                        <SelectItem
+                          key={project.ObjectId || project.id || project.Name}
                           value={value}
                         >
                           {project.Name}
@@ -1531,7 +1531,7 @@ const PMDashboard = () => {
                 <p className="text-sm"><strong>Submitted:</strong> {new Date(editingEntry.submitted_at).toLocaleString()}</p>
                 <p className="text-sm"><strong>Status:</strong> {editingEntry.status}</p>
               </div>
-              
+
               {editData.rows && editData.rows.length > 0 && (
                 <div>
                   {editData.staticHeader && (
@@ -1570,8 +1570,8 @@ const PMDashboard = () => {
                     isReadOnly={false}
                     status={editingEntry?.status || 'draft'}
                   />
-                </div>              )}
-              
+                </div>)}
+
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setEditingEntry(null)}>
                   Cancel
@@ -1593,7 +1593,7 @@ const PMDashboard = () => {
           handleAssignFormReset();
         }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Assign Projects to Users</DialogTitle>
           </DialogHeader>
@@ -1614,21 +1614,20 @@ const PMDashboard = () => {
                 {projects.length > 0 ? (
                   // Filter projects based on search term
                   projects
-                    .filter(project => 
+                    .filter(project =>
                       project.Name.toLowerCase().includes(projectSearchTerm.toLowerCase())
                     )
                     .map((project) => {
                       const value = (project.ObjectId || project.id || '').toString();
-                      
+
                       // Skip items with empty values
                       if (!value) return null;
-                      
+
                       return (
-                        <div 
-                          key={project.ObjectId || project.id || project.Name} 
-                          className={`flex items-center p-2 hover:bg-muted cursor-pointer ${
-                            assignForm.projectIds.includes(value) ? 'bg-muted' : ''
-                          }`}
+                        <div
+                          key={project.ObjectId || project.id || project.Name}
+                          className={`flex items-center p-2 hover:bg-muted cursor-pointer ${assignForm.projectIds.includes(value) ? 'bg-muted' : ''
+                            }`}
                           onClick={() => toggleProjectSelection(value)}
                         >
                           <input
@@ -1669,22 +1668,21 @@ const PMDashboard = () => {
                 {supervisors && supervisors.length > 0 ? (
                   // Filter supervisors based on search term
                   supervisors
-                    .filter(supervisor => 
+                    .filter(supervisor =>
                       supervisor.Name.toLowerCase().includes(supervisorSearchTerm.toLowerCase()) ||
                       supervisor.Email.toLowerCase().includes(supervisorSearchTerm.toLowerCase())
                     )
                     .map((supervisor) => {
                       const value = (supervisor.ObjectId || supervisor.id || '').toString();
-                      
+
                       // Skip items with empty values
                       if (!value) return null;
-                      
+
                       return (
-                        <div 
-                          key={supervisor.ObjectId || supervisor.id || supervisor.Name} 
-                          className={`flex items-center p-2 hover:bg-muted cursor-pointer ${
-                            assignForm.supervisorIds.includes(value) ? 'bg-muted' : ''
-                          }`}
+                        <div
+                          key={supervisor.ObjectId || supervisor.id || supervisor.Name}
+                          className={`flex items-center p-2 hover:bg-muted cursor-pointer ${assignForm.supervisorIds.includes(value) ? 'bg-muted' : ''
+                            }`}
                           onClick={() => toggleSupervisorSelection(value)}
                         >
                           <input
@@ -1716,11 +1714,11 @@ const PMDashboard = () => {
               <Button type="button" variant="outline" onClick={() => setShowAssignProjectModal(false)}>
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={assignForm.projectIds.length === 0 || assignForm.supervisorIds.length === 0}
               >
-                {assignForm.projectIds.length > 0 && assignForm.supervisorIds.length > 0 
+                {assignForm.projectIds.length > 0 && assignForm.supervisorIds.length > 0
                   ? `Assign ${assignForm.projectIds.length} Project(s) to ${assignForm.supervisorIds.length} User(s)`
                   : 'Assign Projects to Users'}
               </Button>
