@@ -12,6 +12,18 @@ const setPool = (dbPool, authMiddleware) => {
   authenticateToken = authMiddleware;
 };
 
+// Helper to get pool or fallback
+const getPool = () => {
+  if (pool) return pool;
+  try {
+    const db = require('../db');
+    return db;
+  } catch (err) {
+    console.error('Failed to require ../db fallback:', err);
+    throw new Error('Database pool not initialized');
+  }
+};
+
 // Middleware to check if user is Super Admin
 const isSuperAdmin = (req, res, next) => {
   if (req.user && req.user.role === 'Super Admin') {
@@ -36,7 +48,7 @@ router.get('/users', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     // Check if is_active column exists
-    const columnCheck = await pool.query(`
+    const columnCheck = await getPool().query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'users' AND column_name = 'is_active'
@@ -55,7 +67,7 @@ router.get('/users', (req, res, next) => {
                FROM users ORDER BY name`;
     }
 
-    const result = await pool.query(query);
+    const result = await getPool().query(query);
 
     res.json(result.rows);
   } catch (error) {
@@ -113,7 +125,7 @@ router.post('/users', (req, res, next) => {
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
     // Insert user into database
-    const result = await pool.query(
+    const result = await getPool().query(
       'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING user_id, name, email, role',
       [name, email, hashedPassword, role]
     );
@@ -195,7 +207,7 @@ router.put('/users/:userId', (req, res, next) => {
     }
 
     // Check if is_active column exists before processing updates
-    const columnCheck = await pool.query(`
+    const columnCheck = await getPool().query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'users' AND column_name IN ('is_active', 'updated_at')
@@ -225,7 +237,7 @@ router.put('/users/:userId', (req, res, next) => {
       oldUserQuery = 'SELECT role, true as is_active FROM users WHERE user_id = $1';
     }
 
-    const oldUserResult = await pool.query(oldUserQuery, [userId]);
+    const oldUserResult = await getPool().query(oldUserQuery, [userId]);
 
     if (oldUserResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -247,7 +259,7 @@ router.put('/users/:userId', (req, res, next) => {
       returnFields += ', true as is_active';
     }
 
-    const result = await pool.query(
+    const result = await getPool().query(
       `UPDATE users SET ${updates.join(', ')} WHERE user_id = $${index} RETURNING ${returnFields}`,
       values
     );
@@ -315,7 +327,7 @@ router.delete('/users/:userId', (req, res, next) => {
       return res.status(400).json({ message: 'Cannot delete your own account' });
     }
 
-    const result = await pool.query(
+    const result = await getPool().query(
       'DELETE FROM users WHERE user_id = $1 RETURNING user_id',
       [userId]
     );
@@ -357,7 +369,7 @@ router.post('/users/:userId/reset-password', (req, res, next) => {
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
-    const result = await pool.query(
+    const result = await getPool().query(
       'UPDATE users SET password = $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING user_id, name, email',
       [hashedPassword, userId]
     );
@@ -394,7 +406,7 @@ router.get('/projects', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     // Fetch all projects from both local projects table and p6_projects table
-    const result = await pool.query(`
+    const result = await getPool().query(`
       SELECT 
         id AS "ObjectId", 
         name AS "Name", 
@@ -410,14 +422,14 @@ router.get('/projects', (req, res, next) => {
       UNION ALL
       
       SELECT 
-        object_id AS "ObjectId", 
-        name AS "Name", 
-        COALESCE(parent_eps_name, location_name) AS "Location", 
-        status AS "Status", 
+        "objectId" AS "ObjectId", 
+        "name" AS "Name", 
+        NULL AS "Location", 
+        "status" AS "Status", 
         0 AS "Progress", 
-        start_date AS "PlanStart", 
-        finish_date AS "PlanEnd",
-        COALESCE(created_at, CURRENT_TIMESTAMP) AS "CreatedAt",
+        "plannedStartDate" AS "PlanStart", 
+        "plannedFinishDate" AS "PlanEnd",
+        COALESCE("lastSyncAt", CURRENT_TIMESTAMP) AS "CreatedAt",
         'p6' AS "Source"
       FROM p6_projects
       
@@ -451,7 +463,7 @@ router.post('/projects', (req, res, next) => {
       });
     }
 
-    const result = await pool.query(
+    const result = await getPool().query(
       'INSERT INTO projects (name, location, status, progress, plan_start, plan_end) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, location, status, progress, plan_start, plan_end',
       [name, location || null, status || 'planning', progress || 0, planStart || null, planEnd || null]
     );
@@ -531,7 +543,7 @@ router.put('/projects/:projectId', (req, res, next) => {
 
     values.push(projectId);
 
-    const result = await pool.query(
+    const result = await getPool().query(
       `UPDATE projects SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${index} RETURNING id, name, location, status, progress, plan_start, plan_end`,
       values
     );
@@ -573,7 +585,7 @@ router.delete('/projects/:projectId', (req, res, next) => {
   try {
     const { projectId } = req.params;
 
-    const result = await pool.query(
+    const result = await getPool().query(
       'DELETE FROM projects WHERE id = $1 RETURNING id',
       [projectId]
     );
@@ -601,7 +613,7 @@ router.get('/stats', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     // Get user counts by role
-    const userStats = await pool.query(`
+    const userStats = await getPool().query(`
       SELECT role, COUNT(*) as count
       FROM users
       GROUP BY role
@@ -609,7 +621,7 @@ router.get('/stats', (req, res, next) => {
     `);
 
     // Get project counts by status
-    const projectStats = await pool.query(`
+    const projectStats = await getPool().query(`
       SELECT status, COUNT(*) as count
       FROM projects
       GROUP BY status
@@ -617,7 +629,7 @@ router.get('/stats', (req, res, next) => {
     `);
 
     // Get total sheets count
-    const sheetsStats = await pool.query(`
+    const sheetsStats = await getPool().query(`
       SELECT COUNT(*) as total_sheets,
              COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft_sheets,
              COUNT(CASE WHEN status = 'submitted' THEN 1 END) as submitted_sheets,
@@ -650,7 +662,7 @@ router.get('/users/:userId', (req, res, next) => {
     const { userId } = req.params;
 
     // Check if is_active column exists
-    const columnCheck = await pool.query(`
+    const columnCheck = await getPool().query(`
       SELECT column_name 
       FROM information_schema.columns 
       WHERE table_name = 'users' AND column_name = 'is_active'
@@ -669,7 +681,7 @@ router.get('/users/:userId', (req, res, next) => {
                FROM users WHERE user_id = $1`;
     }
 
-    const result = await pool.query(query, [userId]);
+    const result = await getPool().query(query, [userId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
@@ -697,7 +709,7 @@ router.get('/users/:userId/projects', (req, res, next) => {
     console.log('Fetching projects for user:', userId);
 
     // Query to get user's assigned projects
-    const result = await pool.query(`
+    const result = await getPool().query(`
       SELECT p.id, p.name
       FROM projects p
       JOIN project_assignments pa ON p.id = pa.project_id
@@ -728,7 +740,7 @@ router.get('/users/:userId/analytics', (req, res, next) => {
     console.log('Fetching analytics for user:', userId);
 
     // Query to get user analytics
-    const result = await pool.query(`
+    const result = await getPool().query(`
       SELECT 
         COUNT(*) as total_sheets,
         COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_sheets,
@@ -768,7 +780,7 @@ router.get('/users/:userId/sheets', (req, res, next) => {
     console.log('Fetching sheets for user:', userId);
 
     // Query to get user's submitted sheets with project names
-    const result = await pool.query(`
+    const result = await getPool().query(`
       SELECT 
         ds.id,
         ds.sheet_date as date,
@@ -812,10 +824,10 @@ router.post('/users/assign-project', (req, res, next) => {
     }
 
     // Check if project exists in either local projects or p6_projects
-    const projectResult = await pool.query(`
+    const projectResult = await getPool().query(`
       SELECT id AS project_id, name, 'local' AS source FROM projects WHERE id = $1
       UNION ALL
-      SELECT object_id AS project_id, name, 'p6' AS source FROM p6_projects WHERE object_id = $1
+      SELECT "objectId" AS project_id, "name", 'p6' AS source FROM p6_projects WHERE "objectId" = $1
     `, [projectId]);
 
     if (projectResult.rows.length === 0) {
@@ -825,13 +837,13 @@ router.post('/users/assign-project', (req, res, next) => {
     const project = projectResult.rows[0];
 
     // Check if user exists
-    const userResult = await pool.query('SELECT user_id, name FROM users WHERE user_id = $1', [userId]);
+    const userResult = await getPool().query('SELECT user_id, name FROM users WHERE user_id = $1', [userId]);
     if (userResult.rows.length === 0) {
       return res.status(404).json({ message: 'User not found' });
     }
 
     // Check if assignment already exists
-    const existingAssignment = await pool.query(
+    const existingAssignment = await getPool().query(
       'SELECT id FROM project_assignments WHERE project_id = $1 AND user_id = $2',
       [projectId, userId]
     );
@@ -841,7 +853,7 @@ router.post('/users/assign-project', (req, res, next) => {
     }
 
     // Assign project
-    const result = await pool.query(
+    const result = await getPool().query(
       'INSERT INTO project_assignments (project_id, user_id, assigned_by) VALUES ($1, $2, $3) RETURNING id',
       [projectId, userId, req.user.userId]
     );
@@ -877,7 +889,7 @@ router.get('/projects/:projectId', (req, res, next) => {
   try {
     const { projectId } = req.params;
 
-    const result = await pool.query(
+    const result = await getPool().query(
       'SELECT id AS "ObjectId", name AS "Name", location AS "Location", status AS "Status", progress AS "Progress", plan_start AS "PlanStart", plan_end AS "PlanEnd", created_at AS "CreatedAt" FROM projects WHERE id = $1',
       [projectId]
     );
@@ -907,7 +919,7 @@ router.get('/projects/:projectId/users', (req, res, next) => {
     const { projectId } = req.params;
 
     // Query to get users assigned to this project
-    const result = await pool.query(`
+    const result = await getPool().query(`
       SELECT u.user_id AS "ObjectId", u.name AS "Name", u.email AS "Email", u.role AS "Role"
       FROM users u
       JOIN project_assignments pa ON u.user_id = pa.user_id
@@ -954,7 +966,7 @@ router.get('/logs', (req, res, next) => {
 
     query += ' ORDER BY sl.created_at DESC LIMIT 1000';
 
-    const result = await pool.query(query, params);
+    const result = await getPool().query(query, params);
 
     res.json(result.rows);
   } catch (error) {
@@ -973,7 +985,7 @@ router.get('/roles', (req, res, next) => {
 }, isSuperAdmin, async (req, res) => {
   try {
     // Get role distribution from users table
-    const result = await pool.query(`
+    const result = await getPool().query(`
       SELECT 
         role AS name,
         COUNT(*) AS userCount
@@ -1017,11 +1029,42 @@ router.get('/entries', (req, res, next) => {
     const { status, projectId, sheetType, limit = 50, offset = 0 } = req.query;
 
     let query = `
+      WITH combined_entries AS (
+        SELECT 
+          d.id,
+          d.sheet_type::text,
+          d.project_id,
+          d.supervisor_id AS user_id,
+          d.status,
+          d.data_json,
+          d.created_at,
+          d.updated_at,
+          d.submitted_at,
+          d.pm_reviewed_at AS approved_at,
+          NULL::timestamp AS final_approved_at
+        FROM dpr_supervisor_entries d
+        
+        UNION ALL
+        
+        SELECT 
+          c.id,
+          c.sheet_type::text,
+          c.project_id,
+          c.supervisor_id AS user_id,
+          c.status,
+          c.data_json,
+          c.created_at,
+          c.updated_at,
+          c.submitted_at,
+          NULL::timestamp AS approved_at,
+          NULL::timestamp AS final_approved_at
+        FROM custom_sheet_entries c
+      )
       SELECT 
         e.id,
         e.sheet_type,
         e.project_id,
-        p.name AS project_name,
+        COALESCE(p.name, p6.name) AS project_name,
         e.user_id,
         u.name AS submitted_by,
         e.status,
@@ -1031,8 +1074,9 @@ router.get('/entries', (req, res, next) => {
         e.submitted_at,
         e.approved_at,
         e.final_approved_at
-      FROM entries e
+      FROM combined_entries e
       LEFT JOIN projects p ON e.project_id = p.id
+      LEFT JOIN p6_projects p6 ON e.project_id = p6."objectId"
       LEFT JOIN users u ON e.user_id = u.user_id
       WHERE 1=1
     `;
@@ -1062,12 +1106,17 @@ router.get('/entries', (req, res, next) => {
     query += ` ORDER BY e.updated_at DESC, e.created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex++}`;
     params.push(parseInt(limit), parseInt(offset));
 
-    const result = await pool.query(query, params);
+    const result = await getPool().query(query, params);
 
     // Get total count for pagination
     let countQuery = `
+      WITH combined_entries AS (
+        SELECT d.sheet_type::text, d.project_id, d.status FROM dpr_supervisor_entries d
+        UNION ALL
+        SELECT c.sheet_type::text, c.project_id, c.status FROM custom_sheet_entries c
+      )
       SELECT COUNT(*) as total
-      FROM entries e
+      FROM combined_entries e
       WHERE 1=1
     `;
 
@@ -1089,7 +1138,7 @@ router.get('/entries', (req, res, next) => {
       countParams.push(sheetType);
     }
 
-    const countResult = await pool.query(countQuery, countParams);
+    const countResult = await getPool().query(countQuery, countParams);
 
     res.json({
       entries: result.rows,
@@ -1116,11 +1165,44 @@ router.get('/snapshot', (req, res, next) => {
 
     // Build query
     let query = `
+      WITH combined_entries AS (
+        SELECT 
+          d.id,
+          d.sheet_type::text,
+          d.project_id,
+          d.supervisor_id AS user_id,
+          d.status,
+          d.data_json,
+          d.created_at,
+          d.updated_at,
+          d.submitted_at,
+          d.pm_reviewed_at AS approved_at,
+          NULL::timestamp AS final_approved_at,
+          d.rejection_reason
+        FROM dpr_supervisor_entries d
+        
+        UNION ALL
+        
+        SELECT 
+          c.id,
+          c.sheet_type::text,
+          c.project_id,
+          c.supervisor_id AS user_id,
+          c.status,
+          c.data_json,
+          c.created_at,
+          c.updated_at,
+          c.submitted_at,
+          NULL::timestamp AS approved_at,
+          NULL::timestamp AS final_approved_at,
+          NULL::text AS rejection_reason
+        FROM custom_sheet_entries c
+      )
       SELECT 
         e.id,
         e.sheet_type,
         e.project_id,
-        p.name AS project_name,
+        COALESCE(p.name, p6.name) AS project_name,
         e.user_id,
         u.name AS submitted_by,
         u.role AS user_role,
@@ -1132,8 +1214,9 @@ router.get('/snapshot', (req, res, next) => {
         e.approved_at,
         e.final_approved_at,
         e.rejection_reason
-      FROM entries e
+      FROM combined_entries e
       LEFT JOIN projects p ON e.project_id = p.id
+      LEFT JOIN p6_projects p6 ON e.project_id = p6."objectId"
       LEFT JOIN users u ON e.user_id = u.user_id
       WHERE 1=1
     `;
@@ -1172,10 +1255,31 @@ router.get('/snapshot', (req, res, next) => {
     // Limit to prevent excessive data
     query += ` LIMIT 1000`;
 
-    const result = await pool.query(query, params);
+    const result = await getPool().query(query, params);
 
     // Get summary statistics
     const statsQuery = `
+      WITH combined_entries AS (
+        SELECT 
+          d.id,
+          d.sheet_type::text,
+          d.project_id,
+          d.supervisor_id AS user_id,
+          d.status,
+          d.created_at
+        FROM dpr_supervisor_entries d
+        
+        UNION ALL
+        
+        SELECT 
+          c.id,
+          c.sheet_type::text,
+          c.project_id,
+          c.supervisor_id AS user_id,
+          c.status,
+          c.created_at
+        FROM custom_sheet_entries c
+      )
       SELECT 
         COUNT(*) as total_entries,
         COUNT(CASE WHEN status = 'draft' THEN 1 END) as draft_count,
@@ -1185,7 +1289,7 @@ router.get('/snapshot', (req, res, next) => {
         COUNT(CASE WHEN status = 'rejected_by_pm' OR status = 'rejected_by_pmag' THEN 1 END) as rejected_count,
         COUNT(DISTINCT project_id) as unique_projects,
         COUNT(DISTINCT user_id) as unique_users
-      FROM entries e
+      FROM combined_entries e
       WHERE 1=1
       ${startDate ? `AND e.created_at >= '${startDate}'` : ''}
       ${endDate ? `AND e.created_at < ('${endDate}'::date + interval '1 day')` : ''}
@@ -1193,7 +1297,7 @@ router.get('/snapshot', (req, res, next) => {
       ${sheetType && sheetType !== 'all' ? `AND e.sheet_type = ANY(ARRAY[${sheetType.split(',').map(t => `'${t}'`).join(',')}])` : ''}
     `;
 
-    const statsResult = await pool.query(statsQuery);
+    const statsResult = await getPool().query(statsQuery);
 
     res.json({
       entries: result.rows,

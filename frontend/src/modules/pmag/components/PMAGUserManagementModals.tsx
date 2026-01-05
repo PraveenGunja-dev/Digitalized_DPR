@@ -102,8 +102,8 @@ export const PMAGUserManagementModals: React.FC<PMAGUserManagementModalsProps> =
         <form onSubmit={onCreateUser} className="space-y-4">
           <div>
             <Label htmlFor="user-role">Role</Label>
-            <Select 
-              value={registerForm.Role} 
+            <Select
+              value={registerForm.Role}
               onValueChange={(value) => onRegisterFormChange("Role", value as "Site PM" | "PMAG")}
             >
               <SelectTrigger id="user-role">
@@ -236,8 +236,8 @@ export const PMAGUserManagementModals: React.FC<PMAGUserManagementModalsProps> =
           {registerForm.assignProject && (
             <div>
               <Label htmlFor="reg-project">Project</Label>
-              <Select 
-                value={registerForm.ProjectId.toString()} 
+              <Select
+                value={registerForm.ProjectId.toString()}
                 onValueChange={(value) => onRegisterFormChange("ProjectId", value)}
               >
                 <SelectTrigger id="reg-project">
@@ -247,10 +247,10 @@ export const PMAGUserManagementModals: React.FC<PMAGUserManagementModalsProps> =
                   {projects.map((project) => {
                     const value = (project.ObjectId || project.id || '').toString();
                     if (!value) return null;
-                    
+
                     return (
-                      <SelectItem 
-                        key={project.ObjectId || project.id || project.Name} 
+                      <SelectItem
+                        key={project.ObjectId || project.id || project.Name}
                         value={value}
                       >
                         {project.Name}
@@ -291,31 +291,30 @@ export const PMAGUserManagementModals: React.FC<PMAGUserManagementModalsProps> =
                 className="mb-2"
               />
             </div>
-            <div className="border rounded-md max-h-40 overflow-y-auto">
+            <div className="border border-border rounded-md max-h-40 overflow-y-auto overflow-x-hidden">
               {projects.length > 0 ? (
                 projects
-                  .filter(project => 
+                  .filter(project =>
                     project.Name.toLowerCase().includes(projectSearchTerm.toLowerCase())
                   )
                   .map((project) => {
                     const value = (project.ObjectId || project.id || '').toString();
                     if (!value) return null;
-                    
+
                     return (
-                      <div 
-                        key={project.ObjectId || project.id || project.Name} 
-                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${
-                          assignForm.projectIds.includes(value) ? 'bg-muted' : ''
-                        }`}
+                      <div
+                        key={project.ObjectId || project.id || project.Name}
+                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${assignForm.projectIds.includes(value) ? 'bg-muted' : ''
+                          }`}
                         onClick={() => onToggleProjectSelection(value)}
                       >
                         <input
                           type="checkbox"
                           checked={assignForm.projectIds.includes(value)}
                           onChange={() => onToggleProjectSelection(value)}
-                          className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          className="mr-2 h-4 w-4 flex-shrink-0 rounded border-border"
                         />
-                        <div className="font-medium">{project.Name}</div>
+                        <div className="font-medium text-sm truncate">{project.Name}</div>
                       </div>
                     );
                   })
@@ -342,34 +341,33 @@ export const PMAGUserManagementModals: React.FC<PMAGUserManagementModalsProps> =
                 className="mb-2"
               />
             </div>
-            <div className="border rounded-md max-h-40 overflow-y-auto">
+            <div className="border border-border rounded-md max-h-40 overflow-y-auto overflow-x-hidden">
               {supervisors && supervisors.length > 0 ? (
                 supervisors
-                  .filter(supervisor => 
+                  .filter(supervisor =>
                     supervisor.Name.toLowerCase().includes(supervisorSearchTerm.toLowerCase()) ||
                     supervisor.Email.toLowerCase().includes(supervisorSearchTerm.toLowerCase())
                   )
                   .map((supervisor) => {
                     const value = (supervisor.ObjectId || supervisor.id || '').toString();
                     if (!value) return null;
-                    
+
                     return (
-                      <div 
-                        key={supervisor.ObjectId || supervisor.id || supervisor.Name} 
-                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${
-                          assignForm.supervisorIds.includes(value) ? 'bg-muted' : ''
-                        }`}
+                      <div
+                        key={supervisor.ObjectId || supervisor.id || supervisor.Name}
+                        className={`flex items-center p-2 hover:bg-muted cursor-pointer ${assignForm.supervisorIds.includes(value) ? 'bg-muted' : ''
+                          }`}
                         onClick={() => onToggleSupervisorSelection(value)}
                       >
                         <input
                           type="checkbox"
                           checked={assignForm.supervisorIds.includes(value)}
                           onChange={() => onToggleSupervisorSelection(value)}
-                          className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          className="mr-2 h-4 w-4 flex-shrink-0 rounded border-border"
                         />
-                        <div>
-                          <div className="font-medium">{supervisor.Name}</div>
-                          <div className="text-sm text-muted-foreground">{supervisor.Email}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{supervisor.Name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{supervisor.Email}</div>
                         </div>
                       </div>
                     );
@@ -390,8 +388,8 @@ export const PMAGUserManagementModals: React.FC<PMAGUserManagementModalsProps> =
             <Button type="button" variant="outline" onClick={() => setShowAssignProjectModal(false)}>
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={assignForm.projectIds.length === 0 || assignForm.supervisorIds.length === 0 || assignLoading}
             >
               {assignLoading ? "Assigning..." : `Assign ${assignForm.projectIds.length} Project(s) to ${assignForm.supervisorIds.length} User(s)`}

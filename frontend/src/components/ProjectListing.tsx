@@ -1,10 +1,11 @@
 import React from 'react';
-import { Calendar, ChevronRight, FileText } from 'lucide-react';
+import { Calendar, ChevronRight, FileText, MapPin } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 interface Project {
   name: string;
+  location?: string;
   status?: string;
   startDate?: string;
   endDate?: string;
@@ -58,11 +59,17 @@ export const ProjectListing: React.FC<ProjectListingProps> = ({ projects, onProj
                 />
               </div>
 
-              {/* Project name - takes remaining space */}
+              {/* Project name and location - takes remaining space */}
               <div className="flex-1 min-w-0">
                 <h3 className="text-base font-semibold text-foreground truncate" title={project.name}>
                   {project.name}
                 </h3>
+                {project.location && (
+                  <div className="flex items-center gap-1 mt-0.5">
+                    <MapPin size={12} className="text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-muted-foreground truncate">{project.location}</span>
+                  </div>
+                )}
               </div>
 
               {/* Status Badge */}

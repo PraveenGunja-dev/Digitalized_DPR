@@ -298,24 +298,18 @@ const DPRDashboard = () => {
         // Fetch resources separately
         try {
           const resources = await getResourcesForProject(projectId);
-          console.log('Raw resources from API:', resources.slice(0, 3)); // Log first 3 raw resources
 
           if (resources.length > 0) {
             // Map resources to the format expected by ResourceTable
             // ResourceTable expects: typeOfMachine, total, yesterday, today, remarks
-            const mappedResources = resources.map((r: any) => {
-              console.log('Resource mapping - name:', r.name, 'resource_id:', r.resource_id);
-              return {
-                typeOfMachine: r.name || r.resource_id || '',  // "Type of Machine" uses the name field
-                total: '0',  // Will be calculated by HyperFormula (yesterday + today)
-                yesterday: '0',  // To be entered by user
-                today: '0',  // To be entered by user
-                remarks: ''
-              };
-            });
-            console.log('Mapped resources (first 3):', mappedResources.slice(0, 3));
+            const mappedResources = resources.map((r: any) => ({
+              typeOfMachine: r.name || r.resource_id || '',  // "Type of Machine" uses the name field
+              total: '0',  // Will be calculated by HyperFormula (yesterday + today)
+              yesterday: '0',  // To be entered by user
+              today: '0',  // To be entered by user
+              remarks: ''
+            }));
             setResourceData(mappedResources);
-            console.log(`Loaded ${resources.length} resources for Resource table`);
           }
         } catch (resError) {
           console.log('Resources not available:', resError);

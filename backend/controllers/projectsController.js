@@ -79,15 +79,15 @@ const getUserProjects = async (req, res) => {
         UNION ALL
         
         SELECT 
-          object_id AS "ObjectId", 
-          name AS "Name", 
-          COALESCE(parent_eps_name, location_name) AS "Location", 
-          status AS "Status", 
+          "objectId" AS "ObjectId", 
+          "name" AS "Name", 
+          NULL AS "Location", 
+          "status" AS "Status", 
           0 AS "PercentComplete", 
-          start_date as "PlannedStartDate", 
-          finish_date as "PlannedFinishDate",
-          description AS "Description",
-          p6_id as "P6Id",
+          "startDate" as "PlannedStartDate", 
+          "finishDate" as "PlannedFinishDate",
+          "description" AS "Description",
+          "projectId" as "P6Id",
           'p6' as "Source"
         FROM p6_projects
         
@@ -114,18 +114,18 @@ const getUserProjects = async (req, res) => {
         UNION ALL
         
         SELECT 
-          p.object_id AS "ObjectId", 
-          p.name AS "Name", 
-          COALESCE(p.parent_eps_name, p.location_name) AS "Location", 
-          p.status AS "Status", 
+          p."objectId" AS "ObjectId", 
+          p."name" AS "Name", 
+          NULL AS "Location", 
+          p."status" AS "Status", 
           0 AS "PercentComplete", 
-          p.start_date as "PlannedStartDate", 
-          p.finish_date as "PlannedFinishDate",
-          p.description AS "Description",
-          p.p6_id as "P6Id",
+          p."startDate" as "PlannedStartDate", 
+          p."finishDate" as "PlannedFinishDate",
+          p."description" AS "Description",
+          p."projectId" as "P6Id",
           'p6' as "Source"
         FROM p6_projects p
-        INNER JOIN project_assignments pa ON p.object_id = pa.project_id
+        INNER JOIN project_assignments pa ON p."objectId" = pa.project_id
         WHERE pa.user_id = $1
         
         ORDER BY "Name"
@@ -392,13 +392,13 @@ const getAllProjectsForAssignment = async (req, res) => {
         UNION ALL
         
         SELECT 
-          object_id AS "ObjectId", 
-          name AS "Name", 
-          COALESCE(parent_eps_name, location_name) AS "Location", 
-          status AS "Status", 
+          "objectId" AS "ObjectId", 
+          "name" AS "Name", 
+          NULL AS "Location", 
+          "status" AS "Status", 
           0 AS "PercentComplete", 
-          start_date as "PlannedStartDate", 
-          finish_date as "PlannedFinishDate",
+          "startDate" as "PlannedStartDate", 
+          "finishDate" as "PlannedFinishDate",
           NULL AS "ActualStartDate",
           NULL AS "ActualFinishDate",
           'p6' as "Source"
@@ -427,18 +427,18 @@ const getAllProjectsForAssignment = async (req, res) => {
         UNION ALL
         
         SELECT 
-          p.object_id AS "ObjectId", 
-          p.name AS "Name", 
-          COALESCE(p.parent_eps_name, p.location_name) AS "Location", 
-          p.status AS "Status", 
+          p."objectId" AS "ObjectId", 
+          p."name" AS "Name", 
+          NULL AS "Location", 
+          p."status" AS "Status", 
           0 AS "PercentComplete", 
-          p.start_date as "PlannedStartDate", 
-          p.finish_date as "PlannedFinishDate", 
+          p."startDate" as "PlannedStartDate", 
+          p."finishDate" as "PlannedFinishDate", 
           NULL AS "ActualStartDate", 
           NULL AS "ActualFinishDate",
           'p6' as "Source"
         FROM p6_projects p
-        INNER JOIN project_assignments pa ON p.object_id = pa.project_id
+        INNER JOIN project_assignments pa ON p."objectId" = pa.project_id
         WHERE pa.user_id = $1
         
         ORDER BY "Name"

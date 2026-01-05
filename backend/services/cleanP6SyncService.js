@@ -1,14 +1,14 @@
 // server/services/cleanP6SyncService.js
-// Clean P6 Sync Service - Fetches exact data from P6 API without fallbacks
+// Clean P6 Sync Service - Uses EXACT P6 API field names (camelCase)
+// Date: 2026-01-04
 
 const { restClient } = require('./oracleP6RestClient');
 const pool = require('../db');
 
 /**
  * Clean P6 Sync Service
- * - Fetches exact values from P6 API
- * - NO fallback values
- * - Stores to local database
+ * - Uses EXACT P6 API field names - no transformation
+ * - Sync order: projects → wbs → activities → resources → resourceAssignments → UDFs
  */
 class CleanP6SyncService {
     constructor() {
@@ -20,41 +20,36 @@ class CleanP6SyncService {
         this.syncLog.push({ timestamp: new Date(), message });
     }
 
-    /**
-     * Sync all projects from P6
-     */
+    // ========================================================================
+    // 1. SYNC PROJECTS
+    // ========================================================================
     async syncProjects() {
-        this.log('Starting projects sync...');
+        this.log('1/9 Starting projects sync...');
 
-        // Only request valid fields as per P6 API /project/fields
         const projects = await restClient.get('/project', {
-            Fields: 'ObjectId,Id,Name,Status,StartDate,FinishDate,PlannedStartDate,ForecastStartDate,ForecastFinishDate,DataDate,Description'
+            Fields: 'ObjectId,Id,Name,Status,StartDate,FinishDate,DataDate,Description'
         });
 
         this.log(`Fetched ${projects.length} projects from P6`);
 
         for (const project of projects) {
-            // Match existing p6_projects table schema
             await pool.query(`
                 INSERT INTO p6_projects (
-                    object_id, p6_id, name, status, 
-                    start_date, finish_date, 
-                    planned_start_date, forecast_start_date, forecast_finish_date,
-                    data_date, description,
-                    last_sync_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
-                ON CONFLICT (object_id) DO UPDATE SET
-                    p6_id = EXCLUDED.p6_id,
-                    name = EXCLUDED.name,
-                    status = EXCLUDED.status,
-                    start_date = EXCLUDED.start_date,
-                    finish_date = EXCLUDED.finish_date,
-                    planned_start_date = EXCLUDED.planned_start_date,
-                    forecast_start_date = EXCLUDED.forecast_start_date,
-                    forecast_finish_date = EXCLUDED.forecast_finish_date,
-                    data_date = EXCLUDED.data_date,
-                    description = EXCLUDED.description,
-                    last_sync_at = NOW()
+                    "objectId", "projectId", "name", "status",
+                    "startDate", "finishDate", "plannedStartDate", "plannedFinishDate",
+                    "dataDate", "description", "lastSyncAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+                ON CONFLICT ("objectId") DO UPDATE SET
+                    "projectId" = EXCLUDED."projectId",
+                    "name" = EXCLUDED."name",
+                    "status" = EXCLUDED."status",
+                    "startDate" = EXCLUDED."startDate",
+                    "finishDate" = EXCLUDED."finishDate",
+                    "plannedStartDate" = EXCLUDED."plannedStartDate",
+                    "plannedFinishDate" = EXCLUDED."plannedFinishDate",
+                    "dataDate" = EXCLUDED."dataDate",
+                    "description" = EXCLUDED."description",
+                    "lastSyncAt" = NOW()
             `, [
                 project.ObjectId,
                 project.Id,
@@ -63,323 +58,436 @@ class CleanP6SyncService {
                 project.StartDate,
                 project.FinishDate,
                 project.PlannedStartDate,
-                project.ForecastStartDate,
-                project.ForecastFinishDate,
+                project.PlannedFinishDate,
                 project.DataDate,
                 project.Description
             ]);
         }
 
-        this.log(`Synced ${projects.length} projects to database`);
+        this.log(`✓ Synced ${projects.length} projects`);
         return projects.length;
     }
 
-    /**
-     * Sync activities for a specific project
-     */
-    async syncActivitiesForProject(projectObjectId) {
-        this.log(`Syncing activities for project ${projectObjectId}...`);
+    // ========================================================================
+    // 2. SYNC WBS
+    // ========================================================================
+    async syncWBS() {
+        this.log('2/9 Starting WBS sync...');
 
-        // Fetch activities with only valid P6 API fields
-        const activities = await restClient.get('/activity', {
-            Fields: 'ObjectId,Id,Name,Status,PercentComplete,PlannedStartDate,PlannedFinishDate,ActualStartDate,ActualFinishDate,BaselineStartDate,BaselineFinishDate,PlannedNonLaborUnits,ActualNonLaborUnits,RemainingNonLaborUnits,PlannedDuration,ActualDuration,RemainingDuration,WBSObjectId,ProjectObjectId',
-            Filter: `ProjectObjectId = ${projectObjectId}`
+        const wbsList = await restClient.get('/wbs', {
+            Fields: 'ObjectId,Name,ParentObjectId,ProjectObjectId,Code,Status'
         });
 
-        this.log(`Fetched ${activities.length} activities for project ${projectObjectId}`);
+        this.log(`Fetched ${wbsList.length} WBS elements from P6`);
+
+        for (const wbs of wbsList) {
+            await pool.query(`
+                INSERT INTO p6_wbs (
+                    "wbsObjectId", "name", "parentObjectId", "projectObjectId", "code", "status", "lastSyncAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
+                ON CONFLICT ("wbsObjectId") DO UPDATE SET
+                    "name" = EXCLUDED."name",
+                    "parentObjectId" = EXCLUDED."parentObjectId",
+                    "projectObjectId" = EXCLUDED."projectObjectId",
+                    "code" = EXCLUDED."code",
+                    "status" = EXCLUDED."status",
+                    "lastSyncAt" = NOW()
+            `, [
+                wbs.ObjectId,
+                wbs.Name,
+                wbs.ParentObjectId,
+                wbs.ProjectObjectId,
+                wbs.Code,
+                wbs.Status
+            ]);
+        }
+
+        this.log(`✓ Synced ${wbsList.length} WBS elements`);
+        return wbsList.length;
+    }
+
+    // ========================================================================
+    // 3. SYNC ACTIVITIES
+    // ========================================================================
+    async syncActivities() {
+        this.log('3/9 Starting activities sync...');
+
+        const activities = await restClient.get('/activity', {
+            Fields: 'ObjectId,Id,Name,PlannedStartDate,PlannedFinishDate,ActualStartDate,ActualFinishDate,ForecastFinishDate,Status,WBSObjectId,ProjectObjectId'
+        });
+
+        this.log(`Fetched ${activities.length} activities from P6`);
 
         for (const activity of activities) {
             await pool.query(`
                 INSERT INTO p6_activities (
-                    object_id, activity_id, name, status, percent_complete,
-                    planned_start_date, planned_finish_date,
-                    actual_start_date, actual_finish_date,
-                    baseline_start_date, baseline_finish_date,
-                    planned_non_labor_units, actual_non_labor_units, remaining_non_labor_units,
-                    duration, actual_duration, remaining_duration,
-                    wbs_object_id, project_object_id,
-                    last_sync_at
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, NOW())
-                ON CONFLICT (object_id) DO UPDATE SET
-                    activity_id = EXCLUDED.activity_id,
-                    name = EXCLUDED.name,
-                    status = EXCLUDED.status,
-                    percent_complete = EXCLUDED.percent_complete,
-                    planned_start_date = EXCLUDED.planned_start_date,
-                    planned_finish_date = EXCLUDED.planned_finish_date,
-                    actual_start_date = EXCLUDED.actual_start_date,
-                    actual_finish_date = EXCLUDED.actual_finish_date,
-                    baseline_start_date = EXCLUDED.baseline_start_date,
-                    baseline_finish_date = EXCLUDED.baseline_finish_date,
-                    planned_non_labor_units = EXCLUDED.planned_non_labor_units,
-                    actual_non_labor_units = EXCLUDED.actual_non_labor_units,
-                    remaining_non_labor_units = EXCLUDED.remaining_non_labor_units,
-                    duration = EXCLUDED.duration,
-                    actual_duration = EXCLUDED.actual_duration,
-                    remaining_duration = EXCLUDED.remaining_duration,
-                    wbs_object_id = EXCLUDED.wbs_object_id,
-                    project_object_id = EXCLUDED.project_object_id,
-                    last_sync_at = NOW()
+                    "activityObjectId", "activityId", "name",
+                    "plannedStartDate", "plannedFinishDate",
+                    "actualStartDate", "actualFinishDate", "forecastFinishDate",
+                    "status", "wbsObjectId", "projectObjectId", "lastSyncAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
+                ON CONFLICT ("activityObjectId") DO UPDATE SET
+                    "activityId" = EXCLUDED."activityId",
+                    "name" = EXCLUDED."name",
+                    "plannedStartDate" = EXCLUDED."plannedStartDate",
+                    "plannedFinishDate" = EXCLUDED."plannedFinishDate",
+                    "actualStartDate" = EXCLUDED."actualStartDate",
+                    "actualFinishDate" = EXCLUDED."actualFinishDate",
+                    "forecastFinishDate" = EXCLUDED."forecastFinishDate",
+                    "status" = EXCLUDED."status",
+                    "wbsObjectId" = EXCLUDED."wbsObjectId",
+                    "projectObjectId" = EXCLUDED."projectObjectId",
+                    "lastSyncAt" = NOW()
             `, [
                 activity.ObjectId,
                 activity.Id,
                 activity.Name,
-                activity.Status,
-                activity.PercentComplete,
                 activity.PlannedStartDate,
                 activity.PlannedFinishDate,
                 activity.ActualStartDate,
                 activity.ActualFinishDate,
-                activity.BaselineStartDate,
-                activity.BaselineFinishDate,
-                activity.PlannedNonLaborUnits,
-                activity.ActualNonLaborUnits,
-                activity.RemainingNonLaborUnits,
-                activity.PlannedDuration,
-                activity.ActualDuration,
-                activity.RemainingDuration,
+                activity.ForecastFinishDate,
+                activity.Status,
                 activity.WBSObjectId,
-                activity.ProjectObjectId || projectObjectId
+                activity.ProjectObjectId
             ]);
         }
 
-        this.log(`Synced ${activities.length} activities to database`);
+        this.log(`✓ Synced ${activities.length} activities`);
         return activities.length;
     }
 
-    /**
-     * Sync Activity Code Types
-     */
-    async syncActivityCodeTypes() {
-        this.log('Syncing activity code types...');
+    // ========================================================================
+    // 4. SYNC RESOURCES
+    // ========================================================================
+    async syncResources() {
+        this.log('4/9 Starting resources sync...');
 
-        const codeTypes = await restClient.get('/activityCodeType', {
-            Fields: 'ObjectId,Name,SequenceNumber,Scope,ProjectObjectId'
+        const resources = await restClient.get('/resource', {
+            Fields: 'ObjectId,Id,Name,UnitOfMeasure,ResourceType'
         });
 
-        this.log(`Fetched ${codeTypes.length} activity code types`);
+        this.log(`Fetched ${resources.length} resources from P6`);
 
-        for (const codeType of codeTypes) {
+        for (const resource of resources) {
             await pool.query(`
-                INSERT INTO p6_activity_code_types (
-                    object_id, name, sequence_number, project_object_id
-                ) VALUES ($1, $2, $3, $4)
-                ON CONFLICT (object_id) DO UPDATE SET
-                    name = EXCLUDED.name,
-                    sequence_number = EXCLUDED.sequence_number,
-                    project_object_id = EXCLUDED.project_object_id
+                INSERT INTO p6_resources (
+                    "resourceObjectId", "resourceId", "name", "unitOfMeasure", "resourceType", "lastSyncAt"
+                ) VALUES ($1, $2, $3, $4, $5, NOW())
+                ON CONFLICT ("resourceObjectId") DO UPDATE SET
+                    "resourceId" = EXCLUDED."resourceId",
+                    "name" = EXCLUDED."name",
+                    "unitOfMeasure" = EXCLUDED."unitOfMeasure",
+                    "resourceType" = EXCLUDED."resourceType",
+                    "lastSyncAt" = NOW()
             `, [
-                codeType.ObjectId,
-                codeType.Name,
-                codeType.SequenceNumber,
-                codeType.ProjectObjectId
+                resource.ObjectId,
+                resource.Id,
+                resource.Name,
+                resource.UnitOfMeasure,
+                resource.ResourceType
             ]);
         }
 
-        return codeTypes.length;
+        this.log(`✓ Synced ${resources.length} resources`);
+        return resources.length;
     }
 
-    /**
-     * Sync Activity Codes
-     */
-    async syncActivityCodes() {
-        this.log('Syncing activity codes...');
+    // ========================================================================
+    // 5. SYNC RESOURCE ASSIGNMENTS
+    // P6 API uses: PlannedUnits/BudgetedUnits = Total Qty, ActualUnits, RemainingUnits
+    // We map: PlannedUnits → targetQty, ActualUnits → actualQty, RemainingUnits → remainingQty
+    // ========================================================================
+    async syncResourceAssignments() {
+        this.log('5/9 Starting resource assignments sync...');
 
-        const codes = await restClient.get('/activityCode', {
-            Fields: 'ObjectId,CodeValue,Description,CodeTypeObjectId,Color,SequenceNumber'
+        // P6 API actual fields (not TargetQty/ActualQty - those don't exist)
+        const assignments = await restClient.get('/resourceAssignment', {
+            Fields: 'ObjectId,ActivityObjectId,ResourceObjectId,PlannedUnits,ActualUnits,RemainingUnits,BudgetedUnits,ProjectObjectId'
         });
 
-        this.log(`Fetched ${codes.length} activity codes`);
+        this.log(`Fetched ${assignments.length} resource assignments from P6`);
 
-        for (const code of codes) {
+        for (const ra of assignments) {
+            // Map P6 fields to our DB columns:
+            // PlannedUnits (or BudgetedUnits) → targetQty (Total Quantity)
+            // ActualUnits → actualQty AND actualUnits (same value in P6)
+            // RemainingUnits → remainingQty AND remainingUnits
+            const targetQty = ra.PlannedUnits || ra.BudgetedUnits || null;
+
             await pool.query(`
-                INSERT INTO p6_activity_codes (
-                    object_id, code_value, description, code_type_object_id, color, sequence_number
-                ) VALUES ($1, $2, $3, $4, $5, $6)
-                ON CONFLICT (object_id) DO UPDATE SET
-                    code_value = EXCLUDED.code_value,
-                    description = EXCLUDED.description,
-                    code_type_object_id = EXCLUDED.code_type_object_id,
-                    color = EXCLUDED.color,
-                    sequence_number = EXCLUDED.sequence_number
+                INSERT INTO p6_resource_assignments (
+                    "objectId", "activityObjectId", "resourceObjectId",
+                    "targetQty", "actualQty", "remainingQty",
+                    "actualUnits", "remainingUnits", "projectObjectId", "lastSyncAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+                ON CONFLICT ("objectId") DO UPDATE SET
+                    "activityObjectId" = EXCLUDED."activityObjectId",
+                    "resourceObjectId" = EXCLUDED."resourceObjectId",
+                    "targetQty" = EXCLUDED."targetQty",
+                    "actualQty" = EXCLUDED."actualQty",
+                    "remainingQty" = EXCLUDED."remainingQty",
+                    "actualUnits" = EXCLUDED."actualUnits",
+                    "remainingUnits" = EXCLUDED."remainingUnits",
+                    "projectObjectId" = EXCLUDED."projectObjectId",
+                    "lastSyncAt" = NOW()
             `, [
-                code.ObjectId,
-                code.CodeValue,
-                code.Description,
-                code.CodeTypeObjectId,
-                code.Color,
-                code.SequenceNumber
+                ra.ObjectId,
+                ra.ActivityObjectId,
+                ra.ResourceObjectId,
+                targetQty,                    // PlannedUnits/BudgetedUnits → targetQty
+                ra.ActualUnits,               // ActualUnits → actualQty
+                ra.RemainingUnits,            // RemainingUnits → remainingQty
+                ra.ActualUnits,               // Also store as actualUnits (for manpower)
+                ra.RemainingUnits,            // Also store as remainingUnits (for manpower)
+                ra.ProjectObjectId
             ]);
         }
 
-        return codes.length;
+        this.log(`✓ Synced ${assignments.length} resource assignments`);
+        return assignments.length;
     }
 
-    /**
-     * Sync Activity Code Assignments for a project's activities
-     */
-    async syncActivityCodeAssignmentsForProject(projectObjectId) {
-        this.log(`Syncing activity code assignments for project ${projectObjectId}...`);
-
-        // Get activities for this project first
-        const activities = await pool.query(
-            'SELECT object_id FROM p6_activities WHERE project_object_id = $1',
-            [projectObjectId]
-        );
-
-        let totalAssignments = 0;
-
-        // Fetch assignments in batches
-        for (const activity of activities.rows) {
-            try {
-                const assignments = await restClient.get('/activityCodeAssignment', {
-                    Fields: 'ActivityObjectId,ActivityCodeObjectId',
-                    Filter: `ActivityObjectId = ${activity.object_id}`
-                });
-
-                for (const assignment of assignments) {
-                    await pool.query(`
-                        INSERT INTO p6_activity_code_assignments (
-                            activity_object_id, activity_code_object_id
-                        ) VALUES ($1, $2)
-                        ON CONFLICT (activity_object_id, activity_code_object_id) DO NOTHING
-                    `, [
-                        assignment.ActivityObjectId,
-                        assignment.ActivityCodeObjectId
-                    ]);
-                    totalAssignments++;
-                }
-            } catch (e) {
-                // Skip if assignment fetch fails for this activity
-                this.log(`Warning: Could not fetch assignments for activity ${activity.object_id}`);
-            }
-        }
-
-        return totalAssignments;
-    }
-
-    /**
-     * Sync UDF Values for activities in a project
-     */
-    async syncUDFValuesForProject(projectObjectId) {
-        this.log(`Syncing UDF values for project ${projectObjectId}...`);
+    // ========================================================================
+    // 6. SYNC ACTIVITY UDF VALUES
+    // ========================================================================
+    async syncActivityUDFValues() {
+        this.log('6/9 Starting activity UDF values sync...');
 
         try {
             const udfValues = await restClient.get('/udfValue', {
-                Fields: 'ForeignObjectId,UDFTypeTitle,Text,Double,Integer,Cost,StartDate,FinishDate,CodeValue,Description',
-                Filter: `ProjectObjectId = ${projectObjectId}`
+                Fields: 'ForeignObjectId,UDFTypeObjectId,UDFTypeTitle,Text,Double,Integer,CodeValue'
             });
 
-            this.log(`Fetched ${udfValues.length} UDF values`);
+            const activityObjectIds = await pool.query('SELECT "activityObjectId" FROM p6_activities');
+            const activityIds = new Set(activityObjectIds.rows.map(r => r.activityObjectId));
 
+            let count = 0;
             for (const udf of udfValues) {
-                await pool.query(`
-                    INSERT INTO p6_udf_values (
-                        foreign_object_id, udf_type_title, text_value, double_value, 
-                        integer_value, cost_value, start_date, finish_date, code_value, description
-                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-                    ON CONFLICT (foreign_object_id, udf_type_title) DO UPDATE SET
-                        text_value = EXCLUDED.text_value,
-                        double_value = EXCLUDED.double_value,
-                        integer_value = EXCLUDED.integer_value,
-                        cost_value = EXCLUDED.cost_value,
-                        start_date = EXCLUDED.start_date,
-                        finish_date = EXCLUDED.finish_date,
-                        code_value = EXCLUDED.code_value,
-                        description = EXCLUDED.description
-                `, [
-                    udf.ForeignObjectId,
-                    udf.UDFTypeTitle,
-                    udf.Text,
-                    udf.Double,
-                    udf.Integer,
-                    udf.Cost,
-                    udf.StartDate,
-                    udf.FinishDate,
-                    udf.CodeValue,
-                    udf.Description
-                ]);
+                if (activityIds.has(udf.ForeignObjectId)) {
+                    const value = udf.Text || udf.Double?.toString() || udf.Integer?.toString() || udf.CodeValue || null;
+
+                    await pool.query(`
+                        INSERT INTO p6_activity_udf_values (
+                            "foreignObjectId", "udfTypeObjectId", "udfTypeTitle", "udfValue"
+                        ) VALUES ($1, $2, $3, $4)
+                        ON CONFLICT ("foreignObjectId", "udfTypeObjectId") DO UPDATE SET
+                            "udfTypeTitle" = EXCLUDED."udfTypeTitle",
+                            "udfValue" = EXCLUDED."udfValue"
+                    `, [udf.ForeignObjectId, udf.UDFTypeObjectId, udf.UDFTypeTitle, value]);
+                    count++;
+                }
             }
 
-            return udfValues.length;
+            this.log(`✓ Synced ${count} activity UDF values`);
+            return count;
         } catch (e) {
-            this.log(`Warning: UDF values sync failed: ${e.message}`);
+            this.log(`Warning: Activity UDF sync failed: ${e.message}`);
             return 0;
         }
     }
 
-    /**
-     * Full sync for a specific project
-     */
-    async syncProject(projectObjectId) {
-        this.log(`=== Starting full sync for project ${projectObjectId} ===`);
+    // ========================================================================
+    // 7. SYNC WBS UDF VALUES
+    // ========================================================================
+    async syncWBSUDFValues() {
+        this.log('7/9 Starting WBS UDF values sync...');
+
+        try {
+            const udfValues = await restClient.get('/udfValue', {
+                Fields: 'ForeignObjectId,UDFTypeObjectId,UDFTypeTitle,Text,Double,Integer,CodeValue'
+            });
+
+            const wbsObjectIds = await pool.query('SELECT "wbsObjectId" FROM p6_wbs');
+            const wbsIds = new Set(wbsObjectIds.rows.map(r => r.wbsObjectId));
+
+            let count = 0;
+            for (const udf of udfValues) {
+                if (wbsIds.has(udf.ForeignObjectId)) {
+                    const value = udf.Text || udf.Double?.toString() || udf.Integer?.toString() || udf.CodeValue || null;
+
+                    await pool.query(`
+                        INSERT INTO p6_wbs_udf_values (
+                            "foreignObjectId", "udfTypeObjectId", "udfTypeTitle", "udfValue"
+                        ) VALUES ($1, $2, $3, $4)
+                        ON CONFLICT ("foreignObjectId", "udfTypeObjectId") DO UPDATE SET
+                            "udfTypeTitle" = EXCLUDED."udfTypeTitle",
+                            "udfValue" = EXCLUDED."udfValue"
+                    `, [udf.ForeignObjectId, udf.UDFTypeObjectId, udf.UDFTypeTitle, value]);
+                    count++;
+                }
+            }
+
+            this.log(`✓ Synced ${count} WBS UDF values`);
+            return count;
+        } catch (e) {
+            this.log(`Warning: WBS UDF sync failed: ${e.message}`);
+            return 0;
+        }
+    }
+
+    // ========================================================================
+    // 8. SYNC PROJECT UDF VALUES
+    // ========================================================================
+    async syncProjectUDFValues() {
+        this.log('8/9 Starting project UDF values sync...');
+
+        try {
+            const udfValues = await restClient.get('/udfValue', {
+                Fields: 'ForeignObjectId,UDFTypeObjectId,UDFTypeTitle,Text,Double,Integer,CodeValue'
+            });
+
+            const projectObjectIds = await pool.query('SELECT "objectId" FROM p6_projects');
+            const projectIds = new Set(projectObjectIds.rows.map(r => r.objectId));
+
+            let count = 0;
+            for (const udf of udfValues) {
+                if (projectIds.has(udf.ForeignObjectId)) {
+                    const value = udf.Text || udf.Double?.toString() || udf.Integer?.toString() || udf.CodeValue || null;
+
+                    await pool.query(`
+                        INSERT INTO p6_project_udf_values (
+                            "foreignObjectId", "udfTypeObjectId", "udfTypeTitle", "udfValue"
+                        ) VALUES ($1, $2, $3, $4)
+                        ON CONFLICT ("foreignObjectId", "udfTypeObjectId") DO UPDATE SET
+                            "udfTypeTitle" = EXCLUDED."udfTypeTitle",
+                            "udfValue" = EXCLUDED."udfValue"
+                    `, [udf.ForeignObjectId, udf.UDFTypeObjectId, udf.UDFTypeTitle, value]);
+                    count++;
+                }
+            }
+
+            this.log(`✓ Synced ${count} project UDF values`);
+            return count;
+        } catch (e) {
+            this.log(`Warning: Project UDF sync failed: ${e.message}`);
+            return 0;
+        }
+    }
+
+    // ========================================================================
+    // 9. SYNC ACTIVITY CODE ASSIGNMENTS
+    // ========================================================================
+    async syncActivityCodeAssignments() {
+        this.log('9/9 Starting activity code assignments sync...');
+
+        try {
+            // Activity Code Types
+            const codeTypes = await restClient.get('/activityCodeType', {
+                Fields: 'ObjectId,Name,Scope,ProjectObjectId'
+            });
+
+            for (const ct of codeTypes) {
+                await pool.query(`
+                    INSERT INTO p6_activity_code_types ("objectId", "name", "scope", "projectObjectId")
+                    VALUES ($1, $2, $3, $4)
+                    ON CONFLICT ("objectId") DO UPDATE SET
+                        "name" = EXCLUDED."name",
+                        "scope" = EXCLUDED."scope",
+                        "projectObjectId" = EXCLUDED."projectObjectId"
+                `, [ct.ObjectId, ct.Name, ct.Scope, ct.ProjectObjectId]);
+            }
+            this.log(`  Synced ${codeTypes.length} activity code types`);
+
+            // Activity Codes
+            const codes = await restClient.get('/activityCode', {
+                Fields: 'ObjectId,Name,CodeValue,Description,CodeTypeObjectId,Color'
+            });
+
+            for (const code of codes) {
+                await pool.query(`
+                    INSERT INTO p6_activity_codes ("objectId", "name", "codeValue", "description", "activityCodeTypeObjectId", "color")
+                    VALUES ($1, $2, $3, $4, $5, $6)
+                    ON CONFLICT ("objectId") DO UPDATE SET
+                        "name" = EXCLUDED."name",
+                        "codeValue" = EXCLUDED."codeValue",
+                        "description" = EXCLUDED."description",
+                        "activityCodeTypeObjectId" = EXCLUDED."activityCodeTypeObjectId",
+                        "color" = EXCLUDED."color"
+                `, [code.ObjectId, code.Name, code.CodeValue, code.Description, code.CodeTypeObjectId, code.Color]);
+            }
+            this.log(`  Synced ${codes.length} activity codes`);
+
+            // Activity Code Assignments
+            const assignments = await restClient.get('/activityCodeAssignment', {
+                Fields: 'ActivityObjectId,ActivityCodeObjectId'
+            });
+
+            for (const assign of assignments) {
+                await pool.query(`
+                    INSERT INTO p6_activity_code_assignments ("activityObjectId", "activityCodeObjectId")
+                    VALUES ($1, $2)
+                    ON CONFLICT ("activityObjectId", "activityCodeObjectId") DO NOTHING
+                `, [assign.ActivityObjectId, assign.ActivityCodeObjectId]);
+            }
+
+            this.log(`✓ Synced ${assignments.length} activity code assignments`);
+            return assignments.length;
+        } catch (e) {
+            this.log(`Warning: Activity code assignments sync failed: ${e.message}`);
+            return 0;
+        }
+    }
+
+    // ========================================================================
+    // FULL SYNC
+    // ========================================================================
+    async syncAll() {
+        this.log('=== STARTING FULL P6 SYNC ===');
+        this.syncLog = [];
 
         const results = {
+            projects: 0,
+            wbs: 0,
             activities: 0,
-            codeAssignments: 0,
-            udfValues: 0
+            resources: 0,
+            resourceAssignments: 0,
+            activityUDFValues: 0,
+            wbsUDFValues: 0,
+            projectUDFValues: 0,
+            activityCodeAssignments: 0
         };
 
         try {
-            results.activities = await this.syncActivitiesForProject(projectObjectId);
-            results.codeAssignments = await this.syncActivityCodeAssignmentsForProject(projectObjectId);
-            results.udfValues = await this.syncUDFValuesForProject(projectObjectId);
+            results.projects = await this.syncProjects();
+            results.wbs = await this.syncWBS();
+            results.activities = await this.syncActivities();
+            results.resources = await this.syncResources();
+            results.resourceAssignments = await this.syncResourceAssignments();
+            results.activityUDFValues = await this.syncActivityUDFValues();
+            results.wbsUDFValues = await this.syncWBSUDFValues();
+            results.projectUDFValues = await this.syncProjectUDFValues();
+            results.activityCodeAssignments = await this.syncActivityCodeAssignments();
+
+            this.log('=== FULL P6 SYNC COMPLETE ===');
+            return { success: true, results, syncLog: this.syncLog };
         } catch (e) {
-            this.log(`Error during sync: ${e.message}`);
-            throw e;
+            this.log(`ERROR: ${e.message}`);
+            return { success: false, error: e.message, results, syncLog: this.syncLog };
         }
-
-        this.log(`=== Sync complete for project ${projectObjectId} ===`);
-        this.log(`Results: ${JSON.stringify(results)}`);
-
-        return results;
     }
 
-    /**
-     * Full sync - all projects
-     */
-    async syncAll() {
-        this.log('=== Starting FULL P6 SYNC ===');
-
-        // Sync global data first
-        await this.syncActivityCodeTypes();
-        await this.syncActivityCodes();
-
-        // Sync all projects
-        const projectCount = await this.syncProjects();
-
-        // Get all projects from database
-        const projects = await pool.query('SELECT object_id, name FROM p6_projects');
-
-        for (const project of projects.rows) {
-            try {
-                await this.syncProject(project.object_id);
-            } catch (e) {
-                this.log(`Error syncing project ${project.name}: ${e.message}`);
-            }
-        }
-
-        this.log('=== FULL P6 SYNC COMPLETE ===');
-        return { projectCount, syncLog: this.syncLog };
+    async syncProject(projectObjectId) {
+        this.log(`=== Syncing project ${projectObjectId} ===`);
+        return this.syncAll();
     }
 
-    /**
-     * Clear all P6 data (for fresh sync)
-     */
     async clearAllData() {
         this.log('Clearing all P6 data...');
-
-        await pool.query('TRUNCATE TABLE p6_udf_values CASCADE');
         await pool.query('TRUNCATE TABLE p6_activity_code_assignments CASCADE');
         await pool.query('TRUNCATE TABLE p6_activity_codes CASCADE');
         await pool.query('TRUNCATE TABLE p6_activity_code_types CASCADE');
+        await pool.query('TRUNCATE TABLE p6_project_udf_values CASCADE');
+        await pool.query('TRUNCATE TABLE p6_wbs_udf_values CASCADE');
+        await pool.query('TRUNCATE TABLE p6_activity_udf_values CASCADE');
+        await pool.query('TRUNCATE TABLE p6_resource_assignments CASCADE');
+        await pool.query('TRUNCATE TABLE p6_resources CASCADE');
         await pool.query('TRUNCATE TABLE p6_activities CASCADE');
-        // Don't truncate projects as they're referenced by other tables
-
-        this.log('All P6 data cleared');
+        await pool.query('TRUNCATE TABLE p6_wbs CASCADE');
+        await pool.query('TRUNCATE TABLE p6_projects CASCADE');
+        this.log('✓ All P6 data cleared');
     }
 }
 
-// Export singleton
 const cleanP6SyncService = new CleanP6SyncService();
 module.exports = { cleanP6SyncService, CleanP6SyncService };

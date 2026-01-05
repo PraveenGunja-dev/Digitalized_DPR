@@ -37,7 +37,7 @@ const assignProjectToSupervisor = async (req, res) => {
     );
 
     const p6ProjectResult = await pool.query(
-      'SELECT object_id as id FROM p6_projects WHERE object_id = $1',
+      'SELECT "objectId" as id FROM p6_projects WHERE "objectId" = $1',
       [projectId]
     );
 
@@ -131,7 +131,7 @@ const assignProjectToMultipleSupervisors = async (req, res) => {
     );
 
     const p6ProjectResult = await pool.query(
-      'SELECT object_id as id FROM p6_projects WHERE object_id = $1',
+      'SELECT "objectId" as id FROM p6_projects WHERE "objectId" = $1',
       [projectId]
     );
 
@@ -234,6 +234,7 @@ const assignProjectsToMultipleSupervisors = async (req, res) => {
     // Validate input
     if (!projectIds || !Array.isArray(projectIds) || projectIds.length === 0 ||
       !supervisorIds || !Array.isArray(supervisorIds) || supervisorIds.length === 0) {
+      console.error('Invalid assignment request body:', req.body);
       return res.status(400).json({ message: 'Arrays of Project IDs and Supervisor IDs are required' });
     }
 
@@ -246,18 +247,19 @@ const assignProjectsToMultipleSupervisors = async (req, res) => {
 
     // 2. Check p6_projects table
     const p6ProjectResults = await pool.query(
-      'SELECT object_id as id FROM p6_projects WHERE object_id = ANY($1)',
+      'SELECT "objectId" as id FROM p6_projects WHERE "objectId" = ANY($1)',
       [projectIds]
     );
 
     // Combine valid IDs found in either table
+    // Normalize to string because p6_projects.objectId is BIGINT and returned as string by pg
     const validProjectIds = new Set([
-      ...localProjectResults.rows.map(r => r.id),
-      ...p6ProjectResults.rows.map(r => r.id)
+      ...localProjectResults.rows.map(r => String(r.id)),
+      ...p6ProjectResults.rows.map(r => String(r.id))
     ]);
 
     // Verify all requested project IDs exist
-    const missingProjects = projectIds.filter(id => !validProjectIds.has(id));
+    const missingProjects = projectIds.filter(id => !validProjectIds.has(String(id)));
 
     if (missingProjects.length > 0) {
       console.log('Missing projects:', missingProjects);
@@ -391,20 +393,20 @@ const getAssignedProjects = async (req, res) => {
       UNION ALL
       
       SELECT 
-        p6.object_id AS "ObjectId",
-        p6.name AS "Name",
-        COALESCE(p6.parent_eps_name, p6.location_name) AS "Location",
-        p6.status AS "Status",
+        p6."objectId" AS "ObjectId",
+        p6."name" AS "Name",
+        NULL AS "Location",
+        p6."status" AS "Status",
         0 AS "PercentComplete",
-        p6.start_date AS "PlannedStartDate",
-        p6.finish_date AS "PlannedFinishDate",
+        p6."startDate" AS "PlannedStartDate",
+        p6."finishDate" AS "PlannedFinishDate",
         NULL AS "ActualStartDate",
         NULL AS "ActualFinishDate",
-        p6.p6_id AS "P6Id",
-        p6.description AS "Description",
+        p6."projectId" AS "P6Id",
+        p6."description" AS "Description",
         'p6' AS "Source"
       FROM p6_projects p6
-      INNER JOIN project_assignments pa ON p6.object_id = pa.project_id
+      INNER JOIN project_assignments pa ON p6."objectId" = pa.project_id
       WHERE pa.user_id = $1
       
       ORDER BY "Name"

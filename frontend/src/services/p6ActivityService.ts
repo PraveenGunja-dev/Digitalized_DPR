@@ -1,52 +1,65 @@
 // src/services/p6ActivityService.ts
-// Service to fetch P6 activities for supervisor tables
-// UPDATED: Uses clean /api/dpr-activities endpoints - NO FALLBACK VALUES
+// Service to fetch P6 activities - Uses EXACT P6 API field names (camelCase)
 
 import apiClient from './apiClient';
 
+// ============================================================================
+// INTERFACES - EXACT P6 API field names
+// ============================================================================
+
 export interface P6Activity {
-    // Core identifiers
-    objectId: number;
+    // Core - exact P6 names
+    activityObjectId: number;
     activityId: string | null;
     slNo: number;
-
-    // Description
-    description: string | null;
-
-    // Status fields
+    name: string | null;
     status: string | null;
+
+    // Dates - exact P6 names
+    plannedStartDate: string | null;
+    plannedFinishDate: string | null;
+    actualStartDate: string | null;
+    actualFinishDate: string | null;
+    forecastFinishDate: string | null;
+
+    // From resourceAssignments - exact P6 names
+    targetQty: number | null;
+    actualQty: number | null;
+    remainingQty: number | null;
+    actualUnits: number | null;
+    remainingUnits: number | null;
+
+    // Calculated: (actualQty / targetQty) * 100
     percentComplete: number | null;
 
-    // Quantities - EXACT P6 VALUES
-    totalQuantity: number | null;
-    actualQuantity: number | null;
-    remainingQuantity: number | null;
+    // From resources - exact P6 names
+    contractorName: string | null;
+    unitOfMeasure: string | null;
+    resourceType: string | null;
 
-    // Date fields - EXACT P6 VALUES
-    basePlanStart: string | null;
-    basePlanFinish: string | null;
-    forecastStart: string | null;
-    forecastFinish: string | null;
-    actualStart: string | null;
-    actualFinish: string | null;
+    // WBS
+    wbsObjectId: number | null;
+    wbsName: string | null;
+    wbsCode: string | null;
 
-    // Duration
-    plannedDuration: number | null;
-
-    // Fields that need manual entry (not available from P6 API)
-    uom: string | null;
+    // WBS UDFs
     blockCapacity: number | null;
-    phase: string | null;
-    block: string | null;
     spvNumber: string | null;
+    block: string | null;
+    phase: string | null;
+
+    // Activity UDFs
     scope: string | null;
-    hold: string | null;
     front: string | null;
+    remarks: string | null;
+    holdDueToWTG: string | null;
+
+    // Activity Codes
     priority: string | null;
     plot: string | null;
+    newBlockNom: string | null;
 
-    // User-editable fields (stored locally)
-    remarks?: string;
+    // Local editable
     cumulative?: string;
     yesterday?: string;
     today?: string;
@@ -68,7 +81,6 @@ export interface P6ActivitiesResponse {
     limit: number;
     totalPages: number;
     activities: P6Activity[];
-    // Nested pagination object for backward compatibility with SupervisorDashboard
     pagination?: PaginationInfo;
 }
 
@@ -79,23 +91,22 @@ export interface DPQtyResponse {
     data: P6Activity[];
 }
 
-/**
- * Fetch P6 activities for a specific project with pagination
- * Uses new clean API - NO FALLBACK VALUES
- */
+// ============================================================================
+// API FUNCTIONS
+// ============================================================================
+
 export const getP6ActivitiesPaginated = async (
     projectObjectId: number | string,
     page: number = 1,
     limit: number = 100
 ): Promise<P6ActivitiesResponse> => {
     try {
-        const response = await apiClient.get<P6ActivitiesResponse>(
+        const response = await apiClient.get<any>(
             `/api/dpr-activities/activities/${projectObjectId}?page=${page}&limit=${limit}`
         );
 
         const data = response.data;
 
-        // Build pagination object for backward compatibility with SupervisorDashboard
         const pagination: PaginationInfo = {
             page: data.page,
             limit: data.limit,
@@ -104,151 +115,79 @@ export const getP6ActivitiesPaginated = async (
             hasMore: data.page < data.totalPages
         };
 
-        // Transform activities to match expected format
+        // Map directly - no transformation needed since backend uses same names
         const activities: P6Activity[] = data.activities.map((a: any, index: number) => ({
-            objectId: a.object_id,
-            activityId: a.activity_id,
+            activityObjectId: a.activityObjectId,
+            activityId: a.activityId,
             slNo: index + 1 + ((page - 1) * limit),
-            description: a.name,
+            name: a.name,
             status: a.status,
-            percentComplete: a.percent_complete ? parseFloat(a.percent_complete) : null,
-            totalQuantity: a.total_quantity ? parseFloat(a.total_quantity) : null,
-            actualQuantity: a.actual_quantity ? parseFloat(a.actual_quantity) : null,
-            remainingQuantity: a.remaining_quantity ? parseFloat(a.remaining_quantity) : null,
-            basePlanStart: a.planned_start_date ? a.planned_start_date.split('T')[0] : null,
-            basePlanFinish: a.planned_finish_date ? a.planned_finish_date.split('T')[0] : null,
-            forecastStart: a.baseline_start_date ? a.baseline_start_date.split('T')[0] : null,
-            forecastFinish: a.baseline_finish_date ? a.baseline_finish_date.split('T')[0] : null,
-            actualStart: a.actual_start_date ? a.actual_start_date.split('T')[0] : null,
-            actualFinish: a.actual_finish_date ? a.actual_finish_date.split('T')[0] : null,
-            plannedDuration: a.planned_duration ? parseFloat(a.planned_duration) : null,
-            // Fields not available from P6 API - return null
-            uom: null,
-            blockCapacity: null,
-            phase: null,
-            block: null,
-            spvNumber: null,
-            scope: null,
-            hold: null,
-            front: null,
-            priority: null,
-            plot: null
+
+            // Dates
+            plannedStartDate: formatDate(a.plannedStartDate),
+            plannedFinishDate: formatDate(a.plannedFinishDate),
+            actualStartDate: formatDate(a.actualStartDate),
+            actualFinishDate: formatDate(a.actualFinishDate),
+            forecastFinishDate: formatDate(a.forecastFinishDate),
+
+            // From resourceAssignments
+            targetQty: parseNumber(a.targetQty),
+            actualQty: parseNumber(a.actualQty),
+            remainingQty: parseNumber(a.remainingQty),
+            actualUnits: parseNumber(a.actualUnits),
+            remainingUnits: parseNumber(a.remainingUnits),
+
+            // Calculated
+            percentComplete: parseNumber(a.percentComplete),
+
+            // From resources
+            contractorName: a.contractorName || null,
+            unitOfMeasure: a.unitOfMeasure || null,
+            resourceType: a.resourceType || null,
+
+            // WBS
+            wbsObjectId: a.wbsObjectId || null,
+            wbsName: a.wbsName || null,
+            wbsCode: a.wbsCode || null,
+
+            // WBS UDFs
+            blockCapacity: parseNumber(a.blockCapacity),
+            spvNumber: a.spvNumber || null,
+            block: a.block || null,
+            phase: a.phase || null,
+
+            // Activity UDFs
+            scope: a.scope || null,
+            front: a.front || null,
+            remarks: a.remarks || null,
+            holdDueToWTG: a.holdDueToWTG || null,
+
+            // Activity Codes
+            priority: a.priority || null,
+            plot: a.plot || null,
+            newBlockNom: a.newBlockNom || null
         }));
 
-        console.log(`Fetched ${activities.length} P6 activities for project ${projectObjectId} (page ${page}/${pagination.totalPages})`);
+        console.log(`Fetched ${activities.length} P6 activities for project ${projectObjectId}`);
 
-        return {
-            ...data,
-            activities,
-            pagination
-        };
+        return { ...data, activities, pagination };
     } catch (error) {
         console.error('Error fetching P6 activities:', error);
         throw error;
     }
 };
 
-/**
- * Fetch resources for a project
- */
 export interface P6Resource {
-    object_id: number;
-    resource_id: string;
+    resourceObjectId: number;
+    resourceId: string;
     name: string;
-    resource_type: string;
-    total: number;
-    units: number;
+    unitOfMeasure: string;
+    resourceType: string;
 }
 
 export const getResources = async (projectObjectId: number | string): Promise<P6Resource[]> => {
     try {
-        const response = await apiClient.get<{ resources: P6Resource[] }>(`/api/oracle-p6/resources/${projectObjectId}`);
-        return response.data.resources;
-    } catch (error) {
-        console.error('Error fetching resources:', error);
-        return [];
-    }
-};
-export const getDPQtyActivities = async (
-    projectObjectId: number | string
-): Promise<DPQtyResponse> => {
-    try {
-        const response = await apiClient.get<DPQtyResponse>(
-            `/api/dpr-activities/dp-qty/${projectObjectId}`
-        );
-        console.log(`Fetched ${response.data.count} DP Qty activities for project ${projectObjectId}`);
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching DP Qty activities:', error);
-        throw error;
-    }
-};
-
-/**
- * Fetch P6 activities for a specific project (legacy - fetches first page only)
- * @deprecated Use getP6ActivitiesPaginated for better performance
- */
-export const getP6ActivitiesForProject = async (projectObjectId: number | string): Promise<P6Activity[]> => {
-    try {
-        const response = await getP6ActivitiesPaginated(projectObjectId, 1, 100);
-        return response.activities;
-    } catch (error) {
-        console.error('Error fetching P6 activities:', error);
-        throw error;
-    }
-};
-
-/**
- * Get sync status
- */
-export const getSyncStatus = async () => {
-    try {
-        const response = await apiClient.get('/api/dpr-activities/sync-status');
-        return response.data;
-    } catch (error) {
-        console.error('Error fetching sync status:', error);
-        throw error;
-    }
-};
-
-/**
- * Trigger P6 sync (placeholder - sync is now handled by backend scheduled job)
- * Kept for backward compatibility with existing components
- */
-/**
- * Trigger manual P6 sync for a specific project
- */
-export const syncP6Data = async (projectObjectId: number | string): Promise<void> => {
-    try {
-        await apiClient.post('/api/oracle-p6/sync', { projectId: projectObjectId });
-        console.log(`Triggered P6 sync for project ${projectObjectId}`);
-    } catch (error) {
-        console.error('Error triggering P6 sync:', error);
-        throw error;
-    }
-};
-
-/**
- * Trigger manual sync for global resources (all projects)
- */
-export const syncGlobalResources = async (): Promise<any> => {
-    try {
-        const response = await apiClient.post<any>('/api/oracle-p6/sync-resources', {});
-        console.log('Triggered global resource sync');
-        return response;
-    } catch (error) {
-        console.error('Error triggering global resource sync:', error);
-        throw error;
-    }
-};
-
-/**
- * Fetch resources for a specific project
- */
-export const getResourcesForProject = async (projectObjectId: number | string): Promise<any[]> => {
-    try {
-        const response = await apiClient.get<any>(`/api/oracle-p6/resources/${projectObjectId}`);
-        console.log(`Fetched ${response.data.resources?.length || 0} resources for project ${projectObjectId}`);
+        const response = await apiClient.get<{ resources: any[] }>(`/api/oracle-p6/resources/${projectObjectId}`);
         return response.data.resources || [];
     } catch (error) {
         console.error('Error fetching resources:', error);
@@ -256,142 +195,238 @@ export const getResourcesForProject = async (projectObjectId: number | string): 
     }
 };
 
-/**
- * Map activities to DP Qty table format
- * NO FALLBACK VALUES - returns null for missing data
- */
+export const getDPQtyActivities = async (projectObjectId: number | string): Promise<DPQtyResponse> => {
+    try {
+        const response = await apiClient.get<any>(`/api/dpr-activities/dp-qty/${projectObjectId}`);
+        const data = response.data;
+
+        const activities: P6Activity[] = data.data.map((a: any, index: number) => ({
+            activityObjectId: a.activityObjectId,
+            activityId: a.activityId,
+            slNo: index + 1,
+            name: a.name,
+            status: a.status,
+            plannedStartDate: a.plannedStartDate,
+            plannedFinishDate: a.plannedFinishDate,
+            actualStartDate: a.actualStartDate,
+            actualFinishDate: a.actualFinishDate,
+            forecastFinishDate: a.forecastFinishDate,
+            targetQty: a.targetQty,
+            actualQty: a.actualQty,
+            remainingQty: a.remainingQty,
+            actualUnits: null,
+            remainingUnits: null,
+            percentComplete: a.percentComplete,
+            contractorName: a.contractorName,
+            unitOfMeasure: a.unitOfMeasure,
+            resourceType: null,
+            wbsObjectId: null,
+            wbsName: null,
+            wbsCode: null,
+            blockCapacity: null,
+            spvNumber: null,
+            block: null,
+            phase: null,
+            scope: null,
+            front: null,
+            remarks: null,
+            holdDueToWTG: null,
+            priority: null,
+            plot: null,
+            newBlockNom: null
+        }));
+
+        return { success: data.success, projectObjectId: data.projectObjectId, count: data.count, data: activities };
+    } catch (error) {
+        console.error('Error fetching DP Qty activities:', error);
+        throw error;
+    }
+};
+
+export const getP6ActivitiesForProject = async (projectObjectId: number | string): Promise<P6Activity[]> => {
+    const response = await getP6ActivitiesPaginated(projectObjectId, 1, 100);
+    return response.activities;
+};
+
+export const getSyncStatus = async () => {
+    const response = await apiClient.get('/api/dpr-activities/sync-status');
+    return response.data;
+};
+
+export const syncP6Data = async (projectObjectId: number | string): Promise<void> => {
+    await apiClient.post('/api/oracle-p6/sync', { projectId: projectObjectId });
+};
+
+export const syncGlobalResources = async (): Promise<any> => {
+    return apiClient.post<any>('/api/oracle-p6/sync-resources', {});
+};
+
+export const getResourcesForProject = async (projectObjectId: number | string): Promise<any[]> => {
+    try {
+        const response = await apiClient.get<any>(`/api/oracle-p6/resources/${projectObjectId}`);
+        return response.data.resources || [];
+    } catch (error) {
+        return [];
+    }
+};
+
+// ============================================================================
+// MAPPING FUNCTIONS
+// ============================================================================
+
 export const mapActivitiesToDPQty = (activities: P6Activity[]) => {
-    return activities.map((activity, index) => ({
+    return activities.map((a, index) => ({
         slNo: String(index + 1),
-        description: activity.description,
-        totalQuantity: activity.totalQuantity !== null ? String(activity.totalQuantity) : null,
-        actualQuantity: activity.actualQuantity !== null ? String(activity.actualQuantity) : null,
-        uom: activity.uom, // Needs manual entry
-        basePlanStart: activity.basePlanStart,
-        basePlanFinish: activity.basePlanFinish,
-        forecastStart: activity.forecastStart,
-        forecastFinish: activity.forecastFinish,
-        actualStart: activity.actualStart,
-        actualFinish: activity.actualFinish,
-        plannedDuration: activity.plannedDuration !== null ? String(activity.plannedDuration) : null,
-        percentComplete: activity.percentComplete !== null ? String(activity.percentComplete) : null,
-        remarks: activity.remarks || null,
-        cumulative: activity.cumulative || null,
-        yesterday: activity.yesterday || null,
-        today: activity.today || null
+        description: a.name || "", // Mapped from name
+        totalQuantity: a.targetQty !== null ? String(a.targetQty) : "", // Mapped from targetQty
+        uom: a.unitOfMeasure || "", // Mapped from unitOfMeasure
+        balance: "", // Calculated field
+        basePlanStart: a.plannedStartDate ? a.plannedStartDate.split('T')[0] : "", // Mapped from plannedStartDate
+        basePlanFinish: a.plannedFinishDate ? a.plannedFinishDate.split('T')[0] : "", // Mapped from plannedFinishDate
+        forecastStart: a.plannedStartDate ? a.plannedStartDate.split('T')[0] : "", // Using planned as forecast init
+        forecastFinish: a.forecastFinishDate ? a.forecastFinishDate.split('T')[0] : (a.plannedFinishDate ? a.plannedFinishDate.split('T')[0] : ""),
+        actualStart: a.actualStartDate ? a.actualStartDate.split('T')[0] : "",
+        actualFinish: a.actualFinishDate ? a.actualFinishDate.split('T')[0] : "",
+        percentComplete: a.percentComplete !== null ? String(a.percentComplete) : "",
+        remarks: a.remarks || "",
+        cumulative: a.cumulative || "",
+        yesterday: a.yesterday || "",
+        today: a.today || ""
     }));
 };
 
-/**
- * Map activities for DP Block table
- * NO FALLBACK VALUES - returns null for missing data
- */
 export const mapActivitiesToDPBlock = (activities: P6Activity[]) => {
-    return activities.map((activity) => ({
-        activityId: activity.activityId,
-        activities: activity.description,
-        blockCapacity: activity.blockCapacity, // Needs manual entry
-        phase: activity.phase, // Needs manual entry
-        block: activity.block, // Needs manual entry
-        spvNumber: activity.spvNumber, // Needs manual entry
-        priority: activity.priority, // Needs manual entry
-        scope: activity.scope, // Needs manual entry
-        hold: activity.hold, // Needs manual entry
-        front: activity.front, // Needs manual entry
-        completed: activity.percentComplete !== null ? String(activity.percentComplete) : null,
-        balance: activity.remainingQuantity !== null ? String(activity.remainingQuantity) : null,
-        baselineStartDate: activity.basePlanStart,
-        baselineEndDate: activity.basePlanFinish,
-        actualStartDate: activity.actualStart,
-        actualFinishDate: activity.actualFinish,
-        forecastStartDate: activity.forecastStart,
-        forecastFinishDate: activity.forecastFinish
+    return activities.map((a) => ({
+        activityId: a.activityId || "",
+        activities: a.name || "", // Mapped from name
+        blockCapacity: a.blockCapacity || "",
+        phase: a.phase || "",
+        block: a.block || "",
+        spvNumber: a.spvNumber || "",
+        priority: a.priority || "",
+        scope: a.scope || "",
+        hold: a.holdDueToWTG || "", // Mapped from holdDueToWTG
+        front: a.front || "",
+        completed: a.actualQty !== null ? String(a.actualQty) : "",
+        balance: a.remainingQty !== null ? String(a.remainingQty) : "",
+
+        // Date mapping
+        baselineStartDate: a.plannedStartDate ? a.plannedStartDate.split('T')[0] : "",
+        baselineEndDate: a.plannedFinishDate ? a.plannedFinishDate.split('T')[0] : "",
+        actualStartDate: a.actualStartDate ? a.actualStartDate.split('T')[0] : "",
+        actualFinishDate: a.actualFinishDate ? a.actualFinishDate.split('T')[0] : "",
+        forecastStartDate: a.plannedStartDate ? a.plannedStartDate.split('T')[0] : "",
+        forecastFinishDate: a.forecastFinishDate ? a.forecastFinishDate.split('T')[0] : (a.plannedFinishDate ? a.plannedFinishDate.split('T')[0] : "")
     }));
 };
 
-/**
- * Map activities for DP Vendor Block table
- * NO FALLBACK VALUES
- */
 export const mapActivitiesToDPVendorBlock = (activities: P6Activity[]) => {
-    return activities.map((activity) => ({
-        activityId: activity.activityId,
-        activities: activity.description,
-        plot: activity.plot, // Needs manual entry
-        newBlockNom: activity.block, // Needs manual entry
-        priority: activity.priority, // Needs manual entry
-        scope: null, // User requested empty/manual
-        hold: activity.hold, // Needs manual entry
-        front: activity.front, // Needs manual entry
-        actual: null, // User requested empty/manual
-        completionPercentage: activity.percentComplete !== null ? String(activity.percentComplete) : null
+    return activities.map((a) => ({
+        activityId: a.activityId || "",
+        activities: a.name || "", // Mapped from name
+        plot: a.plot || "",
+        newBlockNom: a.newBlockNom || "",
+        priority: a.priority || "",
+        baselinePriority: a.priority || "", // Default to priority if baseline not available
+        contractorName: a.contractorName || "",
+        scope: a.scope || "",
+        holdDueToWtg: a.holdDueToWTG || "", // Case fix
+        front: a.front || "",
+        actual: a.actualQty !== null ? String(a.actualQty) : "",
+        completionPercentage: a.percentComplete !== null ? String(a.percentComplete) : "",
+        remarks: a.remarks || "",
+        yesterdayValue: a.yesterday || "",
+        todayValue: a.today || ""
     }));
 };
 
-/**
- * Map activities for Manpower Details table
- * NO FALLBACK VALUES
- */
 export const mapActivitiesToManpowerDetails = (activities: P6Activity[]) => {
-    return activities.map((activity, index) => ({
-        activityId: activity.activityId,
-        slNo: String(index + 1),
-        block: activity.block, // Needs manual entry
-        activity: activity.description
-    }));
+    return activities
+        .filter(a => a.resourceType === 'Labor' || a.resourceType === 'Nonlabor') // Include relevant resources
+        .map((a, index) => ({
+            slNo: String(index + 1),
+            activityId: a.activityId || "",
+            block: a.block || "",
+            contractorName: a.contractorName || "",
+            activity: a.name || "", // Mapped from name
+            section: "", // Not directly in P6 activity, maybe UDF?
+            yesterdayValue: a.yesterday || "",
+            todayValue: a.today || ""
+        }));
 };
 
-/**
- * Map activities for DP Vendor IDT table
- * NO FALLBACK VALUES
- */
 export const mapActivitiesToDPVendorIdt = (activities: P6Activity[]) => {
-    return activities.map((activity) => ({
-        activityId: activity.activityId,
-        activities: activity.description,
-        plot: activity.plot, // Needs manual entry
-        newBlockNom: activity.block, // Needs manual entry
-        scope: null, // User requested empty/manual
-        front: activity.front, // Needs manual entry
-        priority: activity.priority, // Needs manual entry
-        actual: null, // User requested empty/manual
-        completionPercentage: activity.percentComplete !== null ? String(activity.percentComplete) : null
+    return activities.map((a) => ({
+        activityId: a.activityId || "",
+        activities: a.name || "", // Mapped from name
+        plot: a.plot || "",
+        newBlockNom: a.newBlockNom || "",
+        baselinePriority: a.priority || "",
+        scope: a.scope || "",
+        front: a.front || "",
+        priority: a.priority || "",
+        contractorName: a.contractorName || "",
+        remarks: a.remarks || "",
+        holdDueToWtg: a.holdDueToWTG || "", // Case fix
+        actual: a.actualQty !== null ? String(a.actualQty) : "",
+        completionPercentage: a.percentComplete !== null ? String(a.percentComplete) : "",
+        yesterdayValue: a.yesterday || "",
+        todayValue: a.today || ""
     }));
 };
 
-/**
- * Yesterday values response interface
- */
+export const mapResourcesToTable = (resources: P6Resource[]) => {
+    return resources.map((r) => ({
+        typeOfMachine: r.name || "", // Map 'name' to 'typeOfMachine'
+        total: "", // Calculated from yesterday + today
+        yesterday: "",
+        today: "",
+        remarks: ""
+    }));
+};
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+function formatDate(dateValue: string | null): string | null {
+    if (!dateValue) return null;
+    try {
+        return dateValue.split('T')[0];
+    } catch {
+        return null;
+    }
+}
+
+function parseNumber(value: any): number | null {
+    if (value === null || value === undefined) return null;
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? null : parsed;
+}
+
+// ============================================================================
+// YESTERDAY VALUES
+// ============================================================================
+
 export interface YesterdayValuesResponse {
     success: boolean;
     yesterdayDate: string;
     activities: Array<{
-        activity_object_id: number;
-        activity_id: string;
-        activity_name: string;
-        yesterday_value: number;
-        cumulative_value: number;
+        activityObjectId: number;
+        activityId: string;
+        name: string;
+        yesterdayValue: number;
+        cumulativeValue: number;
     }>;
     count: number;
 }
 
-/**
- * Fetch yesterday's values for activities to pre-fill 'Yesterday' column
- */
 export const getYesterdayValues = async (projectObjectId?: number | string): Promise<YesterdayValuesResponse> => {
     try {
         const params = projectObjectId ? `?projectObjectId=${projectObjectId}` : '';
-        const response = await apiClient.get<YesterdayValuesResponse>(
-            `/api/oracle-p6/yesterday-values${params}`
-        );
+        const response = await apiClient.get<YesterdayValuesResponse>(`/api/oracle-p6/yesterday-values${params}`);
         return response.data;
     } catch (error) {
-        console.error('Error fetching yesterday values:', error);
-        return {
-            success: false,
-            yesterdayDate: '',
-            activities: [],
-            count: 0
-        };
+        return { success: false, yesterdayDate: '', activities: [], count: 0 };
     }
 };

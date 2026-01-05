@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -122,6 +122,11 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Assign Projects to Users</DialogTitle>
+          <div className="sr-only">
+            <DialogDescription>
+              Select projects and users to assign.
+            </DialogDescription>
+          </div>
         </DialogHeader>
         <form onSubmit={handleAssignSubmit} className="space-y-4">
           <div>
@@ -136,7 +141,7 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
                 className="mb-2"
               />
             </div>
-            <div className="border rounded-md max-h-40 overflow-y-auto">
+            <div className="border border-border rounded-md max-h-40 overflow-y-auto overflow-x-hidden">
               {projects.length > 0 ? (
                 // Filter projects based on search term
                 projects
@@ -160,9 +165,9 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
                           type="checkbox"
                           checked={assignForm.projectIds.includes(value)}
                           onChange={() => toggleProjectSelection(value)}
-                          className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          className="mr-2 h-4 w-4 flex-shrink-0 rounded border-border"
                         />
-                        <div className="font-medium">{project.Name}</div>
+                        <div className="font-medium text-sm truncate">{project.Name}</div>
                       </div>
                     );
                   })
@@ -190,7 +195,7 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
                 className="mb-2"
               />
             </div>
-            <div className="border rounded-md max-h-40 overflow-y-auto">
+            <div className="border border-border rounded-md max-h-40 overflow-y-auto overflow-x-hidden">
               {supervisors && supervisors.length > 0 ? (
                 // Filter supervisors based on search term
                 supervisors
@@ -215,11 +220,11 @@ export const PMAssignProjectModal: React.FC<PMAssignProjectModalProps> = ({
                           type="checkbox"
                           checked={assignForm.supervisorIds.includes(value)}
                           onChange={() => toggleSupervisorSelection(value)}
-                          className="mr-2 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                          className="mr-2 h-4 w-4 flex-shrink-0 rounded border-border"
                         />
-                        <div>
-                          <div className="font-medium">{supervisor.Name}</div>
-                          <div className="text-sm text-muted-foreground">{supervisor.Email}</div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">{supervisor.Name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{supervisor.Email}</div>
                         </div>
                       </div>
                     );

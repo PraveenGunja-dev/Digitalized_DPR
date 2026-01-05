@@ -1,6 +1,5 @@
 // server/routes/dprActivities.js
-// DPR Activities API - Reads from local database (synced from P6)
-// NO FALLBACK VALUES - Returns exact P6 data
+// DPR Activities API - Uses EXACT P6 API field names (camelCase)
 
 const express = require('express');
 const router = express.Router();
@@ -32,29 +31,27 @@ const ensureAuthAndPool = [ensureAuth, ensurePool];
 
 /**
  * GET /api/dpr-activities/projects
- * Get all projects with activity counts
  */
 router.get('/projects', ensureAuthAndPool, async (req, res) => {
     try {
         const result = await req.pool.query(`
             SELECT 
-                p.object_id,
-                p.p6_id as project_id,
-                p.name,
-                p.status,
-                p.start_date,
-                p.finish_date,
-                p.planned_start_date,
-                p.forecast_start_date,
-                p.forecast_finish_date,
-                p.data_date,
-                COUNT(a.object_id) as activity_count
+                p."objectId",
+                p."projectId",
+                p."name",
+                p."status",
+                p."startDate",
+                p."finishDate",
+                p."plannedStartDate",
+                p."plannedFinishDate",
+                p."dataDate",
+                COUNT(a."activityObjectId") as "activityCount"
             FROM p6_projects p
-            LEFT JOIN p6_activities a ON p.object_id = a.project_object_id
-            GROUP BY p.object_id, p.p6_id, p.name, p.status, 
-                     p.start_date, p.finish_date, p.planned_start_date,
-                     p.forecast_start_date, p.forecast_finish_date, p.data_date
-            ORDER BY p.name
+            LEFT JOIN p6_activities a ON p."objectId" = a."projectObjectId"
+            GROUP BY p."objectId", p."projectId", p."name", p."status",
+                     p."startDate", p."finishDate", p."plannedStartDate",
+                     p."plannedFinishDate", p."dataDate"
+            ORDER BY p."name"
         `);
 
         res.json({
@@ -70,7 +67,7 @@ router.get('/projects', ensureAuthAndPool, async (req, res) => {
 
 /**
  * GET /api/dpr-activities/activities/:projectObjectId
- * Get all activities for a specific project (exact P6 data)
+ * Returns activities with resource assignments, resources, WBS, UDFs
  */
 router.get('/activities/:projectObjectId', ensureAuthAndPool, async (req, res) => {
     try {
@@ -80,39 +77,165 @@ router.get('/activities/:projectObjectId', ensureAuthAndPool, async (req, res) =
 
         // Get total count
         const countResult = await req.pool.query(
-            'SELECT COUNT(*) FROM p6_activities WHERE project_object_id = $1',
+            'SELECT COUNT(*) FROM p6_activities WHERE "projectObjectId" = $1',
             [projectObjectId]
         );
         const totalCount = parseInt(countResult.rows[0].count);
 
-        // Get activities with pagination
+        // Get activities with JOINs
         const result = await req.pool.query(`
             SELECT 
-                a.object_id,
-                a.activity_id,
-                a.name,
-                a.status,
-                a.percent_complete,
-                a.planned_start_date,
-                a.planned_finish_date,
-                a.actual_start_date,
-                a.actual_finish_date,
-                a.baseline_start_date,
-                a.baseline_finish_date,
-                a.planned_non_labor_units as total_quantity,
-                a.actual_non_labor_units as actual_quantity,
-                a.remaining_non_labor_units as remaining_quantity,
-                a.duration as planned_duration,
-                a.actual_duration,
-                a.remaining_duration,
-                a.wbs_object_id,
-                a.project_object_id,
-                a.last_sync_at
+                a."activityObjectId",
+                a."activityId",
+                a."name",
+                a."plannedStartDate",
+                a."plannedFinishDate",
+                a."actualStartDate",
+                a."actualFinishDate",
+                a."forecastFinishDate",
+                a."status",
+                a."wbsObjectId",
+                a."projectObjectId",
+                -- From resource_assignments
+                ra."targetQty",
+                ra."actualQty",
+                ra."remainingQty",
+                ra."actualUnits",
+                ra."remainingUnits",
+                -- Calculated % complete
+                CASE 
+                    WHEN ra."targetQty" > 0 THEN ROUND((ra."actualQty" / ra."targetQty") * 100, 2)
+                    ELSE NULL 
+                END AS "percentComplete",
+                -- From resources
+                r."name" AS "contractorName",
+                r."unitOfMeasure",
+                r."resourceType",
+                -- From WBS
+                w."name" AS "wbsName",
+                w."code" AS "wbsCode"
             FROM p6_activities a
-            WHERE a.project_object_id = $1
-            ORDER BY a.planned_start_date, a.activity_id
+            LEFT JOIN p6_resource_assignments ra ON a."activityObjectId" = ra."activityObjectId"
+            LEFT JOIN p6_resources r ON ra."resourceObjectId" = r."resourceObjectId"
+            LEFT JOIN p6_wbs w ON a."wbsObjectId" = w."wbsObjectId"
+            WHERE a."projectObjectId" = $1
+            ORDER BY a."plannedStartDate", a."activityId"
             LIMIT $2 OFFSET $3
         `, [projectObjectId, parseInt(limit), offset]);
+
+        // Get UDF values
+        const activityIds = result.rows.map(r => r.activityObjectId);
+        let udfMap = {};
+
+        if (activityIds.length > 0) {
+            const udfResult = await req.pool.query(`
+                SELECT "foreignObjectId", "udfTypeTitle", "udfValue"
+                FROM p6_activity_udf_values
+                WHERE "foreignObjectId" = ANY($1)
+            `, [activityIds]);
+
+            for (const udf of udfResult.rows) {
+                if (!udfMap[udf.foreignObjectId]) udfMap[udf.foreignObjectId] = {};
+                udfMap[udf.foreignObjectId][udf.udfTypeTitle] = udf.udfValue;
+            }
+        }
+
+        // Get activity codes
+        let codeMap = {};
+        if (activityIds.length > 0) {
+            const codeResult = await req.pool.query(`
+                SELECT 
+                    aca."activityObjectId",
+                    act."name" AS "codeTypeName",
+                    ac."name" AS "codeName",
+                    ac."codeValue"
+                FROM p6_activity_code_assignments aca
+                JOIN p6_activity_codes ac ON aca."activityCodeObjectId" = ac."objectId"
+                JOIN p6_activity_code_types act ON ac."activityCodeTypeObjectId" = act."objectId"
+                WHERE aca."activityObjectId" = ANY($1)
+            `, [activityIds]);
+
+            for (const code of codeResult.rows) {
+                if (!codeMap[code.activityObjectId]) codeMap[code.activityObjectId] = {};
+                codeMap[code.activityObjectId][code.codeTypeName] = code.codeName || code.codeValue;
+            }
+        }
+
+        // Get WBS UDFs
+        const wbsIds = [...new Set(result.rows.map(r => r.wbsObjectId).filter(Boolean))];
+        let wbsUdfMap = {};
+
+        if (wbsIds.length > 0) {
+            const wbsUdfResult = await req.pool.query(`
+                SELECT "foreignObjectId", "udfTypeTitle", "udfValue"
+                FROM p6_wbs_udf_values
+                WHERE "foreignObjectId" = ANY($1)
+            `, [wbsIds]);
+
+            for (const udf of wbsUdfResult.rows) {
+                if (!wbsUdfMap[udf.foreignObjectId]) wbsUdfMap[udf.foreignObjectId] = {};
+                wbsUdfMap[udf.foreignObjectId][udf.udfTypeTitle] = udf.udfValue;
+            }
+        }
+
+        // Enrich activities
+        const activities = result.rows.map(row => {
+            const activityUdfs = udfMap[row.activityObjectId] || {};
+            const activityCodes = codeMap[row.activityObjectId] || {};
+            const wbsUdfs = wbsUdfMap[row.wbsObjectId] || {};
+
+            return {
+                // Core fields - exact P6 names
+                activityObjectId: row.activityObjectId,
+                activityId: row.activityId,
+                name: row.name,
+                status: row.status,
+
+                // Dates
+                plannedStartDate: row.plannedStartDate,
+                plannedFinishDate: row.plannedFinishDate,
+                actualStartDate: row.actualStartDate,
+                actualFinishDate: row.actualFinishDate,
+                forecastFinishDate: row.forecastFinishDate,
+
+                // From resource assignments
+                targetQty: row.targetQty,
+                actualQty: row.actualQty,
+                remainingQty: row.remainingQty,
+                actualUnits: row.actualUnits,
+                remainingUnits: row.remainingUnits,
+
+                // Calculated
+                percentComplete: row.percentComplete,
+
+                // From resources
+                contractorName: row.contractorName,
+                unitOfMeasure: row.unitOfMeasure,
+                resourceType: row.resourceType,
+
+                // WBS
+                wbsObjectId: row.wbsObjectId,
+                wbsName: row.wbsName,
+                wbsCode: row.wbsCode,
+
+                // Activity UDFs
+                scope: activityUdfs['Scope'] || null,
+                front: activityUdfs['Front'] || null,
+                remarks: activityUdfs['Remarks'] || null,
+                holdDueToWTG: activityUdfs['Hold Due to WTG'] || null,
+
+                // WBS UDFs
+                blockCapacity: wbsUdfs['Block Capacity'] || wbsUdfs['Block Capacity (MWac)'] || null,
+                spvNumber: wbsUdfs['SPV Number'] || null,
+                block: wbsUdfs['Block'] || null,
+                phase: wbsUdfs['Phase'] || null,
+
+                // Activity Codes
+                priority: activityCodes['Priority'] || null,
+                plot: activityCodes['Plot'] || null,
+                newBlockNom: activityCodes['New Block Nom'] || activityCodes['NewBlockNom'] || null
+            };
+        });
 
         res.json({
             success: true,
@@ -121,7 +244,7 @@ router.get('/activities/:projectObjectId', ensureAuthAndPool, async (req, res) =
             page: parseInt(page),
             limit: parseInt(limit),
             totalPages: Math.ceil(totalCount / parseInt(limit)),
-            activities: result.rows
+            activities
         });
     } catch (error) {
         console.error('Error fetching activities:', error);
@@ -131,7 +254,6 @@ router.get('/activities/:projectObjectId', ensureAuthAndPool, async (req, res) =
 
 /**
  * GET /api/dpr-activities/dp-qty/:projectObjectId
- * Get activities mapped to DP Qty table format (exact P6 data, no defaults)
  */
 router.get('/dp-qty/:projectObjectId', ensureAuthAndPool, async (req, res) => {
     try {
@@ -139,61 +261,55 @@ router.get('/dp-qty/:projectObjectId', ensureAuthAndPool, async (req, res) => {
 
         const result = await req.pool.query(`
             SELECT 
-                a.object_id,
-                a.activity_id,
-                a.name as description,
-                a.status,
-                a.percent_complete,
-                a.planned_non_labor_units as total_quantity,
-                a.actual_non_labor_units as actual_quantity,
-                a.planned_start_date as base_plan_start,
-                a.planned_finish_date as base_plan_finish,
-                a.baseline_start_date as forecast_start,
-                a.baseline_finish_date as forecast_finish,
-                a.actual_start_date,
-                a.actual_finish_date,
-                a.duration as planned_duration,
-                a.wbs_object_id
+                a."activityObjectId",
+                a."activityId",
+                a."name",
+                a."status",
+                a."plannedStartDate",
+                a."plannedFinishDate",
+                a."actualStartDate",
+                a."actualFinishDate",
+                a."forecastFinishDate",
+                ra."targetQty",
+                ra."actualQty",
+                ra."remainingQty",
+                CASE 
+                    WHEN ra."targetQty" > 0 THEN ROUND((ra."actualQty" / ra."targetQty") * 100, 2)
+                    ELSE NULL 
+                END AS "percentComplete",
+                r."name" AS "contractorName",
+                r."unitOfMeasure"
             FROM p6_activities a
-            WHERE a.project_object_id = $1
-            ORDER BY a.planned_start_date, a.activity_id
+            LEFT JOIN p6_resource_assignments ra ON a."activityObjectId" = ra."activityObjectId"
+            LEFT JOIN p6_resources r ON ra."resourceObjectId" = r."resourceObjectId"
+            WHERE a."projectObjectId" = $1
+            ORDER BY a."plannedStartDate", a."activityId"
         `, [projectObjectId]);
 
-        // Map to DP Qty format - NO FALLBACK VALUES
-        const dpQtyData = result.rows.map((row, index) => ({
+        const data = result.rows.map((row, index) => ({
             slNo: (index + 1).toString(),
-            objectId: row.object_id,
-            activityId: row.activity_id || null,
-            description: row.description || null,
-            status: row.status || null,
-            percentComplete: row.percent_complete !== null ? parseFloat(row.percent_complete) : null,
-            totalQuantity: row.total_quantity !== null ? parseFloat(row.total_quantity) : null,
-            actualQuantity: row.actual_quantity !== null ? parseFloat(row.actual_quantity) : null,
-            uom: null, // Not available from P6 - needs manual entry
-            basePlanStart: row.base_plan_start ? row.base_plan_start.toISOString().split('T')[0] : null,
-            basePlanFinish: row.base_plan_finish ? row.base_plan_finish.toISOString().split('T')[0] : null,
-            forecastStart: row.forecast_start ? row.forecast_start.toISOString().split('T')[0] : null,
-            forecastFinish: row.forecast_finish ? row.forecast_finish.toISOString().split('T')[0] : null,
-            actualStart: row.actual_start_date ? row.actual_start_date.toISOString().split('T')[0] : null,
-            actualFinish: row.actual_finish_date ? row.actual_finish_date.toISOString().split('T')[0] : null,
-            plannedDuration: row.planned_duration !== null ? parseFloat(row.planned_duration) : null,
-            // Fields that need manual entry (not in P6 API)
-            blockCapacity: null,
-            phase: null,
-            block: null,
-            spvNumber: null,
-            scope: null,
-            hold: null,
-            front: null,
-            priority: null,
-            plot: null
+            activityObjectId: row.activityObjectId,
+            activityId: row.activityId,
+            name: row.name,
+            status: row.status,
+            targetQty: row.targetQty ? parseFloat(row.targetQty) : null,
+            actualQty: row.actualQty ? parseFloat(row.actualQty) : null,
+            remainingQty: row.remainingQty ? parseFloat(row.remainingQty) : null,
+            percentComplete: row.percentComplete ? parseFloat(row.percentComplete) : null,
+            contractorName: row.contractorName,
+            unitOfMeasure: row.unitOfMeasure,
+            plannedStartDate: row.plannedStartDate ? row.plannedStartDate.toISOString().split('T')[0] : null,
+            plannedFinishDate: row.plannedFinishDate ? row.plannedFinishDate.toISOString().split('T')[0] : null,
+            actualStartDate: row.actualStartDate ? row.actualStartDate.toISOString().split('T')[0] : null,
+            actualFinishDate: row.actualFinishDate ? row.actualFinishDate.toISOString().split('T')[0] : null,
+            forecastFinishDate: row.forecastFinishDate ? row.forecastFinishDate.toISOString().split('T')[0] : null
         }));
 
         res.json({
             success: true,
             projectObjectId: parseInt(projectObjectId),
-            count: dpQtyData.length,
-            data: dpQtyData
+            count: data.length,
+            data
         });
     } catch (error) {
         console.error('Error fetching DP Qty data:', error);
@@ -202,29 +318,65 @@ router.get('/dp-qty/:projectObjectId', ensureAuthAndPool, async (req, res) => {
 });
 
 /**
+ * GET /api/dpr-activities/manpower/:projectObjectId
+ * Labor resources only
+ */
+router.get('/manpower/:projectObjectId', ensureAuthAndPool, async (req, res) => {
+    try {
+        const { projectObjectId } = req.params;
+
+        const result = await req.pool.query(`
+            SELECT 
+                a."activityObjectId",
+                a."activityId",
+                a."name" AS activity,
+                r."name" AS contractor,
+                ra."actualUnits",
+                ra."remainingUnits",
+                w."name" AS block
+            FROM p6_activities a
+            JOIN p6_resource_assignments ra ON a."activityObjectId" = ra."activityObjectId"
+            JOIN p6_resources r ON ra."resourceObjectId" = r."resourceObjectId"
+            LEFT JOIN p6_wbs w ON a."wbsObjectId" = w."wbsObjectId"
+            WHERE a."projectObjectId" = $1
+              AND r."resourceType" = 'Labor'
+            ORDER BY r."name", a."activityId"
+        `, [projectObjectId]);
+
+        res.json({
+            success: true,
+            projectObjectId: parseInt(projectObjectId),
+            count: result.rows.length,
+            data: result.rows
+        });
+    } catch (error) {
+        console.error('Error fetching manpower data:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+/**
  * GET /api/dpr-activities/activity-codes
- * Get all activity code types and codes (for Priority, Plot, Block mapping)
  */
 router.get('/activity-codes', ensureAuthAndPool, async (req, res) => {
     try {
-        // Get code types
         const codeTypes = await req.pool.query(`
-            SELECT object_id, name, sequence_number, project_object_id
+            SELECT "objectId", "name", "scope", "projectObjectId"
             FROM p6_activity_code_types
-            ORDER BY name
+            ORDER BY "name"
         `);
 
-        // Get codes
         const codes = await req.pool.query(`
             SELECT 
-                c.object_id,
-                c.code_value,
-                c.description,
-                c.code_type_object_id,
-                t.name as code_type_name
+                c."objectId",
+                c."name",
+                c."codeValue",
+                c."description",
+                c."activityCodeTypeObjectId",
+                t."name" as "codeTypeName"
             FROM p6_activity_codes c
-            LEFT JOIN p6_activity_code_types t ON c.code_type_object_id = t.object_id
-            ORDER BY t.name, c.sequence_number
+            LEFT JOIN p6_activity_code_types t ON c."activityCodeTypeObjectId" = t."objectId"
+            ORDER BY t."name", c."name"
         `);
 
         res.json({
@@ -240,30 +392,35 @@ router.get('/activity-codes', ensureAuthAndPool, async (req, res) => {
 
 /**
  * GET /api/dpr-activities/sync-status
- * Get sync status and last sync time
  */
 router.get('/sync-status', ensureAuthAndPool, async (req, res) => {
     try {
         const counts = await Promise.all([
             req.pool.query('SELECT COUNT(*) FROM p6_projects'),
+            req.pool.query('SELECT COUNT(*) FROM p6_wbs'),
             req.pool.query('SELECT COUNT(*) FROM p6_activities'),
+            req.pool.query('SELECT COUNT(*) FROM p6_resources'),
+            req.pool.query('SELECT COUNT(*) FROM p6_resource_assignments'),
             req.pool.query('SELECT COUNT(*) FROM p6_activity_code_types'),
             req.pool.query('SELECT COUNT(*) FROM p6_activity_codes'),
-            req.pool.query('SELECT MAX(last_sync_at) as last_sync FROM p6_projects'),
-            req.pool.query('SELECT MAX(last_sync_at) as last_sync FROM p6_activities')
+            req.pool.query('SELECT MAX("lastSyncAt") as "lastSync" FROM p6_projects'),
+            req.pool.query('SELECT MAX("lastSyncAt") as "lastSync" FROM p6_activities')
         ]);
 
         res.json({
             success: true,
             counts: {
                 projects: parseInt(counts[0].rows[0].count),
-                activities: parseInt(counts[1].rows[0].count),
-                activityCodeTypes: parseInt(counts[2].rows[0].count),
-                activityCodes: parseInt(counts[3].rows[0].count)
+                wbs: parseInt(counts[1].rows[0].count),
+                activities: parseInt(counts[2].rows[0].count),
+                resources: parseInt(counts[3].rows[0].count),
+                resourceAssignments: parseInt(counts[4].rows[0].count),
+                activityCodeTypes: parseInt(counts[5].rows[0].count),
+                activityCodes: parseInt(counts[6].rows[0].count)
             },
             lastSync: {
-                projects: counts[4].rows[0].last_sync,
-                activities: counts[5].rows[0].last_sync
+                projects: counts[7].rows[0].lastSync,
+                activities: counts[8].rows[0].lastSync
             }
         });
     } catch (error) {

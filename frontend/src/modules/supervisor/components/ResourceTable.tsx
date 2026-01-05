@@ -35,9 +35,6 @@ export const ResourceTable = memo(({
     status = 'draft'
 }: ResourceTableProps) => {
 
-    // Debug logging
-    console.log('ResourceTable rendering with data:', data?.length, data?.[0]);
-
     // HyperFormula instance
     const hfInstance = useMemo(() => {
         return HyperFormula.buildEmpty({

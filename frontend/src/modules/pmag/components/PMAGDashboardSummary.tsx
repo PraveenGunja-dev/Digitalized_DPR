@@ -63,7 +63,7 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
             <Button
               variant="default"
               onClick={onShowSnapshotFilter}
-              className="flex items-center bg-purple-600 hover:bg-purple-700"
+              className="flex items-center"
             >
               <Filter className="w-4 h-4 mr-2" />
               Snapshot Filter
@@ -71,7 +71,7 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
           )}
           {onShowHistory && (
             <Button
-              variant="outline"
+              variant="secondary"
               onClick={onShowHistory}
               className="flex items-center"
             >
@@ -81,9 +81,9 @@ export const PMAGDashboardSummary: React.FC<PMAGDashboardSummaryProps> = ({
           )}
           {onShowArchived && (
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={onShowArchived}
-              className="flex items-center"
+              className="flex items-center border border-input"
             >
               <Archive className="w-4 h-4 mr-2" />
               Archived

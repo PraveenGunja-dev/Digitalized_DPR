@@ -170,6 +170,7 @@ const ProjectsPage = () => {
           <ProjectListing
             projects={paginatedProjects.map(project => ({
               name: project.Name,
+              location: project.Location || project.location || '',
               status: project.Status || 'Active',
               startDate: project.PlannedStartDate ? new Date(project.PlannedStartDate).toLocaleDateString('en-IN') : 'N/A',
               endDate: project.PlannedFinishDate ? new Date(project.PlannedFinishDate).toLocaleDateString('en-IN') : 'N/A'

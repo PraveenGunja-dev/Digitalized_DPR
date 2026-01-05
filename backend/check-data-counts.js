@@ -1,35 +1,37 @@
-const pool = require('./db');
+require('dotenv').config();
+const { Pool } = require('pg');
 
-async function checkDataCounts() {
+const pool = new Pool({
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD
+});
+
+async function checkData() {
     try {
-        console.log('=== Checking Data Counts ===\n');
+        const activities = await pool.query('SELECT COUNT(*) as count FROM p6_activities');
+        console.log('Activities:', activities.rows[0].count);
 
-        // Count p6_activities
-        const activities = await pool.query('SELECT COUNT(*) FROM p6_activities');
-        console.log(`p6_activities: ${activities.rows[0].count} rows`);
+        const assignments = await pool.query('SELECT COUNT(*) as count FROM p6_resource_assignments');
+        console.log('Assignments:', assignments.rows[0].count);
 
-        // Count p6_resources
-        const resources = await pool.query('SELECT COUNT(*) FROM p6_resources');
-        console.log(`p6_resources: ${resources.rows[0].count} rows`);
+        const entries = await pool.query('SELECT COUNT(*) as count FROM dpr_supervisor_entries');
+        console.log('DPR Entries:', entries.rows[0].count);
 
-        // Count by project
-        const byProject = await pool.query(`
-      SELECT project_object_id, COUNT(*) as count 
-      FROM p6_activities 
-      GROUP BY project_object_id 
-      ORDER BY count DESC 
-      LIMIT 5
-    `);
-        console.log('\nActivities by project (top 5):');
-        byProject.rows.forEach(r => {
-            console.log(`  Project ${r.project_object_id}: ${r.count} activities`);
-        });
+        const projects = await pool.query('SELECT COUNT(*) as count FROM p6_projects');
+        console.log('Projects:', projects.rows[0].count);
+
+        // Check sample activities with dates
+        const sample = await pool.query('SELECT "name", "plannedFinishDate", "actualFinishDate" FROM p6_activities WHERE "plannedFinishDate" IS NOT NULL LIMIT 3');
+        console.log('Sample Activities with dates:', sample.rows);
 
     } catch (error) {
         console.error('Error:', error.message);
     } finally {
-        pool.end();
+        await pool.end();
     }
 }
 
-checkDataCounts();
+checkData();

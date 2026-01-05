@@ -56,18 +56,18 @@ const getChartColors = (isDark: boolean) => ({
 const QuantityStatusChart: React.FC<{ activities: P6Activity[]; colors: ReturnType<typeof getChartColors> }> = ({ activities, colors }) => {
     const chartData = useMemo(() => {
         return activities.slice(0, 12).map((activity, index) => {
-            const scope = activity.totalQuantity ?? 0;
-            const actualQty = activity.actualQuantity ?? 0;
-            const cumulative = activity.cumulative ? parseFloat(activity.cumulative) : actualQty;
-            const remainingQty = activity.remainingQuantity ?? (scope - cumulative);
+            const scope = activity.targetQty ?? 0; // Fixed: was 'totalQuantity'
+            const actual = activity.actualQty ?? 0; // Fixed: was 'actualQuantity'
+            const cumulative = activity.cumulative ? parseFloat(activity.cumulative) : actual;
+            const remainingQty = activity.remainingQty ?? (scope - cumulative); // Fixed: was 'remainingQuantity'
             const percentComplete = activity.percentComplete ?? 0;
 
             return {
-                name: activity.description?.substring(0, 18) || `Activity ${index + 1}`,
+                name: activity.name?.substring(0, 18) || `Activity ${index + 1}`, // Fixed: was 'description'
                 scope: scope,
                 balance: Math.max(0, remainingQty),
                 completed: cumulative,
-                uom: activity.uom || 'Units',
+                uom: activity.unitOfMeasure || 'Units', // Fixed: was 'uom'
                 percentComplete: percentComplete,
             };
         });
@@ -123,8 +123,8 @@ const ResourceStatusChart: React.FC<{ activities: P6Activity[]; colors: ReturnTy
             const resourceType = activity.front || 'General';
             if (resourceType && resourceType !== 'General') {
                 const current = resourceMap.get(resourceType) || { required: 0, available: 0 };
-                const scope = activity.totalQuantity ?? 0;
-                const completed = activity.actualQuantity ?? 0;
+                const scope = activity.targetQty ?? 0; // Fixed: was 'totalQuantity'
+                const completed = activity.actualQty ?? 0; // Fixed: was 'actualQuantity'
                 current.required += Math.ceil(scope / 100) || 1;
                 current.available += Math.ceil(completed / 100) || 0;
                 resourceMap.set(resourceType, current);
@@ -193,13 +193,13 @@ const CriticalPathChart: React.FC<{ activities: P6Activity[] }> = ({ activities 
     const ganttData = useMemo(() => {
         // Get all activities with valid dates
         const validActivities = activities.filter(a =>
-            a.basePlanStart || a.actualStart || a.forecastStart
+            a.plannedStartDate || a.actualStartDate // Fixed: was 'basePlanStart' and 'actualStart'
         ).slice(0, 12);
 
         if (validActivities.length === 0) {
             // Use activities even without dates for display
             return activities.slice(0, 12).map((activity, index) => ({
-                name: activity.description?.substring(0, 25) || `Activity ${index + 1}`,
+                name: activity.name?.substring(0, 25) || `Activity ${index + 1}`, // Fixed: was 'description'
                 startDate: new Date(),
                 endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
                 progress: activity.percentComplete ?? 0,
@@ -208,13 +208,13 @@ const CriticalPathChart: React.FC<{ activities: P6Activity[] }> = ({ activities 
         }
 
         return validActivities.map((activity, index) => {
-            const startDate = new Date(activity.actualStart || activity.basePlanStart || activity.forecastStart || new Date());
-            const endDate = new Date(activity.basePlanFinish || activity.forecastFinish || activity.actualFinish || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
+            const startDate = new Date(activity.actualStartDate || activity.plannedStartDate || new Date()); // Fixed
+            const endDate = new Date(activity.plannedFinishDate || activity.forecastFinishDate || activity.actualFinishDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)); // Fixed
             const progress = activity.percentComplete ?? 0;
             const isCritical = activity.priority === 'High' || activity.status === 'Critical';
 
             return {
-                name: activity.description?.substring(0, 25) || `Activity ${index + 1}`,
+                name: activity.name?.substring(0, 25) || `Activity ${index + 1}`, // Fixed: was 'description'
                 startDate,
                 endDate,
                 progress: Math.min(100, progress),
@@ -363,7 +363,7 @@ const MilestonesChart: React.FC<{ activities: P6Activity[] }> = ({ activities })
         // First, try to find actual milestone activities
         let milestones = activities
             .filter(a =>
-                a.description?.toLowerCase().includes('milestone') ||
+                a.name?.toLowerCase().includes('milestone') || // Fixed: was 'description'
                 a.status?.toLowerCase().includes('milestone')
             )
             .slice(0, 8);
@@ -372,10 +372,10 @@ const MilestonesChart: React.FC<{ activities: P6Activity[] }> = ({ activities })
         if (milestones.length === 0) {
             // Get activities sorted by date and pick key ones
             const sortedActivities = [...activities]
-                .filter(a => a.basePlanFinish || a.forecastFinish || a.actualFinish)
+                .filter(a => a.plannedFinishDate || a.forecastFinishDate || a.actualFinishDate) // Fixed
                 .sort((a, b) => {
-                    const dateA = new Date(a.basePlanFinish || a.forecastFinish || a.actualFinish || '').getTime();
-                    const dateB = new Date(b.basePlanFinish || b.forecastFinish || b.actualFinish || '').getTime();
+                    const dateA = new Date(a.plannedFinishDate || a.forecastFinishDate || a.actualFinishDate || '').getTime(); // Fixed
+                    const dateB = new Date(b.plannedFinishDate || b.forecastFinishDate || b.actualFinishDate || '').getTime(); // Fixed
                     return dateA - dateB;
                 });
 
@@ -388,10 +388,10 @@ const MilestonesChart: React.FC<{ activities: P6Activity[] }> = ({ activities })
 
         return milestones.map(m => {
             const progress = m.percentComplete ?? 0;
-            const finishDate = m.basePlanFinish || m.forecastFinish || m.actualFinish || '';
+            const finishDate = m.plannedFinishDate || m.forecastFinishDate || m.actualFinishDate || ''; // Fixed
 
             return {
-                name: m.description?.substring(0, 30) || 'Activity',
+                name: m.name?.substring(0, 30) || 'Activity', // Fixed: was 'description'
                 date: finishDate ? new Date(finishDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD',
                 status: progress >= 100 ? 'Completed'
                     : progress > 0 ? 'In Progress'

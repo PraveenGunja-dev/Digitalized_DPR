@@ -33,20 +33,20 @@ const aggregateTableData = (
 
   // Initialize with P6 activities
   p6Activities.forEach(activity => {
-    // P6Activity uses description. Fallback to activityId if needed.
-    const name = activity.description || '';
+    // P6Activity uses 'name' (not description)
+    const name = activity.name || '';
     if (name) {
       activityMap.set(name.toLowerCase(), {
         name,
-        uom: activity.uom || '',
-        totalScope: Number(activity.totalQuantity || 0),
-        front: Number(activity.front || 0),
-        // Use actualQuantity or percentComplete for completed
-        completed: Number(activity.actualQuantity || activity.percentComplete || 0),
-        // Cumulative is conceptually Actual in many contexts, or use actualQuantity
-        cumulative: Number(activity.actualQuantity || 0),
+        uom: activity.unitOfMeasure || '', // Fixed: was 'uom'
+        totalScope: Number(activity.targetQty || 0), // Fixed: was 'totalQuantity'
+        front: activity.front || '',
+        // Use actualQty or percentComplete for completed
+        completed: Number(activity.actualQty || activity.percentComplete || 0), // Fixed: was 'actualQuantity'
+        // Cumulative is conceptually Actual in many contexts
+        cumulative: Number(activity.actualQty || 0), // Fixed: was 'actualQuantity'
         // Balance is Remaining Quantity
-        balance: Number(activity.remainingQuantity || 0),
+        balance: Number(activity.remainingQty || 0), // Fixed: was 'remainingQuantity'
         percentStatus: Number(activity.percentComplete || 0),
         remarks: activity.remarks || ''
       });

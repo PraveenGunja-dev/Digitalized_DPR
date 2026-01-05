@@ -59,7 +59,7 @@ class OracleP6RestClient {
                     'Accept': 'application/json'
                 },
                 params: params,
-                timeout: 30000 // 30 second timeout
+                timeout: 120000 // 120 second timeout for large data
             };
 
             const response = await axios.get(url, config);

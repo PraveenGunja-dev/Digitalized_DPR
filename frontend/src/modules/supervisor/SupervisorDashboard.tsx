@@ -16,6 +16,7 @@ import {
   mapActivitiesToDPVendorBlock,
   mapActivitiesToManpowerDetails,
   mapActivitiesToDPVendorIdt,
+  mapResourcesToTable,
   P6Activity,
   P6Resource,
   getResources,
@@ -261,7 +262,8 @@ const SupervisorDashboard = () => {
     try {
       console.log(`SupervisorDashboard: Fetching P6 resources for project ${currentProjectId}`);
       const resources = await getResources(currentProjectId);
-      setResourceData(resources);
+      const mappedResources = mapResourcesToTable(resources);
+      setResourceData(mappedResources);
       setIsResourcesFetched(true);
     } catch (error) {
       console.error("Error fetching P6 resources:", error);

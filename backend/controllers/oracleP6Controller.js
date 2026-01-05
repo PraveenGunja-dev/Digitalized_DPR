@@ -8,9 +8,9 @@
 const getDPQtyData = async (req, res) => {
   try {
     const { projectId } = req.query;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -42,7 +42,7 @@ const getDPQtyData = async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     // Transform P6 data to DP Qty table format
     const dpQtyData = result.rows.map((row, index) => ({
       slNo: (index + 1).toString(),
@@ -73,7 +73,7 @@ const getDPQtyData = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching DP Qty data from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching data from Oracle P6',
       error: {
         code: 'P6_DATA_FETCH_ERROR',
@@ -89,14 +89,14 @@ const getDPQtyData = async (req, res) => {
 const getP6Projects = async (req, res) => {
   try {
     const result = await req.pool.query('SELECT id, name, location FROM projects ORDER BY name');
-    
+
     res.status(200).json({
       message: 'Projects fetched successfully from Oracle P6',
       projects: result.rows
     });
   } catch (error) {
     console.error('Error fetching projects from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching projects from Oracle P6',
       error: {
         code: 'P6_PROJECTS_FETCH_ERROR',
@@ -144,9 +144,9 @@ const getActivityFields = (req, res) => {
 const syncProject = async (req, res) => {
   try {
     const { projectId } = req.body;
-    
+
     if (!projectId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: 'Project ID is required for sync',
         error: {
           code: 'MISSING_PROJECT_ID',
@@ -164,7 +164,7 @@ const syncProject = async (req, res) => {
     });
   } catch (error) {
     console.error('Error syncing project from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while syncing project from Oracle P6',
       error: {
         code: 'P6_SYNC_ERROR',
@@ -180,7 +180,7 @@ const syncProject = async (req, res) => {
 const getWBS = async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
     const query = `
       SELECT 
         object_id,
@@ -193,7 +193,7 @@ const getWBS = async (req, res) => {
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     res.status(200).json({
       message: 'WBS structure fetched successfully from Oracle P6',
       projectId: projectId,
@@ -201,7 +201,7 @@ const getWBS = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching WBS from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching WBS from Oracle P6',
       error: {
         code: 'P6_WBS_FETCH_ERROR',
@@ -217,30 +217,35 @@ const getWBS = async (req, res) => {
 const getResources = async (req, res) => {
   try {
     const { projectId } = req.params;
-    
+
+    // Updated query for new CamelCase schema
     const query = `
       SELECT DISTINCT
-        pr.object_id,
-        pr.name,
-        pr.resource_type,
-        pr.units
+        pr."resourceObjectId",
+        pr."name",
+        pr."resourceType",
+        pr."unitOfMeasure"
       FROM p6_resources pr
-      JOIN p6_activity_assignments paa ON pr.object_id = paa.resource_object_id
-      JOIN p6_activities pa ON paa.activity_object_id = pa.object_id
-      WHERE pa.project_id = $1
-      ORDER BY pr.name
+      JOIN p6_resource_assignments pra ON pr."resourceObjectId" = pra."resourceObjectId"
+      WHERE pra."projectObjectId" = $1
+      ORDER BY pr."name"
     `;
 
     const result = await req.pool.query(query, [projectId]);
-    
+
     res.status(200).json({
       message: 'Resources fetched successfully from Oracle P6',
       projectId: projectId,
-      resources: result.rows
+      resources: result.rows.map(r => ({
+        resourceObjectId: r.resourceObjectId,
+        name: r.name,
+        resourceType: r.resourceType,
+        unitOfMeasure: r.unitOfMeasure
+      }))
     });
   } catch (error) {
     console.error('Error fetching resources from Oracle P6:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       message: 'Internal server error while fetching resources from Oracle P6',
       error: {
         code: 'P6_RESOURCES_FETCH_ERROR',

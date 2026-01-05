@@ -483,14 +483,6 @@ const PMAGDashboard = () => {
                 >
                   Refresh
                 </button>
-                <button
-                  onClick={() => setShowHistoryModal(false)}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
               </div>
             </div>
           </div>
@@ -538,7 +530,7 @@ const PMAGDashboard = () => {
                             </span>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {entry.supervisor_name || 'Supervisor'} • {entry.created_at ? new Date(entry.created_at).toLocaleDateString('en-IN', {
+                            📁 {entry.project_name || `Project #${entry.project_id}` || 'Unknown'} • 👤 {entry.supervisor_name || 'Supervisor'} • {entry.created_at ? new Date(entry.created_at).toLocaleDateString('en-IN', {
                               day: '2-digit',
                               month: 'short',
                               year: 'numeric'
@@ -576,56 +568,90 @@ const PMAGDashboard = () => {
 
       {/* Archived List Modal */}
       <Dialog open={showArchivedListModal} onOpenChange={setShowArchivedListModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Archived Entries</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0 bg-background">
+          {/* Header */}
+          <div className="px-6 py-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Archived Entries</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{archivedEntries.length} entries</p>
+              </div>
+              <button
+                onClick={loadArchivedEntries}
+                className="px-3 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Entries List */}
+          <div className="flex-1 overflow-auto">
             {archivedEntries.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No archived entries found</p>
+              <div className="text-center py-16">
+                <div className="text-5xl mb-4">📭</div>
+                <p className="text-muted-foreground">No archived entries found</p>
               </div>
             ) : (
-              archivedEntries.map((entry: any) => (
-                <div key={entry.id} className="border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <h3 className="font-semibold text-lg mb-1">Entry #{entry.id}</h3>
-                      <div className="space-y-1 text-sm">
-                        <p><span className="font-medium">Sheet:</span> {entry.sheet_type?.replace(/_/g, ' ')}</p>
-                        <p><span className="font-medium">Project:</span> {entry.project_name || 'N/A'}</p>
+              <div className="divide-y divide-border">
+                {archivedEntries.map((entry: any) => (
+                  <div
+                    key={entry.id}
+                    className="px-6 py-4 hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      {/* Left: Entry Info */}
+                      <div className="flex items-center gap-4 min-w-0 flex-1">
+                        {/* Entry Number Badge */}
+                        <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-primary">#{entry.id}</span>
+                        </div>
+
+                        {/* Details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-medium text-foreground capitalize">
+                              {entry.sheet_type?.replace(/_/g, ' ') || 'Sheet'}
+                            </h3>
+                            <span className="flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded bg-primary/10 text-primary">
+                              Archived
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                            <span className="font-medium">📁 {entry.project_name || `Project #${entry.project_id}` || 'Unknown Project'}</span>
+                            <span>👤 {entry.supervisor_name || 'Supervisor'}</span>
+                            <span>📅 {entry.created_at ? new Date(entry.created_at).toLocaleDateString('en-IN', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            }) : 'N/A'}</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="space-y-1 text-sm">
-                        <p><span className="font-medium">Submitted by:</span> {entry.supervisor_name || 'Supervisor'}</p>
-                        <p><span className="font-medium">Status:</span> Final Approved</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col justify-center md:items-end">
+
+                      {/* Right: Action */}
                       <button
                         onClick={() => {
                           setSelectedArchivedEntry(entry);
                           setShowArchivedListModal(false);
                           setShowArchivedModal(true);
                         }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                        className="flex-shrink-0 ml-4 px-4 py-2 text-sm font-medium text-primary hover:text-primary/80 hover:bg-primary/10 rounded-md transition-colors"
                       >
                         View Details
                       </button>
                     </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
-          <div className="flex justify-end pt-4">
-            <button
-              onClick={() => setShowArchivedListModal(false)}
-              className="px-4 py-2 border rounded hover:bg-gray-100"
-            >
-              Close
-            </button>
+
+          {/* Footer */}
+          <div className="px-6 py-3 border-t border-border bg-muted/50">
+            <p className="text-xs text-muted-foreground">
+              Showing {archivedEntries.length} archived entries
+            </p>
           </div>
         </DialogContent>
       </Dialog>
@@ -676,12 +702,6 @@ const PMAGDashboard = () => {
                       minute: '2-digit'
                     })}
                   </span>
-                  <button
-                    onClick={() => setShowArchivedModal(false)}
-                    className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-600 border border-[#999999] rounded hover:bg-gray-300 dark:hover:bg-gray-500 text-black dark:text-white"
-                  >
-                    ✕ Close
-                  </button>
                 </div>
               </div>
 

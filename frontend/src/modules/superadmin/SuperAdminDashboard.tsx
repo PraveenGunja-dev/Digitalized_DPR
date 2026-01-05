@@ -826,7 +826,7 @@ const SuperAdminDashboard = () => {
       {/* Create User Modal */}
       {showCreateUserForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-card text-card-foreground border border-border rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Create New User</h2>
             <form onSubmit={handleCreateUserSubmit}>
               <div className="mb-4">
@@ -888,7 +888,7 @@ const SuperAdminDashboard = () => {
       {/* Create Project Modal */}
       {showCreateProjectForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-card text-card-foreground border border-border rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Create New Project</h2>
             <form onSubmit={handleCreateProjectSubmit}>
               <div className="mb-4">
@@ -988,7 +988,7 @@ const SuperAdminDashboard = () => {
       {/* Edit Role Modal */}
       {showEditRoleModal && editingRole && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <div className="bg-card text-card-foreground border border-border rounded-lg p-6 w-full max-w-md">
             <h2 className="text-xl font-bold mb-4">Edit Role</h2>
             <form onSubmit={(e) => {
               e.preventDefault();
