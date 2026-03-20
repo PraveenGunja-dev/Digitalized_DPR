@@ -424,39 +424,39 @@ async def reject_entry_by_pm(
         f"Entry {entry_id} ({entry['sheet_type']}) rejected by PM. Reason: {rejection_reason or 'No reason'}",
     )
 
-        # Notify Supervisor
-        await create_notification(
-            pool, entry["supervisor_id"], 
-            "DPR Rejected", 
-            f"Your {entry['sheet_type']} for {entry['entry_date']} was rejected. Reason: {rejection_reason}",
-            "error", entry["project_id"], entry_id, entry["sheet_type"]
-        )
+    # Notify Supervisor
+    await create_notification(
+        pool, entry["supervisor_id"], 
+        "DPR Rejected", 
+        f"Your {entry['sheet_type']} for {entry['entry_date']} was rejected. Reason: {rejection_reason}",
+        "error", entry["project_id"], entry_id, entry["sheet_type"]
+    )
+    
+    # EMAIL NOTIFICATION
+    try:
+        from app.services.email_service import send_dpr_status_email
+        sup = await pool.fetchrow("SELECT name, email FROM users WHERE user_id = $1", entry["supervisor_id"])
+        proj = await pool.fetchval('SELECT "Name" FROM p6_projects WHERE "ObjectId" = $1', entry["project_id"])
+        if sup and sup["email"]:
+            await send_dpr_status_email(
+                sup["email"], sup["name"], entry["sheet_type"], "Rejected by PM", 
+                proj or "Project", entry["entry_date"].isoformat(), rejection_reason
+            )
+    except Exception as ee:
+        logger.error(f"Email notification failed: {ee}")
         
-        # EMAIL NOTIFICATION
-        try:
+    # Notify Super Admin
+    try:
+        from app.config import settings
+        if settings.SUPER_ADMIN_EMAIL:
             from app.services.email_service import send_dpr_status_email
-            sup = await pool.fetchrow("SELECT name, email FROM users WHERE user_id = $1", entry["supervisor_id"])
             proj = await pool.fetchval('SELECT "Name" FROM p6_projects WHERE "ObjectId" = $1', entry["project_id"])
-            if sup and sup["email"]:
-                await send_dpr_status_email(
-                    sup["email"], sup["name"], entry["sheet_type"], "Rejected by PM", 
-                    proj or "Project", entry["entry_date"].isoformat(), rejection_reason
-                )
-        except Exception as ee:
-            logger.error(f"Email notification failed: {ee}")
-            
-        # Notify Super Admin
-        try:
-            from app.config import settings
-            if settings.SUPER_ADMIN_EMAIL:
-                from app.services.email_service import send_dpr_status_email
-                proj = await pool.fetchval('SELECT "Name" FROM p6_projects WHERE "ObjectId" = $1', entry["project_id"])
-                await send_dpr_status_email(
-                    settings.SUPER_ADMIN_EMAIL, "Super Admin", entry["sheet_type"], "Rejected by PM",
-                    proj or "Project", entry["entry_date"].isoformat(), f"Reason: {rejection_reason}"
-                )
-        except Exception as ee:
-            logger.error(f"Super Admin email notification failed: {ee}")
+            await send_dpr_status_email(
+                settings.SUPER_ADMIN_EMAIL, "Super Admin", entry["sheet_type"], "Rejected by PM",
+                proj or "Project", entry["entry_date"].isoformat(), f"Reason: {rejection_reason}"
+            )
+    except Exception as ee:
+        logger.error(f"Super Admin email notification failed: {ee}")
     except Exception as e:
         logger.error(f"Failed to send rejection notification: {e}")
 
